@@ -25,7 +25,9 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "scapper",
+    "my_house_in_japan.front",
+    "my_house_in_japan.scrapper",
+    "my_house_in_japan.inventory",
 ]
 
 MIDDLEWARE = [
@@ -99,6 +101,19 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
 
 STATIC_URL = "static/"
+STATICFILES_DIRS = [
+    BASE_DIR / "my_house_in_japan/static/",
+]
+
+STATIC_ROOT = BASE_DIR / "my_house_in_japan/STATIC_ROOT"
+
+COMPRESS_ROOT = STATIC_ROOT
+STATICFILES_FINDERS = [
+    'django.contrib.staticfiles.finders.FileSystemFinder',
+    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
+    'compressor.finders.CompressorFinder'
+]
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field

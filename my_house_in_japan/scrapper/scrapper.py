@@ -99,6 +99,8 @@ def get_listing_data(url):
     # Extract images
     image_urls = []
 
+    ul_element = soup.find('ul', {'data-target': 'photo-slider.slider'})
+
     if ul_element:
         # Find all <img> tags within the <ul> element
         img_tags = ul_element.find_all('img')
@@ -134,19 +136,22 @@ def get_listing_data(url):
         'image_urls': image_urls
     }
 
-    ul_element = soup.find('ul', {'data-target': 'photo-slider.slider'})
-
     return listing_data
 
 
-listing_urls = [
-    'https://www.homes.co.jp/kodate/b-1118600001512/',
-    'https://www.homes.co.jp/kodate/b-1474730000032/',
-    'https://www.homes.co.jp/kodate/b-1120410015607/',
-    'https://www.homes.co.jp/kodate/b-1184720013058/'
-]
 
 
-for url in listing_urls:
-    print(get_listing_data(url))
-    print ("=========================================")
+def get_properties():
+    # listing_urls = get_listing_urls()
+    listing_urls = [
+        'https://www.homes.co.jp/kodate/b-1118600001512/',
+        # 'https://www.homes.co.jp/kodate/b-1474730000032/',
+        # 'https://www.homes.co.jp/kodate/b-1120410015607/',
+        # 'https://www.homes.co.jp/kodate/b-1184720013058/'
+    ]
+    properties_data = []
+    for url in listing_urls:
+        properties_data.append(get_listing_data(url=url))
+    return properties_data
+
+
