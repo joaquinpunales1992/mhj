@@ -121,8 +121,8 @@ USE_TZ = True
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': '995115111049-vj4c5dc4j07b657edr10r6lq18k9r1av.apps.googleusercontent.com',
-            'secret': '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',
+            'client_id': '',
+            'secret': '',
             'key': ''
         }
     }
