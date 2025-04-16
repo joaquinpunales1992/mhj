@@ -1,43 +1,67 @@
 from django.db import models
 
 
-
-# 'property_title': google_translator.translate(property_title),
-#         'property_price': google_translator.translate(table_data['価格']),
-#         'floor_plan': google_translator.translate(table_data['間取り']),
-#         'building_area': google_translator.translate(table_data['建物面積']),
-#         'land_area': google_translator.translate(table_data['土地面積']),
-#         'parking': google_translator.translate(table_data['駐車場']),
-#         'building_age': google_translator.translate(table_data['築年月']),
-#         'location': google_translator.translate(table_data['所在地']),
-#         'traffic': google_translator.translate(table_data['交通']),
-#         'building_structure': google_translator.translate(table_data['建物構造']),
-#         'road_condition': google_translator.translate(table_data['接道状況']),
-#         'setback': google_translator.translate(table_data['セットバック']),
-#         'city_planning': google_translator.translate(table_data['都市計画']),
-#         'zoning': google_translator.translate(table_data['用途地域']),
-#         'land_category': google_translator.translate(table_data['地目']),
-#         'building_coverage_ratio': google_translator.translate(table_data['建ぺい率']),
-#         'floor_area_ratio': google_translator.translate(table_data['容積率']),
-#         'current_status': google_translator.translate(table_data['現況']),
-#         'handover': google_translator.translate(table_data['引渡し']),
-#         # 'equipment': google_translator.translate(table_data['設備']), TODO:FIX
-#         'transaction_type': google_translator.translate(table_data['取引態様']),
-#         'remarks': google_translator.translate(table_data['備考']),
-#         'image_urls': image_urls
-
-class PropertyImage(models.Model):
-    file = models.FileField(upload_to="property_images/", max_length=254, null=True, blank=True)
-
 class Property(models.Model):
+    url = models.URLField(max_length=255, default="")
     title = models.CharField(max_length=255)
-    price = models.PositiveIntegerField()
-    floor_plan = models.CharField(max_length=255)
-    building_area = models.FloatField()
-    land_area = models.FloatField()
+    price = models.CharField(max_length=255)
+    building_area = models.CharField(max_length=255)
+    land_area = models.CharField(max_length=255)
     parking = models.CharField(max_length=255)
+    traffic = models.CharField(max_length=255, default="")
+    building_structure = models.CharField(max_length=255, default="")
+    road_condition = models.CharField(max_length=255, default="")
+    setback = models.CharField(max_length=255, default="")
+    city_planning = models.CharField(max_length=255, default="")
+    zoning = models.CharField(max_length=255, default="")
+    land_category = models.CharField(max_length=255, default="")
+    building_coverage_ratio = models.CharField(max_length=255, default="")
+    floor_area_ratio = models.CharField(max_length=255, default="") 
+    current_status = models.CharField(max_length=255, default="")
+    handover = models.CharField(max_length=255, default="")
+    transaction_type = models.CharField(max_length=255, default="")
+    equipment = models.CharField(max_length=255, default="")
+    floor_plan = models.CharField(max_length=255)
+    location = models.CharField(max_length=255, default="")
+    construction_date = models.CharField(max_length=255, default="")
+    land_rights = models.CharField(max_length=255, default="")
+    description = models.TextField(default="") #remarks
     construction = models.CharField(max_length=255)
-    images = models.ForeignKey(to=PropertyImage, related_name="properties", on_delete=models.CASCADE)
+    show_in_front = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = "Property"
+        verbose_name_plural = "Properties"
     
     def __str__(self):
-        return f"{self.tile}: {self.price}"
+        return f"{self.title}: {self.price}"
+    
+    def get_title_for_front(self):
+        return self.title if len(self.title) < 20 else self.title[:20] + "..."
+    
+    def get_price_for_front(self):
+
+        from my_house_in_japan.inventory.utils import convert_price_string, convert_yen_to_usd
+        return convert_yen_to_usd(convert_price_string(self.price))
+    
+    def property_has_any_image(self):
+        return self.images.exists()
+    
+    def get_ordered_images(self):
+        return self.images.order_by('first_image', '-id')
+    
+
+class PropertyImage(models.Model):
+    property = models.ForeignKey(Property, related_name='images', on_delete=models.CASCADE, null=True)
+    file = models.FileField(upload_to="property_images/", max_length=254, null=True, blank=True)
+    show_in_front = models.BooleanField(default=True)
+    first_image = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = "Property Image"
+        verbose_name_plural = "Property Images"
+        
+    def __str__(self):
+        return f"{self.property.title} - Image"
+    
+

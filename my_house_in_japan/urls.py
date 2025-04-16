@@ -1,8 +1,14 @@
 from django.contrib import admin
-from my_house_in_japan.front.views import display_home
-from django.urls import path
+from my_house_in_japan.front import views as front_views
+from my_house_in_japan.membership import views as membership_views
+from django.urls import path, include
 
 urlpatterns = [
-    path("", display_home, name="home"),
+    path("", front_views.display_home, name="home"),
+    path("p/<int:pk>/", front_views.property_detail, name="property_detail"),
+    path("api/send-booking-confirmation", front_views.send_booking_confirmation, name="send_booking_confirmation"),
+    path('authenticate/<int:pk>/', membership_views.show_authenticate_page, name='authenticate'),
     path("admin/", admin.site.urls),
+    path('accounts/', include('allauth.urls')),
+    path('contact-seller/<int:pk>/', front_views.contact_seller, name='contact_seller')
 ]

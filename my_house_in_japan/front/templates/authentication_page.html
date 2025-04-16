@@ -1,0 +1,182 @@
+{% load socialaccount %}
+
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My House in Japan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
+</head>
+
+<body>
+  <div class="flex flex-col lg:flex-row min-h-screen">
+    <!-- Sidebar -->
+    <aside class="lg:w-64 bg-neutral-light border-r border-accent/30 p-5 flex flex-col">
+      <div class="mb-8">
+        <h1 class="font-serif text-xl text-primary mb-1">My House in Japan</h1>
+      </div>
+      
+      <nav class="space-y-6 mb-auto">
+        <a href="/" class="flex items-center space-x-3 text-primary group">
+          <div class="w-6 h-6 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+          </div>
+          <span class="transition-all group-hover:translate-x-1">Back to Listing</span>
+        </a>
+        
+      </nav>
+      
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="flex-1 p-6 lg:p-10 bg-neutral-light">
+      <div class="max-w-4xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-3xl font-serif font-light text-primary">Register and access to the Property details</h1>
+            <div class="flex items-center space-x-2">
+              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+        </header>
+
+        <!-- Booking Form -->
+
+        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
+            <div class="p-6 border-b border-accent/20">
+              <h2 class="font-serif text-xl text-primary mb-1">Create an Account</h2>
+              <p class="text-secondary text-sm">
+                    <!-- TODO -->
+              </p>
+            </div>
+        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
+          <div class="p-6 border-b border-accent/20">
+            <h2 class="font-serif text-xl text-primary mb-1">Or Register with</h2><br>
+            <p class="text-secondary text-sm">
+                <a href="{% provider_login_url 'google' %}"
+                class="btn btn-light "
+                style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google Logo" width="32" height="32">
+
+                </a>
+            </p>
+          </div>
+          
+    
+          
+
+        </div>
+          
+      </div>
+    </main>
+  </div>
+
+  <script src="{% static 'assets/js/property_detail.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const downloadBtn = document.getElementById('download-zip-btn');
+      
+      downloadBtn.addEventListener('click', async function() {
+        try {
+          // Show loading state
+          const originalText = downloadBtn.innerHTML;
+          downloadBtn.innerHTML = '<span class="animate-pulse">Creating ZIP...</span>';
+          
+          // Create a new zip file
+          const zip = new JSZip();
+          
+          // Add the HTML file
+          const htmlContent = document.documentElement.outerHTML;
+          zip.file("booking-page.html", htmlContent);
+          
+          // Fetch and add the CSS file
+          const cssResponse = await fetch("styles.css");
+          const cssContent = await cssResponse.text();
+          zip.file("styles.css", cssContent);
+          
+          // Fetch and add the JavaScript file
+          const jsResponse = await fetch("script.js");
+          const jsContent = await jsResponse.text();
+          zip.file("script.js", jsContent);
+          
+          // Add README file
+          const readmeContent = 
+`# Japanese-Inspired Garden Booking Page
+
+This is a standalone implementation of a Japanese-inspired garden consultation booking page. The design features a minimalist, zen-like aesthetic with a clean user interface for booking consultations.
+
+## Features
+
+- Calendar date picker for selecting consultation dates
+- Time slot selection for choosing appointment times
+- Garden preview section showing potential garden elements
+- Achievement tracking for user progress
+- Success confirmation message after booking is complete
+- Responsive design for mobile, tablet, and desktop
+
+## How to Use
+
+1. Place all files in the same folder
+2. Open booking-page.html in your web browser
+3. No server setup required - works completely client-side
+`;
+          zip.file("README.md", readmeContent);
+          
+          // Generate the zip file
+          const zipBlob = await zip.generateAsync({type: "blob"});
+          
+          // Save the zip file
+          saveAs(zipBlob, "zen-garden-booking.zip");
+          
+          // Reset button state
+          downloadBtn.innerHTML = originalText;
+        } catch (error) {
+          console.error("Error creating ZIP file:", error);
+          downloadBtn.innerHTML = "Download Failed";
+          setTimeout(() => {
+            downloadBtn.innerHTML = originalText;
+          }, 2000);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
+
+
+
+Yeah!
+
+
+Register Here:
+
+or Use your Google Account:
+
+<a href="{% provider_login_url 'google' %}"
+class="btn btn-light d-flex align-items-center gap-3 py-3 px-4 border rounded-pill shadow-lg"
+style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
+<img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+    alt="Google Logo" width="32" height="32">
+
+<span style="font-weight: bold;">Sign up</span>

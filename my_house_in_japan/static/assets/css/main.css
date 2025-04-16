@@ -1636,10 +1636,10 @@ input, select, textarea {
 				background-position: center;
 				background-repeat: no-repeat;
 				background-size: cover;
-				border: 0;
 				height: 100%;
 				left: 0;
 				position: absolute;
+				border: 6px solid #242629;
 				top: 0;
 				width: 100%;
 			}

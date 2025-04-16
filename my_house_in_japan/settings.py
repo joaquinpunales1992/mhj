@@ -25,19 +25,32 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "django_social_share",
+    "allauth",
+    "allauth.account",
+    "allauth.socialaccount",
+    "allauth.socialaccount.providers.google",
     "my_house_in_japan.front",
     "my_house_in_japan.scrapper",
     "my_house_in_japan.inventory",
+]
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.contrib.sites.middleware.CurrentSiteMiddleware",
 ]
 
 ROOT_URLCONF = "my_house_in_japan.urls"
@@ -84,6 +97,14 @@ AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",},
 ]
 
+# EMAIL SETTINGS
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp-relay.sendinblue.com"
+EMAIL_PORT = 587
+EMAIL_HOST_USER = "joaquinpunales@gmail.com"
+EMAIL_HOST_PASSWORD = "Daksj8AbWTScGQ7R"
+EMAIL_USE_TLS = True
+DEFAULT_FROM_EMAIL = "joaquinpunales@gmail.com"
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
@@ -95,6 +116,31 @@ TIME_ZONE = "UTC"
 USE_I18N = True
 
 USE_TZ = True
+
+# Django All Auth
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': '995115111049-vj4c5dc4j07b657edr10r6lq18k9r1av.apps.googleusercontent.com',
+            'secret': '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',
+            'key': ''
+        }
+    }
+}
+
+ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'email'
+ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_UNIQUE_EMAIL = True
+ACCOUNT_USERNAME_REQUIRED = False
+ACCOUNT_USER_MODEL_USERNAME_FIELD = None
+SOCIALACCOUNT_LOGIN_ON_GET = True
+ACCOUNT_LOGOUT_ON_GET = True
+SOCIALACCOUNT_STORE_TOKENS = False
+LOGIN_REDIRECT_URL = "/"
+
+LOGIN_URL= "/accounts/login/"
 
 
 # Static files (CSS, JavaScript, Images)
