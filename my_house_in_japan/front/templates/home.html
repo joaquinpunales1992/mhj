@@ -47,8 +47,8 @@
 										height: 200%;
 									">
 
-									<!-- Filler or top content if needed -->
-									<div style="flex-grow: 1;"></div>
+									<!-- Filler or top content if needed
+									<div style="flex-grow: 1;"></div> -->
 
 									<!-- Bottom-aligned row -->
 									<div style="
@@ -60,7 +60,7 @@
 										<!-- Info on the left -->
 										<div>
 											{% if property.title %}<h2 style="margin: 0;">{{ property.get_title_for_front }}</h2>{% endif %}
-											{% if property.price %}<p style="margin: 0;"><strong>$:</strong> {{ property.get_price_for_front }}</p>{% endif %}
+											{% if property.price %}<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }} - {{ property.price }}</p>{% endif %}
 											{% if property.location %} <p style="margin: 0;">📍 {{ property.location }}{% endif %}
 							
 										</div>

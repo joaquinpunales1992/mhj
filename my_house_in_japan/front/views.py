@@ -26,8 +26,8 @@ def send_booking_confirmation(request):
     if request.method == 'POST':
 
         send_mail(
-            'Booking Confirmation',
-            f'Your booking is confirmed.',
+            'Your House in Japan',
+            f'Hi, we have received your inquiry about a property. We will get back to you soon.',
             'noreply@myhouseinjapan.com',
             ['joaquinpunales@gmail.com'],  
         )

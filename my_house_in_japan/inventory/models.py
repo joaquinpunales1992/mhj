@@ -1,4 +1,6 @@
 from django.db import models
+from my_house_in_japan.inventory.utils import convert_price_string, convert_yen_to_usd
+
 
 
 class Property(models.Model):
@@ -39,9 +41,8 @@ class Property(models.Model):
     def get_title_for_front(self):
         return self.title if len(self.title) < 20 else self.title[:20] + "..."
     
+    @property
     def get_price_for_front(self):
-
-        from my_house_in_japan.inventory.utils import convert_price_string, convert_yen_to_usd
         return convert_yen_to_usd(convert_price_string(self.price))
     
     def property_has_any_image(self):

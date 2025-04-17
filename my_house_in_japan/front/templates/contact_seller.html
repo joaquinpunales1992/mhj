@@ -219,11 +219,13 @@ footer a:hover {
 }
 
 .carousel-control.prev {
-    left: 15px;
+  left: 15px !important;
+  right: auto !important;
 }
 
 .carousel-control.next {
-    right: 15px;
+    right: 15px !important;
+    left: auto !important;
 }
 
 /* Indicators */
@@ -231,7 +233,6 @@ footer a:hover {
     position: absolute;
     bottom: 15px;
     left: 50%;
-    transform: translateX(-50%);
     display: flex;
     gap: 10px;
     z-index: 10;
@@ -731,7 +732,7 @@ class ImageCarousel {
 
   </script>
 
-  <style>
+  <!-- <style>
     /* Carousel */
 
 	.carousel {
@@ -848,7 +849,7 @@ class ImageCarousel {
 			.carousel article p {
 				text-align: center;
 			}
-  </style>
+  </style> -->
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
@@ -942,7 +943,7 @@ class ImageCarousel {
           <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
             <div class="flex-1">
               <p class="text-xll text-gray-500">Price</p>
-              <p class="text-xll font-semibold">{{ property.price }}</p>
+              <p class="text-xll font-semibold">{{ property.get_price_for_front }}</p>
             </div>
             <div class="flex-1">
               <p class="text-xll text-gray-500">Location</p>
@@ -1039,8 +1040,8 @@ class ImageCarousel {
           <br>
           <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
             <div class="p-6 border-b border-accent/20">
-              <h2 class="font-serif text-xxl text-primary mb-1">Contact the seller for this property</h2>
-              <p class="text-xxl">We'll make the arrangement to connect you and the seller</p>
+              <h2 class="font-serif text-xxl text-primary mb-1">Connect with the seller</h2>
+              <p class="text-xxl">We’ll take care of connecting you with the seller</p>
             </div>            
             
             <!-- Book Button -->
@@ -1048,7 +1049,7 @@ class ImageCarousel {
               <button
                 id="book-button"
                 class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors"
-              > I'm intereted in this property
+              > I'm Interested in This Property
               </button>
             </div>
 

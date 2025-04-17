@@ -23,7 +23,8 @@ def get_listing_urls():
     page_number = 1
 
     while keep_looking:
-        url = f"https://www.homes.co.jp/kodate/chuko/tokyo/list/?page={page_number}"
+        url = f"https://toushi.homes.co.jp/bukkensearch/?page={page_number}"
+        # url = f"https://www.homes.co.jp/kodate/chuko/tokyo/list/?page={page_number}"
 
         response = requests.get(url, headers=headers)
 
