@@ -1,5 +1,5 @@
 from django.db import models
-from my_house_in_japan.inventory.utils import convert_price_string, convert_yen_to_usd
+from inventory.utils import convert_price_string, convert_yen_to_usd
 
 
 

@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from my_house_in_japan.inventory.models import Property
+from inventory.models import Property
 
 def display_home(request):
     """

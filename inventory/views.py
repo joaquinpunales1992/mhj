@@ -1,8 +1,8 @@
-from my_house_in_japan.scrapper.scrapper import get_properties
+from scrapper.scrapper import get_properties
 
 
 def import_property():
-    from my_house_in_japan.inventory.models import Property, PropertyImage
+    from inventory.models import Property, PropertyImage
 
     properties_list = get_properties()
     for property_dict in properties_list:

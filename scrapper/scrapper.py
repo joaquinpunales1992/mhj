@@ -8,7 +8,7 @@ import os
 import sys
 import chardet
 from deep_translator import GoogleTranslator
-from my_house_in_japan.inventory.models import Property, PropertyImage
+from inventory.models import Property, PropertyImage
 
 
 MAX_PAGE = 10

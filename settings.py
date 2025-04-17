@@ -14,6 +14,7 @@ SECRET_KEY = "django-insecure-wl@vypt@4fcmd!9ix!ez=9**e=+^o8cqley39pziipsq6@ouu6
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    "127.0.0.1",
     "myhouseinjapan.simplifiedbites.com",
     "www.myhouseinjapan.simplifiedbites.com"
 ]
@@ -33,9 +34,9 @@ INSTALLED_APPS = [
     "allauth.account",
     "allauth.socialaccount",
     "allauth.socialaccount.providers.google",
-    "my_house_in_japan.front",
-    "my_house_in_japan.scrapper",
-    "my_house_in_japan.inventory",
+    "front",
+    "scrapper",
+    "inventory",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -54,7 +55,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-ROOT_URLCONF = "my_house_in_japan.urls"
+ROOT_URLCONF = "urls"
 
 TEMPLATES = [
     {
@@ -72,7 +73,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "my_house_in_japan.wsgi.application"
+WSGI_APPLICATION = "wsgi.application"
 
 
 # Database
@@ -122,8 +123,8 @@ USE_TZ = True
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': '995115111049-vj4c5dc4j07b657edr10r6lq18k9r1av.apps.googleusercontent.com',
-            'secret': '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',
+            'client_id': '',
+            'secret': '',
             'key': ''
         }
     }

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from my_house_in_japan.inventory.models import Property, PropertyImage
+from inventory.models import Property, PropertyImage
 from django.db import models
 
 
