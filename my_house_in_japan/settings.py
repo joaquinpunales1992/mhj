@@ -13,7 +13,10 @@ SECRET_KEY = "django-insecure-wl@vypt@4fcmd!9ix!ez=9**e=+^o8cqley39pziipsq6@ouu6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    "myhouseinjapan.simplifiedbites.com",
+    "www.myhouseinjapan.simplifiedbites.com"
+]
 
 
 # Application definition
@@ -44,13 +47,11 @@ MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.contrib.sites.middleware.CurrentSiteMiddleware",
 ]
 
 ROOT_URLCONF = "my_house_in_japan.urls"
@@ -128,6 +129,7 @@ SOCIALACCOUNT_PROVIDERS = {
     }
 }
 
+# SOCIALACCOUNT_ADAPTER = "flow.adapter.MySocialAccountAdapter"
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
