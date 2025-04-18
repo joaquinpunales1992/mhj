@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_social_share",
+    "compressor",
     "allauth",
     "allauth.account",
     "allauth.socialaccount",
@@ -123,8 +124,8 @@ USE_TZ = True
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': '',
-            'secret': '',
+            'client_id': '995115111049-vj4c5dc4j07b657edr10r6lq18k9r1av.apps.googleusercontent.com',
+            'secret': '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',
             'key': ''
         }
     }
@@ -151,10 +152,10 @@ LOGIN_URL= "/accounts/login/"
 
 STATIC_URL = "static/"
 STATICFILES_DIRS = [
-    BASE_DIR / "my_house_in_japan/static/",
+    BASE_DIR / "myhouseinjapan/static/",
 ]
 
-STATIC_ROOT = BASE_DIR / "my_house_in_japan/STATIC_ROOT"
+STATIC_ROOT = BASE_DIR / "myhouseinjapan/STATIC_ROOT"
 
 COMPRESS_ROOT = STATIC_ROOT
 STATICFILES_FINDERS = [
