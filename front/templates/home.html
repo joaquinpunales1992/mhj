@@ -1,4 +1,4 @@
-{% load static %}
+{% load static compress %}
 
 <!DOCTYPE HTML>
 <html>
@@ -6,7 +6,9 @@
 		<title>My House in Japan</title>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-		<link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
+		{% compress css %}
+			<link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
+		{% endcompress %}
 		<noscript><link rel="stylesheet" href="{% static 'assets/css/noscript.css' %}" /></noscript>
 	</head>
 	<body class="is-preload">
@@ -29,12 +31,16 @@
 						{% for property in properties %}
 							{% if property.property_has_any_image %}
 								<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
-									{% for image in property.get_ordered_images %}
-										{% if image.show_in_front %}
-												{{ image.file }}
-											<a href="{{ image.file }}" class="image"><img src="{{ image.file }}" alt="" /></a>
+									
+									{% with property.get_ordered_images.first as first_image %}
+										{% if first_image.show_in_front %}
+											<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}"/></a>
 										{% endif %}
-									{% endfor %}
+									{% endwith %}
+									<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
+									<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
+
+									
 									<div class="details-box" style="
 										padding: 1rem 1.5rem;
 										border-radius: 8px;
@@ -46,10 +52,6 @@
 										justify-content: space-between;
 										height: 200%;
 									">
-
-									<!-- Filler or top content if needed
-									<div style="flex-grow: 1;"></div> -->
-
 									<!-- Bottom-aligned row -->
 									<div style="
 										display: flex;
@@ -60,8 +62,8 @@
 										<!-- Info on the left -->
 										<div>
 											{% if property.title %}<h2 style="margin: 0;">{{ property.get_title_for_front }}</h2>{% endif %}
-											{% if property.price %}<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }} - {{ property.price }}</p>{% endif %}
-											{% if property.location %} <p style="margin: 0;">📍 {{ property.location }}{% endif %}
+											{% if property.price %}<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>{% endif %}
+											{% if property.location %} <p style="margin: 0;">📍 {{ property.get_location_for_front }}{% endif %}
 							
 										</div>
 

@@ -215,6 +215,9 @@
 				var	$this = $(this),
 					$image = $this.find('.image'), $image_img = $image.children('img'),
 					x;
+					var $propertyLocation = $this.find('#property-location').text().trim();
+					var $propertyPrice = $this.find('#property-price').text().trim();
+
 
 				// No image? Bail.
 					if ($image.length == 0)
@@ -226,6 +229,20 @@
 
 					// Set background.
 						$image.css('background-image', 'url(' + $image_img.attr('src') + ')');
+						// Add text overlay.
+						var $textOverlay = $('<div class="text-overlay">' + $propertyLocation + ' - ' + $propertyPrice +'</div>');
+						$image.append($textOverlay);
+						$textOverlay.css({
+							position: 'absolute',
+							bottom: '10px',
+							left: '10px',
+							color: '#fff',
+							background: 'rgba(0, 0, 0, 0.5)',
+							padding: '5px',
+							'border-radius': '5px',
+							'font-size': '14px'
+						});
+						
 
 					// Set background position.
 						if (x = $image_img.data('position'))

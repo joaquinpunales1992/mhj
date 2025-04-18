@@ -12,3 +12,11 @@ def convert_price_string(price_str):
     
 def convert_yen_to_usd(price):
     return locale.currency(price * 0.007, grouping=True)
+
+def infer_location(location):
+    if "tokyo" in location.lower():
+        return "Tokyo"
+    elif "osaka" in location.lower():
+        return "Osaka"
+    else:
+        return location

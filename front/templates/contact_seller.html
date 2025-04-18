@@ -880,9 +880,10 @@ class ImageCarousel {
               headers: {
                   'Content-Type': 'application/json'
               },
-              data: {
-                'url': property_url              
-              }
+              body: JSON.stringify({
+                'url': property_url,
+                'user_email': '{{ request.user.email }}',
+              })
           })
           .then(response => {
               if (!response.ok) {

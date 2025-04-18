@@ -1,5 +1,5 @@
 from django.db import models
-from inventory.utils import convert_price_string, convert_yen_to_usd
+from inventory.utils import convert_price_string, convert_yen_to_usd, infer_location
 
 
 
@@ -50,6 +50,9 @@ class Property(models.Model):
     
     def get_ordered_images(self):
         return self.images.order_by('first_image', '-id')
+    
+    def get_location_for_front(self):
+        return infer_location(self.location)
     
 
 class PropertyImage(models.Model):
