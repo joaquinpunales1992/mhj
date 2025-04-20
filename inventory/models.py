@@ -6,7 +6,7 @@ from inventory.utils import convert_price_string, convert_yen_to_usd, infer_loca
 class Property(models.Model):
     url = models.URLField(max_length=255, default="")
     title = models.CharField(max_length=255)
-    price = models.CharField(max_length=255)
+    price = models.IntegerField(default=0)
     building_area = models.CharField(max_length=255)
     land_area = models.CharField(max_length=255)
     parking = models.CharField(max_length=255)

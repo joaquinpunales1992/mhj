@@ -1,17 +1,15 @@
 import locale
 locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
 
-def convert_price_string(price_str):
+def convert_price_string(price):
     try:
-        # Remove whitespace and commas
-        numeric_part = price_str.strip().replace(',', '')
         # Convert to int and multiply by 10,000
-        return int(numeric_part) * 10000
+        return int(price) * 10000
     except (ValueError, AttributeError):
-        raise ValueError(f"Invalid price string: {price_str}")
+        raise ValueError(f"Invalid price: {price}")
     
 def convert_yen_to_usd(price):
-    return locale.currency(price * 0.007, grouping=True).split('.')[0]
+    return locale.currency(float(price) * 0.007, grouping=True)
 
 def infer_location(location):
     if "tokyo" in location.lower():

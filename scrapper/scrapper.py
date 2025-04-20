@@ -177,7 +177,7 @@ def persist_property(property_data: dict):
             property.current_status=property_data['current_status']
             property.handover=property_data['handover']
             property.transaction_type=property_data['transaction_type']
-            property.price=property_data['property_price']
+            property.price= int(property_data['property_price'].replace(',', ''))
             property.floor_plan=property_data['floor_plan']
             property.building_area=property_data['building_area']
             property.land_area=property_data['land_area']
