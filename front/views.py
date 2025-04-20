@@ -6,7 +6,9 @@ def display_home(request):
     View function to render the home page.
     """
 
-    properties = Property.objects.filter(show_in_front=True).order_by('price')
+    properties = Property.objects.filter(show_in_front=True).annotate(
+        price_as_float=Cast(F('price'), FloatField())
+    ).order_by('price_as_float')
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
@@ -22,6 +24,8 @@ from django.views.decorators.csrf import csrf_exempt
 import json
 from django.template.loader import render_to_string
 from django.utils.html import strip_tags
+from django.db.models import F, FloatField
+from django.db.models.functions import Cast
 
 @csrf_exempt
 def send_booking_confirmation(request):
