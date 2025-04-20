@@ -23,7 +23,7 @@ class Property(models.Model):
     handover = models.CharField(max_length=255, default="")
     transaction_type = models.CharField(max_length=255, default="")
     equipment = models.CharField(max_length=255, default="")
-    floor_plan = models.CharField(max_length=255)
+    floor_plan = models.CharField(max_length=500)
     location = models.CharField(max_length=255, default="")
     construction_date = models.CharField(max_length=255, default="")
     land_rights = models.CharField(max_length=255, default="")

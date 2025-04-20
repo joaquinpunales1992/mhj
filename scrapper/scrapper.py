@@ -13,7 +13,13 @@ from inventory.models import Property, PropertyImage
 
 MAX_PAGE = 10
 
-def get_listing_urls():
+def pull_specific_property(url: str):
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"
+    }
+    persist_property(property_data=get_listing_data(url=url))
+
+def pull_properties():
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"
     }
@@ -23,8 +29,9 @@ def get_listing_urls():
     page_number = 1
 
     while keep_looking:
+        url = f"https://www.homes.co.jp/kodate/chuko/shizuoka/list/?page={page_number}"
         # url = f"https://toushi.homes.co.jp/bukkensearch/?page={page_number}"
-        url = f"https://www.homes.co.jp/kodate/chuko/tokyo/list/?page={page_number}"
+        # url = f"https://www.homes.co.jp/kodate/chuko/tokyo/list/?page={page_number}"
 
         response = requests.get(url, headers=headers)
 
@@ -112,7 +119,7 @@ def get_listing_data(url):
         img_tags = ul_element.find_all('img')
         for img in img_tags:
             img_url = img.get('src')
-            if img_url.startswith('https://image.homes.jp/smallimg'):
+            if img_url.startswith('https://image') and 'homes.jp/smallimg' in img_url:
                 image_urls.append(img_url)
 
     # Add more fields as needed
@@ -188,5 +195,3 @@ def persist_property(property_data: dict):
     except Exception as e:
         print(f"Error saving property: {e}")
     
-
-get_listing_urls()
