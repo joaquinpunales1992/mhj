@@ -30,6 +30,7 @@ class Property(models.Model):
     description = models.TextField(default="") #remarks
     construction = models.CharField(max_length=255)
     show_in_front = models.BooleanField(default=True)
+    featured = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Property"

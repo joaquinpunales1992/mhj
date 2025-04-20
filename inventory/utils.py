@@ -9,7 +9,7 @@ def convert_price_string(price):
         raise ValueError(f"Invalid price: {price}")
     
 def convert_yen_to_usd(price):
-    return locale.currency(float(price) * 0.007, grouping=True)
+    return locale.currency(float(price) * 0.007, grouping=True).replace('.00', '')
 
 def infer_location(location):
     if "tokyo" in location.lower():
@@ -62,5 +62,37 @@ def infer_location(location):
         return "Shimane"
     elif 'tottori' in location.lower():
         return "Tottori"
+    elif "nagasaki" in location.lower():
+        return "Nagasaki"
+    elif "kumamoto" in location.lower():
+        return "Kumamoto"
+    elif "ehime" in location.lower():
+        return "Ehime"
+    elif "kagoshima" in location.lower():
+        return "Kagoshima"
+    elif "okinawa" in location.lower():
+        return "Okinawa"
+    elif "aomori" in location.lower():
+        return "Aomori"
+    elif "akita" in location.lower():
+        return "Akita"
+    elif "yamaguchi" in location.lower():
+        return "Yamaguchi"
+    elif "toyama" in location.lower():
+        return "Toyama"
+    elif "gifu" in location.lower():
+        return "Gifu"
+    elif "shizuoka" in location.lower():
+        return "Shizuoka"
+    elif "wakayama" in location.lower():
+        return "Wakayama"
+    elif "nara" in location.lower():
+        return "Nara"
+    elif "miyazaki" in location.lower():    
+        return "Miyazaki"
+    elif "kagawa" in location.lower():  
+        return "Kagawa"
+    elif "yamaguchi" in location.lower():
+        return "Yamaguchi"
     else:
         return location

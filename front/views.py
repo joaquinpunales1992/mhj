@@ -6,7 +6,7 @@ def display_home(request):
     View function to render the home page.
     """
 
-    properties = Property.objects.filter(show_in_front=True).order_by('price')
+    properties = Property.objects.filter(show_in_front=True).order_by('price', 'featured')
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
