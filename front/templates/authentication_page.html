@@ -66,7 +66,7 @@
             <p class="text-secondary text-sm">
               <form action="/register-via-email/{{ property_pk }}/" method="POST" class="flex items-center space-x-5">
                 {% csrf_token %}
-                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid" placeholder="Enter your email" required>
+                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid; color: black;" placeholder="Enter your email" required>
                 <button type="submit" class="primary">Register</button>
               </form>
             </p>
