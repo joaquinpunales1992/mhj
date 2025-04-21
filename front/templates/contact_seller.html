@@ -850,7 +850,7 @@ class ImageCarousel {
 				text-align: center;
 			}
   </style> -->
-
+  
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const bookButton = document.getElementById('book-button');
@@ -882,7 +882,7 @@ class ImageCarousel {
               },
               body: JSON.stringify({
                 'url': property_url,
-                'user_email': '{{ request.user.email }}',
+                'user_email': '{{ user_email }}',
               })
           })
           .then(response => {

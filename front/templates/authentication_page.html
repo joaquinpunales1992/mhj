@@ -11,6 +11,7 @@
   <title>My House in Japan</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
 </head>
 
 <body>
@@ -37,11 +38,11 @@
     
     <!-- Main Content -->
     <main class="flex-1 p-6 lg:p-10 bg-neutral-light">
-      <div class="max-w-4xl mx-auto">
+      <div class="max-w-8xl mx-auto">
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-serif font-light text-primary">Register and access to the Property details</h1>
+            <h1 class="text-3xl font-serif font-light text-primary">Register to access the property details</h1>
             <div class="flex items-center space-x-2">
               <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -59,22 +60,29 @@
         </header>
 
         <!-- Booking Form -->
-
         <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
           <div class="p-6 border-b border-accent/20">
+            <p class="text-secondary text-l">Register with your email</p>
+            <p class="text-secondary text-sm">
+              <form action="/register-via-email/{{ property_pk }}/" method="POST" class="flex items-center space-x-5">
+                {% csrf_token %}
+                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid" placeholder="Enter your email" required>
+                <button type="submit" class="primary">Register</button>
+              </form>
+            </p>
+          </div>
+          
+          <div class="p-6 border-b border-accent/20">
+            <p class="text-secondary text-l">or Register with you Google Account</p>
             <p class="text-secondary text-sm">
                 <a href="{% provider_login_url 'google' %}"
                 class="btn btn-light "
                 style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
                 <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
                     alt="Google Logo" width="32" height="32">
-
                 </a>
             </p>
           </div>
-          
-    
-          
 
         </div>
         </main>
@@ -112,25 +120,25 @@
           
           // Add README file
           const readmeContent = 
-`# Japanese-Inspired Garden Booking Page
+    `# Japanese-Inspired Garden Booking Page
 
-This is a standalone implementation of a Japanese-inspired garden consultation booking page. The design features a minimalist, zen-like aesthetic with a clean user interface for booking consultations.
+    This is a standalone implementation of a Japanese-inspired garden consultation booking page. The design features a minimalist, zen-like aesthetic with a clean user interface for booking consultations.
 
-## Features
+    ## Features
 
-- Calendar date picker for selecting consultation dates
-- Time slot selection for choosing appointment times
-- Garden preview section showing potential garden elements
-- Achievement tracking for user progress
-- Success confirmation message after booking is complete
-- Responsive design for mobile, tablet, and desktop
+    - Calendar date picker for selecting consultation dates
+    - Time slot selection for choosing appointment times
+    - Garden preview section showing potential garden elements
+    - Achievement tracking for user progress
+    - Success confirmation message after booking is complete
+    - Responsive design for mobile, tablet, and desktop
 
-## How to Use
+    ## How to Use
 
-1. Place all files in the same folder
-2. Open booking-page.html in your web browser
-3. No server setup required - works completely client-side
-`;
+    1. Place all files in the same folder
+    2. Open booking-page.html in your web browser
+    3. No server setup required - works completely client-side
+    `;
           zip.file("README.md", readmeContent);
           
           // Generate the zip file
