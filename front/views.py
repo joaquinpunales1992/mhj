@@ -1,13 +1,15 @@
+import json
 from django.shortcuts import render
 from inventory.models import Property
 from django.core.mail import EmailMessage
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.template.loader import render_to_string
+
 
 def display_home(request):
-    """
-    View function to render the home page.
-    """
 
-    properties = Property.objects.filter(show_in_front=True).order_by('price', 'featured')
+    properties = Property.objects.filter(show_in_front=True).order_by('featured', 'price')
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
@@ -17,13 +19,7 @@ def property_detail(request, pk):
 
     return render(request, 'property_detail.html', context={'property': property})
 
-from django.core.mail import send_mail
-from django.http import JsonResponse
-from django.views.decorators.csrf import csrf_exempt
-import json
-from django.template.loader import render_to_string
-from django.utils.html import strip_tags
-from django.http import Http404
+
 
 @csrf_exempt
 def send_booking_confirmation(request):
@@ -58,7 +54,7 @@ def send_booking_confirmation(request):
 def contact_seller(request, pk):
     property = Property.objects.filter(pk=pk).first()
     user_email = None
-    
+
     try:
         if getattr(request.user, 'email', None) is not None:
             user_email = request.user.email
