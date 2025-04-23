@@ -9,7 +9,7 @@ from django.template.loader import render_to_string
 
 def display_home(request):
 
-    properties = Property.objects.filter(show_in_front=True).order_by('-featured', 'price')[:90]
+    properties = Property.objects.filter(show_in_front=True).order_by('-featured', 'price')#[:90]
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
