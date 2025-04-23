@@ -2,9 +2,11 @@ from django.contrib import admin
 from front import views as front_views
 from membership import views as membership_views
 from django.urls import path, include
+from django.views.generic import TemplateView
 
 urlpatterns = [
     path("", front_views.display_home, name="home"),
+    path("sitemap.xml", TemplateView.as_view(template_name="sitemap.xml", content_type="application/xml"), name="sitemap"),
     path("p/<int:pk>/", front_views.property_detail, name="property_detail"),
     path("api/send-booking-confirmation", front_views.send_booking_confirmation, name="send_booking_confirmation"),
     path('authenticate/<int:pk>/', membership_views.show_authenticate_page, name='authenticate'),
