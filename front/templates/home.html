@@ -40,9 +40,25 @@
 						<h1><strong>My Akiya in Japan</strong></h1>
 						<nav>
 							<ul>
-								<li><a href="#purchasing-process" class="icon solid fa-home">How to Buy?</a></li>
-								<li><a href="#faqs" class="icon solid fa-question-circle">FAQs</a></li>
-								<li><a href="#about" class="icon solid fa-info-circle">About</a></li>
+								<li class="responsive-icon">
+									<a href="#purchasing-process" class="icon solid fa-home"><span class="responsive-text">How to Buy?</span></a>
+								</li>
+								<li class="responsive-icon">
+									<a href="#faqs" class="icon solid fa-question-circle"><span class="responsive-text">FAQs</span></a>
+									
+								</li>
+								<li class="responsive-icon">
+									<a href="#about" class="icon solid fa-info-circle"><span class="responsive-text">About</span></a>
+								</li>
+
+								<style>
+									@media (max-width: 768px) {
+										.responsive-icon .responsive-text {
+											visibility: hidden;
+											display: none;
+										}
+									}
+								</style>
 							</ul>
 						</nav>
 					</header>
