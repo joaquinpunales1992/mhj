@@ -952,19 +952,22 @@ class ImageCarousel {
           <!-- Top Row: Main Property Info -->
           <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
             <div class="flex-1">
-              <p class="text-xll text-gray-500">Price</p>
+              <p class="text-xll text-gray-500"><strong>Price</strong></p>
               <p class="text-xll font-semibold">{{ property.get_price_for_front }}</p>
+              <hr>
             </div>
             <div class="flex-1">
-              <p class="text-xll text-gray-500">Location</p>
+              <p class="text-xll text-gray-500"><strong>Location</strong></p>
               <p class="text-xll">{{ property.location }}</p>
+              <hr>
             </div>
             <div class="flex-1">
-              <p class="text-xll text-gray-500">Building Area</p>
+              <p class="text-xll text-gray-500"><strong>Building Area</strong></p>
               <p class="text-xll">{{ property.building_area }}</p>
+              <hr>
             </div>
             <div class="flex-1">
-              <p class="text-xll text-gray-500">Land Area</p>
+              <p class="text-xll text-gray-500"><strong>Land Area</strong></p>
               <p class="text-xll">{{ property.land_area }} </p>
             </div>
           </div>
