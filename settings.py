@@ -15,6 +15,8 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     "127.0.0.1",
+    "www.akiyainjapan.com",
+    "akiyainjapan.com",
     "myhouseinjapan.simplifiedbites.com",
     "www.myhouseinjapan.simplifiedbites.com"
 ]
@@ -124,14 +126,14 @@ USE_TZ = True
 SOCIALACCOUNT_PROVIDERS = {
     'google': {
         'APP': {
-            'client_id': '995115111049-vj4c5dc4j07b657edr10r6lq18k9r1av.apps.googleusercontent.com',
-            'secret': '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',
+            'client_id': '',
+            'secret': '',
             'key': ''
         }
     }
 }
 
-# SOCIALACCOUNT_ADAPTER = "flow.adapter.MySocialAccountAdapter"
+SOCIALACCOUNT_ADAPTER = "membership.adapter.SocialAccountAdapter"
 ACCOUNT_LOGOUT_REDIRECT_URL = '/'
 ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = 'email'
@@ -155,7 +157,7 @@ STATICFILES_DIRS = [
     BASE_DIR / "myhouseinjapan/static/",
 ]
 
-STATIC_ROOT = BASE_DIR / "myhouseinjapan/STATIC_ROOT"
+STATIC_ROOT = BASE_DIR / "my_house_in_japan/static"
 
 COMPRESS_ROOT = STATIC_ROOT
 STATICFILES_FINDERS = [
