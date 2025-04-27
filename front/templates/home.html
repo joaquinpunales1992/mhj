@@ -87,12 +87,19 @@
 								<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
 									
 									{% with property.get_ordered_images.first as first_image %}
-										{% if first_image.show_in_front %}
-											<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}"/></a>
+										{% if property.premium %}
+											<a href="{% static 'images/premium_placeholder.png' %}" class="image"><img src="{% static 'images/premium_placeholder.png' %}" alt="This is a premium property"/></a>
+											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
+											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
+										{% else %}
+											{% if first_image.show_in_front %}
+												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}"/></a>
+											{% endif %}
+											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
+											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
 										{% endif %}
 									{% endwith %}
-									<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
-									<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
+									
 
 									
 									<div class="details-box" style="
@@ -116,20 +123,27 @@
 										">
 											<!-- Info on the left -->
 											<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
-												{% if property.location %}
-													<p style="margin: 0;">📍 {{ property.get_location_for_front }}</p>
-												{% endif %}
-												{% if property.price %}
-													<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
-												{% endif %}
-												{% if user.is_authenticated or request.COOKIES.email %}
-													<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk %}'">
-														<span class="lock-icon"></span> Contact the Seller
+												{% if property.premium %}
+													<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
+														<span class="lock-icon">🔒</span> Upgrade to Connect
 													</button>
+
 												{% else %}
-													<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk %}'">
-														<span class="lock-icon">🔒</span> Log In to Connect
-													</button>
+													{% if property.location %}
+														<p style="margin: 0;">📍 {{ property.get_location_for_front }}</p>
+													{% endif %}
+													{% if property.price %}
+														<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
+													{% endif %}
+													{% if user.is_authenticated or request.COOKIES.email %}
+														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk %}'">
+															<span class="lock-icon"></span> Contact the Seller
+														</button>
+													{% else %}
+														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk %}'">
+															<span class="lock-icon">🔒</span> Log In to Contact
+														</button>
+													{% endif %}
 												{% endif %}
 											</div>
 										</div>

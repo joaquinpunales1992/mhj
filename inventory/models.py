@@ -31,6 +31,7 @@ class Property(models.Model):
     construction = models.CharField(max_length=255)
     show_in_front = models.BooleanField(default=True)
     featured = models.BooleanField(default=False)
+    premium = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Property"

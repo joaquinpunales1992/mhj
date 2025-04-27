@@ -2,6 +2,9 @@ from django.shortcuts import render, redirect
 from django.urls import reverse
 
 
+def upgrade_premium(request):
+    return render(request, 'premium_account.html')
+
 def show_authenticate_page(request, pk):
     return render(request, 'authentication_page.html', context={'property_pk': pk})
 

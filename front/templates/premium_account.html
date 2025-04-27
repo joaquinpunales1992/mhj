@@ -1,0 +1,193 @@
+{% load socialaccount %}
+
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Akiya in Japan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
+  <script src="https://www.paypal.com/sdk/js?client-id=AZTP_cn7ajpK-tSRt1MGdC15_FNPQNR3eLevMMGNF16gCB8xdeEUg_H7CFfkRdF-wGuzTZGYjWJTwOeq&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+  <script src="{% static 'assets/js/jquery.min.js' %}"></script>
+  <script>
+    $(document).ready(function() {
+      paypal.Buttons({
+            style: {
+                shape: 'pill',
+                color: 'gold',
+                layout: 'horizontal',
+                label: 'subscribe'
+            },
+            createSubscription: function(data, actions) {
+              return actions.subscription.create({
+                /* Creates the subscription */
+                plan_id: 'P-9YA60071BE678631YM3PYQOQ'
+              });
+            },
+            onApprove: function(data, actions) {
+              alert(data.subscriptionID); 
+            }
+        }).render('#paypal-button-container-P-9YA60071BE678631YM3PYQOQ'); 
+    });
+        
+    </script>
+</head>
+
+<body>
+  <div class="flex flex-col lg:flex-row min-h-screen">
+    <!-- Sidebar -->
+    <aside class="lg:w-64 bg-neutral-light border-r border-accent/30 p-5 flex flex-col">
+      <div class="mb-8">
+        <h1 class="font-serif text-xl text-primary mb-1">My Akiya in Japan</h1>
+      </div>
+      
+      <nav class="space-y-6 mb-auto">
+        <a href="/" class="flex items-center space-x-3 text-primary group">
+          <div class="w-6 h-6 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>
+          </div>
+          <span class="transition-all group-hover:translate-x-1">Back to Listing</span>
+        </a>
+        
+      </nav>
+      
+    </aside>
+    
+    <!-- Main Content -->
+    <main class="flex-1 p-6 lg:p-10 bg-neutral-light">
+      <div class="max-w-8xl mx-auto">
+        <!-- Header -->
+        <header class="mb-12">
+          <div class="flex items-center justify-between mb-6">
+            <h1 class="text-3xl font-serif font-light text-primary">Upgrade to Premium</h1>
+          </div>
+        </header>
+
+        <section class="mb-12">
+          <h2 class="text-4xl font-serif text-primary mb-4">Premium Account Features</h2>
+          <ul class="list-disc pl-6 text-secondary">
+            <li>Access to exclusive property listings not available to free users</li>
+            <li>Priority customer support for faster assistance</li>
+            <li>Detailed property reports with historical data and trends</li>
+            <li>Early access to new features and updates</li>
+            <li>Ad-free browsing experience</li>
+            <li>Downloadable property documents and resources</li>
+          </ul>
+        </section>
+
+        {% if user.is_authenticated or request.COOKIES.email %}
+        <div class="panel-footer">
+            <div id="paypal-button-container-P-9YA60071BE678631YM3PYQOQ"></div>
+          </div>
+
+        {% else %}
+        <!-- Booking Form -->
+        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
+          <div class="p-6 border-b border-accent/20">
+            <p class="text-secondary text-l">Register with your email</p>
+            <p class="text-secondary text-sm">
+              <form action="/register-via-email/{{ property_pk }}/" method="POST" class="flex items-center space-x-5">
+                {% csrf_token %}
+                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid; color: black;" placeholder="Enter your email" required>
+                <button type="submit" class="primary">Register</button>
+              </form>
+            </p>
+          </div>
+          
+          <div class="p-6 border-b border-accent/20">
+            <p class="text-secondary text-l">or Register with your Google Account</p>
+            <p class="text-secondary text-sm">
+                <a href="{% provider_login_url 'google' %}"
+                class="btn btn-light "
+                style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
+                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
+                    alt="Google Logo" width="32" height="32">
+                </a>
+            </p>
+          </div>
+        </div>
+
+        {% endif %}
+
+        </main>
+  </div>
+
+  <script src="{% static 'assets/js/property_detail.js' %}"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const downloadBtn = document.getElementById('download-zip-btn');
+      
+      downloadBtn.addEventListener('click', async function() {
+        try {
+          // Show loading state
+          const originalText = downloadBtn.innerHTML;
+          downloadBtn.innerHTML = '<span class="animate-pulse">Creating ZIP...</span>';
+          
+          // Create a new zip file
+          const zip = new JSZip();
+          
+          // Add the HTML file
+          const htmlContent = document.documentElement.outerHTML;
+          zip.file("booking-page.html", htmlContent);
+          
+          // Fetch and add the CSS file
+          const cssResponse = await fetch("styles.css");
+          const cssContent = await cssResponse.text();
+          zip.file("styles.css", cssContent);
+          
+          // Fetch and add the JavaScript file
+          const jsResponse = await fetch("script.js");
+          const jsContent = await jsResponse.text();
+          zip.file("script.js", jsContent);
+          
+          // Add README file
+          const readmeContent = 
+    `# Japanese-Inspired Garden Booking Page
+
+    This is a standalone implementation of a Japanese-inspired garden consultation booking page. The design features a minimalist, zen-like aesthetic with a clean user interface for booking consultations.
+
+    ## Features
+
+    - Calendar date picker for selecting consultation dates
+    - Time slot selection for choosing appointment times
+    - Garden preview section showing potential garden elements
+    - Achievement tracking for user progress
+    - Success confirmation message after booking is complete
+    - Responsive design for mobile, tablet, and desktop
+
+    ## How to Use
+
+    1. Place all files in the same folder
+    2. Open booking-page.html in your web browser
+    3. No server setup required - works completely client-side
+    `;
+          zip.file("README.md", readmeContent);
+          
+          // Generate the zip file
+          const zipBlob = await zip.generateAsync({type: "blob"});
+          
+          // Save the zip file
+          saveAs(zipBlob, "zen-garden-booking.zip");
+          
+          // Reset button state
+          downloadBtn.innerHTML = originalText;
+        } catch (error) {
+          console.error("Error creating ZIP file:", error);
+          downloadBtn.innerHTML = "Download Failed";
+          setTimeout(() => {
+            downloadBtn.innerHTML = originalText;
+          }, 2000);
+        }
+      });
+    });
+  </script>
+</body>
+</html>
