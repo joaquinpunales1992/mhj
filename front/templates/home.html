@@ -100,15 +100,13 @@
 										{% endif %}
 									{% endwith %}
 									
-
-									
 									<div class="details-box" style="
 										padding: 1rem 1.5rem;
 										border-radius: 8px;
 										box-shadow: 0 2px 8px rgba(0,0,0,0.1);
 										background: rgba(0, 0, 0, 0.5);
 										min-width: 300px;
-										max-width: 100px;
+										max-width: 400px;
 										display: flex;
 										flex-direction: column;
 										justify-content: space-between;
@@ -124,10 +122,15 @@
 											<!-- Info on the left -->
 											<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
 												{% if property.premium %}
-													<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-														<span class="lock-icon">🔒</span> Upgrade to Connect
-													</button>
-
+													{% if user.is_authenticated or request.COOKIES.email %}
+														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
+															<span class="lock-icon">🔒</span> Upgrade to Connect
+														</button>
+													{% else %}
+														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 1 %}'">
+															<span class="lock-icon">🔒</span> Upgrade to Connect
+														</button>
+													{% endif %}
 												{% else %}
 													{% if property.location %}
 														<p style="margin: 0;">📍 {{ property.get_location_for_front }}</p>
@@ -140,7 +143,7 @@
 															<span class="lock-icon"></span> Contact the Seller
 														</button>
 													{% else %}
-														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk %}'">
+														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
 															<span class="lock-icon">🔒</span> Log In to Contact
 														</button>
 													{% endif %}

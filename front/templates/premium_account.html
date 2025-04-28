@@ -17,8 +17,8 @@
     $(document).ready(function() {
       paypal.Buttons({
             style: {
-                shape: 'pill',
-                color: 'gold',
+                shape: 'rect',
+                color: 'blue',
                 layout: 'horizontal',
                 label: 'subscribe'
             },
@@ -29,11 +29,25 @@
               });
             },
             onApprove: function(data, actions) {
-              alert(data.subscriptionID); 
+              $.ajax({
+                url: '/approved-membership-payment/',
+                method: 'POST',
+                data: {
+                  // username
+                  subscription_id: data.subscriptionID,
+                  csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(response) {
+                  console.log('Subscription successfully processed:', response);
+                },
+                error: function(error) {
+                  console.error('Error processing subscription:', error);
+                }
+              });
+              console.log('Subscription ID:', data.subscriptionID); 
             }
         }).render('#paypal-button-container-P-9YA60071BE678631YM3PYQOQ'); 
     });
-        
     </script>
 </head>
 
@@ -73,9 +87,7 @@
             <li>Access to exclusive property listings not available to free users</li>
             <li>Priority customer support for faster assistance</li>
             <li>Detailed property reports with historical data and trends</li>
-            <li>Early access to new features and updates</li>
             <li>Ad-free browsing experience</li>
-            <li>Downloadable property documents and resources</li>
           </ul>
         </section>
 
@@ -83,36 +95,7 @@
         <div class="panel-footer">
             <div id="paypal-button-container-P-9YA60071BE678631YM3PYQOQ"></div>
           </div>
-
-        {% else %}
-        <!-- Booking Form -->
-        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
-          <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">Register with your email</p>
-            <p class="text-secondary text-sm">
-              <form action="/register-via-email/{{ property_pk }}/" method="POST" class="flex items-center space-x-5">
-                {% csrf_token %}
-                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid; color: black;" placeholder="Enter your email" required>
-                <button type="submit" class="primary">Register</button>
-              </form>
-            </p>
-          </div>
-          
-          <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">or Register with your Google Account</p>
-            <p class="text-secondary text-sm">
-                <a href="{% provider_login_url 'google' %}"
-                class="btn btn-light "
-                style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                    alt="Google Logo" width="32" height="32">
-                </a>
-            </p>
-          </div>
-        </div>
-
         {% endif %}
-
         </main>
   </div>
 
