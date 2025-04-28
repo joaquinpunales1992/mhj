@@ -169,6 +169,7 @@ def persist_property(property_data: dict):
             property.building_structure=property_data['building_structure']
             property.road_condition=property_data['road_condition']
             property.setback=property_data['setback']
+            property.setback=property_data['setback']
             property.city_planning=property_data['city_planning']
             property.zoning=property_data['zoning']
             property.land_category=property_data['land_category']
@@ -183,6 +184,7 @@ def persist_property(property_data: dict):
             property.land_area=property_data['land_area']
             property.parking=property_data['parking']
             property.construction=property_data['building_age']
+            property.land_rights=property_data['land_rights']
         
             property.save()
 
