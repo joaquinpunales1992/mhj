@@ -12,6 +12,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
+  <script src="https://www.paypal.com/sdk/js?client-id=AZTP_cn7ajpK-tSRt1MGdC15_FNPQNR3eLevMMGNF16gCB8xdeEUg_H7CFfkRdF-wGuzTZGYjWJTwOeq&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+  <script src="{% static 'assets/js/jquery.min.js' %}"></script>
 </head>
 
 <body>
@@ -42,7 +44,7 @@
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-serif font-light text-primary">Register to access the property details</h1>
+            <h1 class="text-3xl font-serif font-light text-primary">Sign up free to view property details</h1>
             <div class="flex items-center space-x-2">
               <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -56,8 +58,19 @@
               </div>
             </div>
           </div>
-
         </header>
+
+        <section class="mb-12">
+          <h2 class="text-4xl font-serif text-primary mb-4">Free Features</h2>
+          <ul class="list-disc pl-6 text-secondary">
+            <li>Access a wide variety</li>
+            <li>Priority customer support for faster assistance</li>
+            <li>Detailed property reports with historical data and trends</li>
+            <li>Early access to new features and updates</li>
+            <li>Ad-free browsing experience</li>
+            <li>Downloadable property documents and resources</li>
+          </ul>
+        </section>
 
         <!-- Booking Form -->
         <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
@@ -83,7 +96,6 @@
                 </a>
             </p>
           </div>
-
         </div>
         </main>
   </div>
