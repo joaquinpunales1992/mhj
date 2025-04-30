@@ -7,10 +7,11 @@ PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO2vCNkVVR6kTZBgKmIS7gIChzRl4ZBA8KAFyp7xWupjW8c
 PAGE_ID = '612249001976104' 
 
 DOMAIN_CONTEXT = (
-    "Generate a facebook post caption for a website that sells houses in Japan for foreigners, "
-    "Create an engaging text for a property listing using the property location and price, "
-    "Limit the caption to 100 characters, "
-    "Kepp the response maximum 65 characters, "
+    "Generate a Facebook post caption for a website that sells houses in Japan for foreigners. "
+    "Use only the information provided, such as property location and price — do not assume any extra details. "
+    "Write an engaging caption to promote the property. "
+    "Keep the total caption under 100 characters. "
+    "Ensure the main descriptive part is no more than 65 characters. "
 )
 
 def load_llm_model(load_local_model=True):
@@ -87,14 +88,14 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
 
 
 from inventory.models import Property
-properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[23:33]
+properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[34:44]
 
 for property in properties_qs:
     try:
         post_to_facebook(
             property_image_url=property.images.first().file.url,
             property_location=property.location,
-            property_price=property.get_price_for_front(),
+            property_price=property.get_price_for_front,
             use_ai_caption=True
         )
     except Exception as e:
