@@ -15,12 +15,13 @@ DOMAIN_CONTEXT = (
 )
 
 def load_llm_model(load_local_model=True):
-    if load_local_model:
-        return Llama(model_path="social/qwen2-0_5b-instruct-q4_k_m.gguf") 
+    global llm_model
+    if load_local_model:  
+        llm_model = Llama(model_path="social/pretrained_llm_models/qwen2-0_5b-instruct-q4_k_m.gguf")
     else:
-        return Llama.from_pretrained(
-                repo_id="Qwen/Qwen2-0.5B-Instruct-GGUF",
-            filename="qwen2-0_5b-instruct-q4_0.gguf",
+        llm_model = Llama.from_pretrained(
+            repo_id="Qwen/Qwen2-0.5B-Instruct-GGUF",
+            filename="qwen2-0_5b-instruct-fp16.gguf",
             verbose=False,
             max_seq_len=512
         )
@@ -42,7 +43,6 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
     regular_caption = f"Location: {property_location} - Price: {property_price}"
     if use_ai_caption:
         try:
-            llm_model = load_llm_model()
             # Generate caption using LLM
             # caption_prompt = f"Write an engaing caption for a Facebook post: {regular_caption}"
             caption_full_prompt = f"{DOMAIN_CONTEXT}\nUser: {regular_caption}\nBot:"
@@ -60,8 +60,8 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
         caption = regular_caption
 
     # Add additional text to the caption
-    caption += "\n\nFind out more at https://akiyainjapan.com"
-
+    caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind out more at https://akiyainjapan.com\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+    print (caption)
     # Post to Facebook
     url = f'https://graph.facebook.com/v19.0/{PAGE_ID}/photos'
     
@@ -90,6 +90,8 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
 from inventory.models import Property
 properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[34:44]
 
+
+load_llm_model()
 for property in properties_qs:
     try:
         post_to_facebook(
