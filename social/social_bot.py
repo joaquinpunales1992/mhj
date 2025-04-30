@@ -67,7 +67,7 @@ def generate_caption_for_post(property_location, property_price, use_ai_caption=
 
 def post_to_instagram(property_image_url, property_location, property_price, use_ai_caption):
 
-    caption = generate_caption_for_post (property_location=property_location, property_price=property_price, use_ai_caption=use_ai_caption)
+    caption = generate_caption_for_post(property_location=property_location, property_price=property_price, use_ai_caption=use_ai_caption)
 
     load_media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
 
@@ -96,7 +96,7 @@ def post_to_instagram(property_image_url, property_location, property_price, use
 
 
 def post_to_facebook(property_image_url, property_location, property_price, use_ai_caption=True):
-    caption = generate_caption_for_post (property_location=property_location, property_price=property_price, use_ai_caption=use_ai_caption)
+    caption = generate_caption_for_post(property_location=property_location, property_price=property_price, use_ai_caption=use_ai_caption)
     
     # Post to Facebook
     url = f'https://graph.facebook.com/v19.0/{PAGE_ID}/photos'
