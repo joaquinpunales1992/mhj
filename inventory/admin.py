@@ -18,6 +18,8 @@ class PropertyAdmin(admin.ModelAdmin):
         "land_area",
         "parking",
         "construction",
+        "featured",
+        "premium",
     ]
 
     inlines = [PropertyImageInline,]

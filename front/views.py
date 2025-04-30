@@ -20,7 +20,6 @@ def property_detail(request, pk):
     return render(request, 'property_detail.html', context={'property': property})
 
 
-
 @csrf_exempt
 def send_booking_confirmation(request):
     if request.method == 'POST':

@@ -1,6 +1,5 @@
 {% load socialaccount %}
 
-
 {% load static %}
 
 <!DOCTYPE html>
@@ -14,6 +13,42 @@
   <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
   <script src="https://www.paypal.com/sdk/js?client-id=AZTP_cn7ajpK-tSRt1MGdC15_FNPQNR3eLevMMGNF16gCB8xdeEUg_H7CFfkRdF-wGuzTZGYjWJTwOeq&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
   <script src="{% static 'assets/js/jquery.min.js' %}"></script>
+  <script>
+    $(document).ready(function() {
+      paypal.Buttons({
+            style: {
+                shape: 'rect',
+                color: 'blue',
+                layout: 'horizontal',
+                label: 'subscribe'
+            },
+            createSubscription: function(data, actions) {
+              return actions.subscription.create({
+                /* Creates the subscription */
+                plan_id: 'P-9YA60071BE678631YM3PYQOQ'
+              });
+            },
+            onApprove: function(data, actions) {
+              $.ajax({
+                url: '/approved-membership-payment/',
+                method: 'POST',
+                data: {
+                  // username
+                  subscription_id: data.subscriptionID,
+                  csrfmiddlewaretoken: '{{ csrf_token }}'
+                },
+                success: function(response) {
+                  console.log('Subscription successfully processed:', response);
+                },
+                error: function(error) {
+                  console.error('Error processing subscription:', error);
+                }
+              });
+              console.log('Subscription ID:', data.subscriptionID); 
+            }
+        }).render('#paypal-button-container-P-9YA60071BE678631YM3PYQOQ'); 
+    });
+    </script>
 </head>
 
 <body>
@@ -33,9 +68,7 @@
           </div>
           <span class="transition-all group-hover:translate-x-1">Back to Listing</span>
         </a>
-        
       </nav>
-      
     </aside>
     
     <!-- Main Content -->
@@ -44,57 +77,25 @@
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-serif font-light text-primary">{% if redirect_to_premium == '1' %}Sign up to view property details{% else %}Sign up FREE to view property details {% endif %}</h1>
-            <div class="flex items-center space-x-2">
-              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                </svg>
-              </div>
-              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-            </div>
+            <h1 class="text-3xl font-serif font-light text-primary">Upgrade to Premium</h1>
           </div>
         </header>
-      
-        {% if redirect_to_premium == '0' %}
-          <section class="mb-12">
-            <h2 class="text-4xl font-serif text-primary mb-4">Free Features</h2>
-            <ul class="list-disc pl-6 text-secondary">
-              <li>Explore an extensive range of properties</li>
-              <li>Ad-free browsing experience</li>
-            </ul>
-          </section>
-        {% endif %}
 
-        <!-- Booking Form -->
-        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
-          <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">SignUp with your email</p>
-            <p class="text-secondary text-sm">
-              <form action="/register-via-email/{{ property_pk }}/{{ redirect_to_premium }}/" method="POST" class="flex items-center space-x-5">
-                {% csrf_token %}
-                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid; color: black;" placeholder="Enter your email" required>
-                <button type="submit" class="primary">SignUp</button>
-              </form>
-            </p>
+        <section class="mb-12">
+          <h2 class="text-4xl font-serif text-primary mb-4">Premium Account Features</h2>
+          <ul class="list-disc pl-6 text-secondary">
+            <li>Access to exclusive property listings not available to free users</li>
+            <li>Priority customer support for faster assistance</li>
+            <li>Detailed property reports with historical data and trends</li>
+            <li>Ad-free browsing experience</li>
+          </ul>
+        </section>
+
+        {% if user.is_authenticated or request.COOKIES.email %}
+        <div class="panel-footer">
+            <div id="paypal-button-container-P-9YA60071BE678631YM3PYQOQ"></div>
           </div>
-          
-          <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">or SignUp with your Google Account</p>
-            <p class="text-secondary text-sm">
-                <a href="{% provider_login_url 'google' %}"
-                class="btn btn-light "
-                style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                    alt="Google Logo" width="32" height="32">
-                </a>
-            </p>
-          </div>
-        </div>
+        {% endif %}
         </main>
   </div>
 
