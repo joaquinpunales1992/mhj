@@ -102,7 +102,8 @@ def get_listing_data(url):
         '引渡し': None,
         '設備': None,
         '取引態様': None,
-        '備考': None
+        '備考': None,
+        '土地権利': None
     }
     for row in table.find_all('tr'):
         header = row.find('th').get_text(strip=True)
@@ -147,6 +148,7 @@ def get_listing_data(url):
         # 'equipment': google_translator.translate(table_data['設備']), TODO:FIX
         'transaction_type': google_translator.translate(table_data['取引態様'][:MAX_CHAR_LENGTH]) if table_data['取引態様'] else "",
         'remarks':  google_translator.translate(table_data['備考'][:MAX_CHAR_LENGTH]) if table_data['備考'] else "",
+        'land_rights': google_translator.translate(table_data['土地権利'][:MAX_CHAR_LENGTH]) if table_data['土地権利'] else "",
         'image_urls': image_urls
     }
 
@@ -168,7 +170,6 @@ def persist_property(property_data: dict):
             # property.land_rights=property_data['land_rights']
             property.building_structure=property_data['building_structure']
             property.road_condition=property_data['road_condition']
-            property.setback=property_data['setback']
             property.setback=property_data['setback']
             property.city_planning=property_data['city_planning']
             property.zoning=property_data['zoning']
