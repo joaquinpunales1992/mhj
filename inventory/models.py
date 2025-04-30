@@ -2,8 +2,15 @@ from django.db import models
 from inventory.utils import convert_price_string, convert_yen_to_usd, infer_location
 
 
+class TimestampMixin(models.Model):
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
 
-class Property(models.Model):
+    class Meta:
+        abstract = True
+
+
+class Property(TimestampMixin):
     url = models.URLField(max_length=255, default="", blank=True)
     title = models.CharField(max_length=255, blank=True)
     price = models.IntegerField(default=0)

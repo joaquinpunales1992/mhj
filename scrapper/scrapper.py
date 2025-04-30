@@ -11,31 +11,26 @@ from deep_translator import GoogleTranslator
 from inventory.models import Property, PropertyImage
 
 
-MAX_PAGE = 10
+REQUEST_HEADERS = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"} 
 
 def pull_specific_property(url: str):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"
-    }
+    headers = REQUEST_HEADERS
+
     persist_property(property_data=get_listing_data(url=url))
 
-def pull_properties():
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"
-    }
+def pull_properties(url: str, page_limit: int= 1):
+    headers = REQUEST_HEADERS
     
     keep_looking = True
     listings_url_list = []
-    page_number = 1
+    current_number = 1
 
     while keep_looking:
-        url = f"https://www.homes.co.jp/kodate/chuko/shizuoka/list/?page={page_number}"
-        # url = f"https://toushi.homes.co.jp/bukkensearch/?page={page_number}"
-        # url = f"https://www.homes.co.jp/kodate/chuko/tokyo/list/?page={page_number}"
-
+        url = f"{url}?page={current_number}"
+       
         response = requests.get(url, headers=headers)
 
-        if response.status_code != 200 or page_number == MAX_PAGE:
+        if response.status_code != 200 or current_number == page_limit:
             print(f"Failed to retrieve data: {response.status_code}")
             keep_looking = False
             break
@@ -49,15 +44,13 @@ def pull_properties():
         for url in listing_urls:
             persist_property(property_data=get_listing_data(url=url))
 
-        page_number += 1
+        current_number += 1
             
     return listings_url_list
         
         
 def get_listing_data(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"
-    }
+    headers = REQUEST_HEADERS
 
     MAX_CHAR_LENGTH = 5000
     
@@ -197,4 +190,5 @@ def persist_property(property_data: dict):
 
     except Exception as e:
         print(f"Error saving property: {e}")
+        
     
