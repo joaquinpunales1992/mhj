@@ -3,13 +3,14 @@ import urllib.parse
 from llama_cpp import Llama
 
 
-PAGE_ACCESS_TOKEN = ''
-PAGE_ID = '' 
+PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO7kBLv8reRSYEZC5NVamnD2ZB2ZCPffZAgZCcX2CxZAPHI6x3AzAzTHBVjDQaozFhKJLroZBysgAZAhPAZCpXbn4w3N5ceoP7f10QxfywR3qLZAE76UZBYDS2BZC9Xly4RejM7wf38gLeRYLnch6Ds29pD8mwWJbxPv8yKFCvnle45o7G8xyz4aR5HK26vAjVFvCUOEoxQgqEJIZD'
+PAGE_ID = '612249001976104' 
 
 DOMAIN_CONTEXT = (
-    "Generate a text for a website that sells houses in Japan. "
+    "Generate a facebook post caption for a website that sells houses in Japan for foreigners. "
     "Create an engaging text for a property listing using the property location and price. "
     "Limit the caption to 100 characters."
+    "Kepp the response maximum 65 characters. "
 )
 
 def load_llm_model(load_local_model=True):
@@ -42,10 +43,14 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
         try:
             llm_model = load_llm_model()
             # Generate caption using LLM
-            caption_prompt = f"Write an engaing caption for a Facebook post: {regular_caption}"
-            caption_full_prompt = f"{DOMAIN_CONTEXT}\nUser: {caption_prompt}\nBot:"
-            output = llm_model(caption_full_prompt, max_tokens=50)
+            # caption_prompt = f"Write an engaing caption for a Facebook post: {regular_caption}"
+            caption_full_prompt = f"{DOMAIN_CONTEXT}\nUser: {regular_caption}\nBot:"
+            output = llm_model(caption_full_prompt, max_tokens=80)
+
             caption = output["choices"][0]["text"].strip()
+            caption = caption.replace('"', '')
+            if not caption.endswith('.'):
+                caption = caption[:caption.rfind('.') + 1]
             print (f"*********Generated caption: {caption}")
 
         except Exception as e:
@@ -53,7 +58,10 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
             caption = regular_caption
     else:
         caption = regular_caption
-    
+
+    # Add additional text to the caption
+    caption += "\nFind out more at https://akiyainjapan.com"
+
 
 
     # Post to Facebook
@@ -77,9 +85,13 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
 
 
 
-post_to_facebook(
-    property_image_url='https://image.homes.co.jp/smallimg/2023/09/12/20230912_1_1_1_1_1_1_1_1.jpg',
-    property_location='Tokyo, Japan',
-    property_price='¥100,000,000',
-    use_ai_caption=True
-)
+from inventory.models import Property
+properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[:10]
+
+for property in properties_qs:
+    post_to_facebook(
+        property_image_url=property.images.first().file.url,
+        property_location=property.location,
+        property_price=property.price,
+        use_ai_caption=True
+    )
