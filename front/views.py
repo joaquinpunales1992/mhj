@@ -1,4 +1,5 @@
 import json
+from django.conf import settings
 from django.shortcuts import render
 from inventory.models import Property
 from django.core.mail import EmailMessage
@@ -9,7 +10,7 @@ from django.template.loader import render_to_string
 
 def display_home(request):
 
-    properties = Property.objects.filter(show_in_front=True).order_by('-featured', 'price')#[:90]
+    properties = Property.objects.filter(show_in_front=True).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
