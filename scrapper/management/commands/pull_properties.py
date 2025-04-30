@@ -6,8 +6,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         try:
-            page_limit = 3
-            url = "https://www.homes.co.jp/kodate/chuko/shizuoka/list/"
+            page_limit = 15
+            url = "https://www.homes.co.jp/kodate/chuko/miyazaki/list/"
             pull_properties(url=url, page_limit=page_limit)
             self.stdout.write(self.style.SUCCESS('Successfully pulled properties.'))
         except Exception as e:

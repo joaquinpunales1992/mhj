@@ -3,8 +3,9 @@ import urllib.parse
 from llama_cpp import Llama
 
 
-PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO2vCNkVVR6kTZBgKmIS7gIChzRl4ZBA8KAFyp7xWupjW8cC10q97GYrtcYjOveOJ86FR5g7SIC8TS1pW647cUKePlLNnD52vrn1GX2HipoqdNkOu7kKzesQ0LSUVRkMzL0b2KiCclVB3JNFvcyDlHeZAoZAgSRBSvMLIHfEzZCRkzgusMvFOFsKOeZCe1FARvqz6yeqQZDZD'
+PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO4hvRjsO0ZBB74AVZAwkM4NbBu2YuANElCxDyH6VpZB8r9KDcGOD9l1TP9WQIRY4rmf2oW6rZBZBmgBfxlBSqNCiMPqW4uijBKcZAflFekZCKz68K0boAAIrZBFR5oTs7LtSEepv8Xo7pEqbSqBNSwdMyZA04x1oBdZC1NzwtzNuZAmJcT0pxtfX6WhhVRvvBRybd4ZD'
 PAGE_ID = '612249001976104' 
+INSTAGRAM_USER_ID = '17841473089014615'
 
 DOMAIN_CONTEXT = (
     "Generate a Facebook post caption for a website that sells houses in Japan for foreigners. "
@@ -38,9 +39,9 @@ def prepare_image_url_for_facebook(image_url):
     
     return image_url
 
-def post_to_facebook(property_image_url, property_location, property_price, use_ai_caption=True):
-    
+def generate_caption_for_post(property_location, property_price, use_ai_caption=True):
     regular_caption = f"Location: {property_location} - Price: {property_price}"
+
     if use_ai_caption:
         try:
             # Generate caption using LLM
@@ -61,7 +62,42 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
 
     # Add additional text to the caption
     caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind out more at https://akiyainjapan.com\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
-    print (caption)
+    return caption
+
+
+def post_to_instagram(property_image_url, property_location, property_price, use_ai_caption):
+
+    caption = generate_caption_for_post (property_location=property_location, property_price=property_price, use_ai_caption=use_ai_caption)
+
+    load_media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
+
+    image_url = prepare_image_url_for_facebook(property_image_url)
+    payload = {
+        "image_url": image_url,
+        "caption": caption,
+        "access_token": PAGE_ACCESS_TOKEN
+    }
+
+    response = requests.post(load_media_url, data=payload)
+    if 'id' in response.json():
+        creation_id = response.json().get('id')
+        publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
+        publish_payload = {
+            "creation_id": creation_id,
+            "access_token": PAGE_ACCESS_TOKEN
+        }   
+        publish_response = requests.post(publish_url, data=publish_payload)
+        if publish_response.status_code == 200:
+            print('✅ Successfully posted to Instagram:')
+            print(publish_response.json())
+        else:
+            print('❌ Failed to publish Instagram post:')
+            print(publish_response.text)
+
+
+def post_to_facebook(property_image_url, property_location, property_price, use_ai_caption=True):
+    caption = generate_caption_for_post (property_location=property_location, property_price=property_price, use_ai_caption=use_ai_caption)
+    
     # Post to Facebook
     url = f'https://graph.facebook.com/v19.0/{PAGE_ID}/photos'
     
@@ -86,12 +122,29 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
         print(response.text)
 
 
-
+# RUN SOCIAL BOT
 from inventory.models import Property
-properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[34:44]
-
+properties_qs = Property.objects.filter(images__isnull=False, price__lte=1200).distinct()#[1:1000]
 
 load_llm_model()
+
+image_url = Property.objects.filter(images__isnull=False).first().images.first().file.url
+
+
+# INSTAGRAM POSTING
+for property in properties_qs:
+    try:
+        post_to_instagram(
+            property_image_url=property.images.first().file.url,
+            property_location=property.location,
+            property_price=property.get_price_for_front,
+            use_ai_caption=True
+        )
+    except Exception as e:
+        print(f"Error posting property {property.id}: {e}")
+        continue
+
+# FACEBOOK POSTING
 for property in properties_qs:
     try:
         post_to_facebook(
