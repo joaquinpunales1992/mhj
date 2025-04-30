@@ -3,14 +3,14 @@ import urllib.parse
 from llama_cpp import Llama
 
 
-PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO7kBLv8reRSYEZC5NVamnD2ZB2ZCPffZAgZCcX2CxZAPHI6x3AzAzTHBVjDQaozFhKJLroZBysgAZAhPAZCpXbn4w3N5ceoP7f10QxfywR3qLZAE76UZBYDS2BZC9Xly4RejM7wf38gLeRYLnch6Ds29pD8mwWJbxPv8yKFCvnle45o7G8xyz4aR5HK26vAjVFvCUOEoxQgqEJIZD'
+PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO2vCNkVVR6kTZBgKmIS7gIChzRl4ZBA8KAFyp7xWupjW8cC10q97GYrtcYjOveOJ86FR5g7SIC8TS1pW647cUKePlLNnD52vrn1GX2HipoqdNkOu7kKzesQ0LSUVRkMzL0b2KiCclVB3JNFvcyDlHeZAoZAgSRBSvMLIHfEzZCRkzgusMvFOFsKOeZCe1FARvqz6yeqQZDZD'
 PAGE_ID = '612249001976104' 
 
 DOMAIN_CONTEXT = (
-    "Generate a facebook post caption for a website that sells houses in Japan for foreigners. "
-    "Create an engaging text for a property listing using the property location and price. "
-    "Limit the caption to 100 characters."
-    "Kepp the response maximum 65 characters. "
+    "Generate a facebook post caption for a website that sells houses in Japan for foreigners, "
+    "Create an engaging text for a property listing using the property location and price, "
+    "Limit the caption to 100 characters, "
+    "Kepp the response maximum 65 characters, "
 )
 
 def load_llm_model(load_local_model=True):
@@ -51,7 +51,6 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
             caption = caption.replace('"', '')
             if not caption.endswith('.'):
                 caption = caption[:caption.rfind('.') + 1]
-            print (f"*********Generated caption: {caption}")
 
         except Exception as e:
             print(f"Error generating caption: {e}")
@@ -60,14 +59,16 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
         caption = regular_caption
 
     # Add additional text to the caption
-    caption += "\nFind out more at https://akiyainjapan.com"
-
-
+    caption += "\n\nFind out more at https://akiyainjapan.com"
 
     # Post to Facebook
     url = f'https://graph.facebook.com/v19.0/{PAGE_ID}/photos'
     
-    image_url = prepare_image_url_for_facebook(property_image_url)
+    try:
+        image_url = prepare_image_url_for_facebook(property_image_url)
+    except Exception as e:
+        print(f"Error preparing image URL: {e}")
+        return
     
     payload = {
         'url': image_url,
@@ -86,12 +87,16 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
 
 
 from inventory.models import Property
-properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[:10]
+properties_qs = Property.objects.filter(images__isnull=False).all().distinct()[23:33]
 
 for property in properties_qs:
-    post_to_facebook(
-        property_image_url=property.images.first().file.url,
-        property_location=property.location,
-        property_price=property.price,
-        use_ai_caption=True
-    )
+    try:
+        post_to_facebook(
+            property_image_url=property.images.first().file.url,
+            property_location=property.location,
+            property_price=property.get_price_for_front(),
+            use_ai_caption=True
+        )
+    except Exception as e:
+        print(f"Error posting property {property.id}: {e}")
+        continue
