@@ -21,6 +21,7 @@ class PropertyAdmin(admin.ModelAdmin):
         "featured",
         "premium",
     ]
+    search_fields = ["title", "premium", "featured"]
 
     inlines = [PropertyImageInline,]
 
