@@ -18,19 +18,19 @@ def pull_specific_property(url: str):
 
     persist_property(property_data=get_listing_data(url=url))
 
-def pull_properties(url: str, page_limit: int= 1):
+def pull_properties(listing_url: str, page_from: int= 1, page_to: int= 50):
     headers = REQUEST_HEADERS
     
     keep_looking = True
     listings_url_list = []
-    current_number = 1
+    current_number = page_from
 
     while keep_looking:
-        url = f"{url}?page={current_number}"
+        url = f"{listing_url}?page={current_number}"
        
         response = requests.get(url, headers=headers)
 
-        if response.status_code != 200 or current_number == page_limit:
+        if response.status_code != 200 or current_number == page_to:
             print(f"Failed to retrieve data: {response.status_code}")
             keep_looking = False
             break
@@ -41,6 +41,7 @@ def pull_properties(url: str, page_limit: int= 1):
         
         # extract the url of the listing
         listing_urls = [listing.find('div', class_='moduleInner').find('div', class_='moduleBody').find('a').get('href') for listing in listings]
+
         for url in listing_urls:
             persist_property(property_data=get_listing_data(url=url))
 

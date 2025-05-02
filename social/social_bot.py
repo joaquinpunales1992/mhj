@@ -116,25 +116,30 @@ def post_to_facebook(property_image_url, property_location, property_price, use_
 
     if response.status_code == 200:
         print('✅ Successfully posted to Facebook:')
-        print(response.json())
     else:
         print('❌ Failed to post:')
-        print(response.text)
 
 
 # RUN SOCIAL BOT
 from inventory.models import Property
-properties_qs = Property.objects.filter(images__isnull=False, price__lte=1200).distinct()#[1:1000]
+from social.models import SocialPost
+
+PRICE_LIMIT = 1200
+
+facebook_posted_urls = SocialPost.objects.filter(social_media='facebook').values_list('property_url', flat=True)
+instagram_posted_urls = SocialPost.objects.filter(social_media='instagram').values_list('property_url', flat=True)
+
+properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT).exclude(url__in=facebook_posted_urls).distinct() #[1:1000]
+properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT).exclude(url__in=instagram_posted_urls).distinct() #[1:1000]
 
 load_llm_model()
 
 image_url = Property.objects.filter(images__isnull=False).first().images.first().file.url
 
-
-# INSTAGRAM POSTING
-for property in properties_qs:
+# FACEBOOK POSTING
+for property in properties_to_post_facebook:
     try:
-        post_to_instagram(
+        post_to_facebook(
             property_image_url=property.images.first().file.url,
             property_location=property.location,
             property_price=property.get_price_for_front,
@@ -144,10 +149,10 @@ for property in properties_qs:
         print(f"Error posting property {property.id}: {e}")
         continue
 
-# FACEBOOK POSTING
-for property in properties_qs:
+# INSTAGRAM POSTING
+for property in properties_to_post_instagram:
     try:
-        post_to_facebook(
+        post_to_instagram(
             property_image_url=property.images.first().file.url,
             property_location=property.location,
             property_price=property.get_price_for_front,

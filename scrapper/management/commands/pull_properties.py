@@ -1,14 +1,17 @@
 from django.core.management.base import BaseCommand
 from scrapper.scrapper import pull_properties
+from scrapper.constants import LIFULL_HOMES_BASE_URL, LIFULL_HOMES_REGION_LIST
 
 class Command(BaseCommand):
     help = 'Pull properties from the specified website'
 
     def handle(self, *args, **kwargs):
         try:
-            page_limit = 15
-            url = "https://www.homes.co.jp/kodate/chuko/miyazaki/list/"
-            pull_properties(url=url, page_limit=page_limit)
-            self.stdout.write(self.style.SUCCESS('Successfully pulled properties.'))
+            for region in LIFULL_HOMES_REGION_LIST:
+                page_from = 1
+                page_to = 50
+                listing_url = f"{LIFULL_HOMES_BASE_URL}/kodate/chuko/{region}/list/"
+                pull_properties(listing_url=listing_url, page_from=page_from, page_to=page_to)
+                self.stdout.write(self.style.SUCCESS(f'Successfully pulled properties - {region}'))
         except Exception as e:
             self.stderr.write(self.style.ERROR(f'Error pulling properties: {e}'))

@@ -1,0 +1,8 @@
+{page-id}?fields=instagram_business_account&access_token={access_token}
+
+me/accounts?access_token=EAAKF3IrNfYMBO4hvRjsO0ZBB74AVZAwkM4NbBu2YuANElCxDyH6VpZB8r9KDcGOD9l1TP9WQIRY4rmf2oW6rZBZBmgBfxlBSqNCiMPqW4uijBKcZAflFekZCKz68K0boAAIrZBFR5oTs7LtSEepv8Xo7pEqbSqBNSwdMyZA04x1oBdZC1NzwtzNuZAmJcT0pxtfX6WhhVRvvBRybd4ZD
+Remove
+
+
+
+Instagram PAGE ID: 17841473089014615
