@@ -25,9 +25,10 @@ def pull_properties(listing_url: str, page_from: int= 1, page_to: int= 50):
     listings_url_list = []
     current_number = page_from
 
+    # persisted_properties_urls = [property.url for property in Property.objects.all()]
+
     while keep_looking:
         url = f"{listing_url}?page={current_number}"
-       
         response = requests.get(url, headers=headers)
 
         if response.status_code != 200 or current_number == page_to:
@@ -41,7 +42,8 @@ def pull_properties(listing_url: str, page_from: int= 1, page_to: int= 50):
         
         # extract the url of the listing
         listing_urls = [listing.find('div', class_='moduleInner').find('div', class_='moduleBody').find('a').get('href') for listing in listings]
-
+        # listing_to_persist = [listing_url for listing_url in listing_urls if listing_url not in persisted_properties_urls]
+        
         for url in listing_urls:
             persist_property(property_data=get_listing_data(url=url))
 
@@ -49,7 +51,7 @@ def pull_properties(listing_url: str, page_from: int= 1, page_to: int= 50):
             
     return listings_url_list
         
-        
+
 def get_listing_data(url):
     headers = REQUEST_HEADERS
 
