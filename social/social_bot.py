@@ -3,7 +3,7 @@ import urllib.parse
 from llama_cpp import Llama
 
 
-PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO12nXi5ukt4m7j0b7K1mxHcDYYdO7ZCEPAkKhJtX0ME2ZBEVymTUAAZAVeOhQTdkP6yoaSZAMoMs3FI9LoOYHZCJZB8bceUePSYURwp6ZCWXoW7eO8oogjW6r83ZCSfYCD0GlZA6tFjYrks7rMwRlpfKl5p11gaZCE92lzYaPJm4v29jVTQrWwKXCuNZAvGdQ7vb7wFCmaXZCel1WgZDZD'
+PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO0dXW4fFV7hd0KJfO9lynVGlbGWiPBUPZCTnKPnUvZBhOIPIZB44yxPZACRvVagyZAFZAdcnPVwq7tMO4vfeMCUf4y4EudWTakblZBbKBVBR38o917pNpfAQQqbCMciaBw7icqb7GK7PZBHeYAJXsMVhJNJ4W2o6s64WZBCZCw1YIGtur5EbcH8mZC3D5KFWNLbhGxUhfmM1mAZD'
 PAGE_ID = '612249001976104' 
 INSTAGRAM_USER_ID = '17841473089014615'
 
@@ -228,6 +228,7 @@ instagram_posted_urls = SocialPost.objects.filter(social_media='instagram').valu
 properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT).exclude(url__in=facebook_posted_urls).order_by('price').distinct() #[1:1000]
 properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT).exclude(url__in=instagram_posted_urls).order_by('price').distinct() #[1:1000]
 
+import pdb;pdb.set_trace()
 load_llm_model()
 
 # image_url = Property.objects.filter(images__isnull=False).first().images.first().file.url

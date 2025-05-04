@@ -140,11 +140,11 @@
 													{% endif %}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk %}'">
-															<span class="lock-icon"></span> Contact the Seller
+															<span class="lock-icon"></span> Buy This House
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-															<span class="lock-icon">🔒</span> Log In to Contact
+															<span class="lock-icon">🔒</span> Log In to Make It Yours
 														</button>
 													{% endif %}
 												{% endif %}
