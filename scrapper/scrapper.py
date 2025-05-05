@@ -8,6 +8,7 @@ import os
 import sys
 import chardet
 from deep_translator import GoogleTranslator
+from scrapper.constants import MAX_PRICE_TO_PULL
 from inventory.models import Property, PropertyImage
 
 
@@ -185,14 +186,18 @@ def persist_property(property_data: dict):
             property.parking=property_data['parking']
             property.construction=property_data['building_age']
             property.land_rights=property_data['land_rights']
-        
-            property.save()
+            
+            if property.price > MAX_PRICE_TO_PULL:
+                print(f"Property {property.title} exceed price limit.")
+                return
+            else:
+                property.save()
 
-            for image_url in property_data.get('image_urls', []):
-                PropertyImage.objects.create(property=property, file=image_url)
-        
-            property.save()
-            print(f"Property {property.title} saved successfully.")
+                for image_url in property_data.get('image_urls', []):
+                    PropertyImage.objects.create(property=property, file=image_url)
+            
+                property.save()
+                print(f"Property {property.title} saved successfully.")
 
     except Exception as e:
         print(f"Error saving property: {e}")

@@ -10,7 +10,7 @@ from django.template.loader import render_to_string
 
 def display_home(request):
 
-    properties = Property.objects.filter(show_in_front=True).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
+    properties = Property.objects.filter(show_in_front=True, price__lte=1500).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
