@@ -94,5 +94,20 @@ def infer_location(location):
         return "Kagawa"
     elif "yamaguchi" in location.lower():
         return "Yamaguchi"
+    elif "tokushima" in location.lower():
+        return "Tokushima"
+    elif "oita" in location.lower():
+        return "Oita"
+    elif "fukui" in location.lower():   
+        return "Fukui"
+    elif "shiga" in location.lower():
+        return "Shiga"
+    elif 'hokkaido' in location.lower():
+        return "Hokkaido"
+    elif "kochi" in location.lower():
+        return "Kochi"
+    elif "saga" in location.lower():
+        return "Saga"
+
     else:
         return location
