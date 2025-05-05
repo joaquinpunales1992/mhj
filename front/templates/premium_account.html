@@ -11,7 +11,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
-  <script src="https://www.paypal.com/sdk/js?client-id=AZTP_cn7ajpK-tSRt1MGdC15_FNPQNR3eLevMMGNF16gCB8xdeEUg_H7CFfkRdF-wGuzTZGYjWJTwOeq&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+  <script src="https://www.paypal.com/sdk/js?client-id=AR790bFgRwMS_iZ1r90RNt4GV8R2H7nD1RtjE8V6aRWkW7blRbvZnn05Crkfaj2J2bF0PoHZ_78Ipdoy&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
   <script src="{% static 'assets/js/jquery.min.js' %}"></script>
   <script>
     $(document).ready(function() {
@@ -25,7 +25,7 @@
             createSubscription: function(data, actions) {
               return actions.subscription.create({
                 /* Creates the subscription */
-                plan_id: 'P-9YA60071BE678631YM3PYQOQ'
+                plan_id: 'P-0LP4392316520073RNAMO5MQ'
               });
             },
             onApprove: function(data, actions) {
@@ -46,7 +46,7 @@
               });
               console.log('Subscription ID:', data.subscriptionID); 
             }
-        }).render('#paypal-button-container-P-9YA60071BE678631YM3PYQOQ'); 
+        }).render('#paypal-button-container-P-0LP4392316520073RNAMO5MQ'); 
     });
     </script>
 </head>
@@ -93,7 +93,7 @@
 
         {% if user.is_authenticated or request.COOKIES.email %}
         <div class="panel-footer">
-            <div id="paypal-button-container-P-9YA60071BE678631YM3PYQOQ"></div>
+            <div id="paypal-button-container-P-0LP4392316520073RNAMO5MQ"></div>
           </div>
         {% endif %}
         </main>
