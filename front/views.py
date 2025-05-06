@@ -1,6 +1,6 @@
 import json
 from django.conf import settings
-from django.shortcuts import render
+from django.shortcuts import render, redirect, reverse
 from inventory.models import Property
 from django.core.mail import EmailMessage
 from django.http import JsonResponse
@@ -14,7 +14,7 @@ def display_home(request):
     return render(request, 'home.html', context={'properties': properties})
 
 def property_detail(request, pk):
-
+    import pdb;pdb.set_trace()
     # Fetch the property details from the database
     property = Property.objects.filter(pk=pk).first()
 
@@ -50,24 +50,31 @@ def send_booking_confirmation(request):
         return JsonResponse({'message': 'Email sent'})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+def require_authentication(view_func):
+    def wrapper(request, *args, **kwargs):
+        user_email = None
 
+        try:
+            if getattr(request.user, 'email', None) is not None:
+                user_email = request.user.email
+        except AttributeError:
+            pass
+
+        try:
+            if 'email' in request.COOKIES:
+                user_email = request.COOKIES['email']
+        except AttributeError:
+            pass
+
+        if not user_email:
+            return redirect(reverse('authenticate', kwargs={'pk': kwargs.get('pk'), 'redirect_to_premium': 'false'}))
+
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+
+@require_authentication
 def contact_seller(request, pk):
     property = Property.objects.filter(pk=pk).first()
-    user_email = None
-
-    try:
-        if getattr(request.user, 'email', None) is not None:
-            user_email = request.user.email
-    except AttributeError:
-        pass
-
-    try:
-        if 'email' in request.COOKIES:
-            user_email = request.COOKIES['email']
-    except AttributeError:
-        pass
-
-    if not user_email:
-        return JsonResponse({'error': 'Forbidden request'}, status=403)
-    
+    user_email = request.user.email if request.user.is_authenticated else request.COOKIES.get('email')
     return render(request, 'contact_seller.html', context={'property': property, 'user_email': user_email})

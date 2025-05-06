@@ -1,7 +1,4 @@
-import json
 from django.core.mail import EmailMessage
-from django.http import JsonResponse
-from django.template.loader import render_to_string
 
 
 def notify_user_registered_via_email(new_user_email):
