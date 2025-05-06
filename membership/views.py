@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect
 from django.urls import reverse
+from membership.utils import notify_user_registered_via_email
 
 
 def upgrade_premium(request):
@@ -11,6 +12,8 @@ def show_authenticate_page(request, pk, redirect_to_premium=0):
 def register_via_email(request, pk, redirect_to_premium=0):
     email = request.POST.get('email')
     if email:
+        notify_user_registered_via_email(email)
+
         if redirect_to_premium == '1':
             response = redirect(reverse('upgrade_premium'))
             response.set_cookie('email', email)
