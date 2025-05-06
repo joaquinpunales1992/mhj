@@ -1,4 +1,4 @@
-MAX_PRICE_TO_PULL= 1000
+MAX_PRICE_TO_PULL= 800
 
 LIFULL_HOMES_BASE_URL = "https://www.homes.co.jp"
 
