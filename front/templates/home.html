@@ -124,11 +124,11 @@
 												{% if property.premium %}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-															<span class="lock-icon">🔒</span> Upgrade to Connect
+															<span class="lock-icon">🔒</span> Upgrade to See Details
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 1 %}'">
-															<span class="lock-icon">🔒</span> Upgrade to Connect
+															<span class="lock-icon">🔒</span> Upgrade to See Details
 														</button>
 													{% endif %}
 												{% else %}
@@ -144,7 +144,7 @@
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-															<span class="lock-icon">🔒</span> Log In to Make It Yours
+															<span class="lock-icon">🔒</span> Log In to Buy This House
 														</button>
 													{% endif %}
 												{% endif %}
