@@ -108,6 +108,7 @@ def infer_location(location):
         return "Kochi"
     elif "saga" in location.lower():
         return "Saga"
-
+    elif "mie prefecture" in location.lower():
+        return "Mie"
     else:
         return location
