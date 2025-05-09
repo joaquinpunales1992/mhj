@@ -9,7 +9,6 @@ from django.template.loader import render_to_string
 
 
 def display_home(request):
-
     properties = Property.objects.filter(show_in_front=True, price__lte=1500).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
     return render(request, 'home.html', context={'properties': properties})
 
@@ -33,7 +32,7 @@ def send_booking_confirmation(request):
         html_message = render_to_string('emails/booking_confirmation.html', {'property_url': property_url})
 
         email = EmailMessage(
-            subject='Your House in Japan - Booking Confirmation',
+            subject='Your Akiya in Japan - Booking Confirmation',
             body=html_message,
             from_email='noreply@myhouseinjapan.com',
             to=[user_email],
