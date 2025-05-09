@@ -1,28 +1,13 @@
 import requests
 import urllib.parse
 from llama_cpp import Llama
+from social.constants import *
 
-
-PAGE_ACCESS_TOKEN = 'EAAKF3IrNfYMBO0dXW4fFV7hd0KJfO9lynVGlbGWiPBUPZCTnKPnUvZBhOIPIZB44yxPZACRvVagyZAFZAdcnPVwq7tMO4vfeMCUf4y4EudWTakblZBbKBVBR38o917pNpfAQQqbCMciaBw7icqb7GK7PZBHeYAJXsMVhJNJ4W2o6s64WZBCZCw1YIGtur5EbcH8mZC3D5KFWNLbhGxUhfmM1mAZD'
-PAGE_ID = '612249001976104' 
-INSTAGRAM_USER_ID = '17841473089014615'
-
-DOMAIN_CONTEXT = (
-    "You are a copywriting assistant for a website that sells houses in Japan to foreigners.\n"
-    "Your job is to generate short, engaging Facebook post captions.\n"
-    "Use only the information provided (e.g., location and price). Do not make up features.\n"
-    "Guidelines:\n"
-    "- Total length: max 100 characters\n"
-    "- Main descriptive part: max 65 characters\n"
-    "- Make it appealing for foreign buyers\n"
-    "- Avoid emojis or hashtags\n"
-    "- Keep the language natural and friendly\n"
-)
 
 def load_llm_model(load_local_model=True):
     global llm_model
     if load_local_model:  
-        llm_model = Llama(model_path="social/pretrained_llm_models/qwen2-0_5b-instruct-q4_k_m.gguf")
+        llm_model = Llama(model_path="social/pretrained_llm_models/qwen2-0_5b-instruct-fp16.gguf")
     else:
         llm_model = Llama.from_pretrained(
             repo_id="Qwen/Qwen2-0.5B-Instruct-GGUF",
@@ -44,7 +29,7 @@ def prepare_image_url_for_facebook(image_url):
     return image_url
 
 def generate_caption_for_post(property_location, property_price, use_ai_caption=True):
-    regular_caption = f"Location: {property_location} - Price: {property_price}"
+    regular_caption = f"Location: {property_location} - Price: {property_price} "
     
     if use_ai_caption:
         try:
@@ -65,12 +50,10 @@ def generate_caption_for_post(property_location, property_price, use_ai_caption=
 
     return caption
 
-
-
 def post_to_instagram(property, use_ai_caption):
 
     property_url=property.url
-    property_image_urls=[image.file.url for image in property.images.all()][:5]
+    property_image_urls=[image.file.url for image in property.images.all()][:4]
     property_location=property.location
     property_price=property.get_price_for_front
     
@@ -146,7 +129,6 @@ import requests
 
 def post_to_facebook(property, use_ai_caption=True):
 
-    property_url=property.url,
     property_image_urls = [image.file.url for image in property.images.all()][:3]
     property_location=property.location
     property_price=property.get_price_for_front
@@ -198,7 +180,7 @@ def post_to_facebook(property, use_ai_caption=True):
             print('✅ Successfully posted to Facebook with multiple images.')
             SocialPost.objects.create(
                 caption=caption,
-                property_url=property_url,
+                property_url=property.url,
                 social_media='facebook'
             )
         else:
@@ -207,33 +189,64 @@ def post_to_facebook(property, use_ai_caption=True):
         print("❌ No images were uploaded; skipping post.")
 
 
+def post_instagram_reel():
+    import requests
+
+    INSTAGRAM_USER_ID = "your_instagram_user_id"
+    ACCESS_TOKEN = "your_facebook_page_access_token"
+    VIDEO_URL = "https://yourdomain.com/path/to/reel_video.mp4"  # must be public
+    CAPTION = "Experience modern living in Kyoto 🏯✨ #JapanHomes"
+
+    # Step 1: Create media container
+    media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
+    media_payload = {
+        "media_type": "REELS",
+        "video_url": VIDEO_URL,
+        "caption": CAPTION,
+        "access_token": ACCESS_TOKEN
+    }
+    media_response = requests.post(media_url, data=media_payload)
+    print("📥 Media upload response:", media_response.text)
+
+    if "id" in media_response.json():
+        creation_id = media_response.json()["id"]
+
+        # Step 2: Publish the video
+        publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
+        publish_payload = {
+            "creation_id": creation_id,
+            "access_token": ACCESS_TOKEN
+        }
+
+        publish_response = requests.post(publish_url, data=publish_payload)
+        print("🚀 Publish response:", publish_response.text)
+
+        if publish_response.status_code == 200:
+            print("✅ Successfully posted to Instagram Reels!")
+        else:
+            print("❌ Failed to publish Reel.")
+    else:
+        print("❌ Failed to create media container.")
+
+
 
 # RUN SOCIAL BOT
 from inventory.models import Property
 from social.models import SocialPost
 
-PRICE_LIMIT = 800
-INSTGRAM_POST = False
-FACEBOOK_POST = True
 
-facebook_posted_urls = SocialPost.objects.filter(
+load_llm_model()
+
+def post_on_facebook_batch(price_limit: int, batch_size: int):
+    facebook_posted_urls = SocialPost.objects.filter(
     social_media='facebook'
     ).values_list(
         'property_url',
         flat=True
     )
 
-instagram_posted_urls = SocialPost.objects.filter(social_media='instagram').values_list('property_url', flat=True)
+    properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
 
-properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT).exclude(url__in=facebook_posted_urls).order_by('price').distinct() #[1:1000]
-properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT).exclude(url__in=instagram_posted_urls).order_by('price').distinct() #[1:1000]
-
-import pdb;pdb.set_trace()
-load_llm_model()
-
-# image_url = Property.objects.filter(images__isnull=False).first().images.first().file.url
-
-if FACEBOOK_POST:
     for property in properties_to_post_facebook:
         try:
             post_to_facebook(property=property, use_ai_caption=True)
@@ -241,7 +254,13 @@ if FACEBOOK_POST:
             print(f"Error posting property {property.id}: {e}")
             continue
 
-if INSTGRAM_POST:
+def post_on_instagram_batch(price_limit: int, batch_size: int):
+    instagram_posted_urls = SocialPost.objects.filter(
+    social_media='instagram'
+    ).values_list('property_url', flat=True)
+
+    properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=price_limit).exclude(url__in=instagram_posted_urls).order_by('price').distinct()[:batch_size]
+
     for property in properties_to_post_instagram:
         try:
             post_to_instagram(
