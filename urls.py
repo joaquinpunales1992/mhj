@@ -10,6 +10,7 @@ urlpatterns = [
     path("sitemap.xml", TemplateView.as_view(template_name="sitemap.xml", content_type="application/xml"), name="sitemap"),
     path("p/<int:pk>/", front_views.property_detail, name="property_detail"),
     path("api/send-booking-confirmation", front_views.send_booking_confirmation, name="send_booking_confirmation"),
+    path("api/submit-premium-request", front_views.submit_premium_request, name="submit_premium_request"),
     path('authenticate/<int:pk>/<str:redirect_to_premium>/', membership_views.show_authenticate_page, name='authenticate'),
     path('register-via-email/<int:pk>/<str:redirect_to_premium>/', membership_views.register_via_email, name='register_via_email'),
     path('upgrade-premium/', membership_views.upgrade_premium, name='upgrade_premium'),
