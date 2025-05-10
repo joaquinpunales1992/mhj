@@ -136,11 +136,11 @@
 												{% if property.premium %}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-															<span class="lock-icon">🔒</span> Upgrade to See Details
+															<span class="lock-icon">🔒</span> Upgrade to Learn More
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 1 %}'">
-															<span class="lock-icon">🔒</span> Upgrade to See Details
+															<span class="lock-icon">🔒</span> Upgrade to Learn More
 														</button>
 													{% endif %}
 												{% else %}
@@ -152,11 +152,11 @@
 													{% endif %}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk %}'">
-															<span class="lock-icon"></span> Buy This House
+															<span class="lock-icon"></span> Learn More
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-															<span class="lock-icon">🔒</span> Log In to Buy This House
+															<span class="lock-icon">🔒</span> Register to Learn More
 														</button>
 													{% endif %}
 												{% endif %}
