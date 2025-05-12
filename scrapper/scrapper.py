@@ -171,7 +171,6 @@ def persist_property(property_data: dict):
             property.location=property_data['location']
             property.description=property_data['remarks']
             property.construction_date=property_data['building_age']
-            # property.land_rights=property_data['land_rights']
             property.building_structure=property_data['building_structure']
             property.road_condition=property_data['road_condition']
             property.setback=property_data['setback']
