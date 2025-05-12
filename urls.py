@@ -3,11 +3,12 @@ from front import views as front_views
 from membership import views as membership_views
 from django.urls import path, include
 from django.views.generic import TemplateView
+from front import sitemap 
 
 
 urlpatterns = [
     path("", front_views.display_home, name="home"),
-    path("sitemap.xml", TemplateView.as_view(template_name="sitemap.xml", content_type="application/xml"), name="sitemap"),
+    path('sitemap.xml', sitemap.display_sitemaps, name='django.contrib.sitemaps.views.sitemap'),
     path("p/<int:pk>/", front_views.property_detail, name="property_detail"),
     path("api/send-booking-confirmation", front_views.send_booking_confirmation, name="send_booking_confirmation"),
     path("api/submit-premium-request", front_views.submit_premium_request, name="submit_premium_request"),
