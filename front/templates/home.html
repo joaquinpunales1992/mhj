@@ -150,6 +150,7 @@
 													{% if property.price %}
 														<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
 													{% endif %}
+													{{ property.created_at }}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk %}'">
 															<span class="lock-icon"></span> Learn More

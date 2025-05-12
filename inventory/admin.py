@@ -11,13 +11,14 @@ class PropertyImageInline(admin.TabularInline):
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
     list_display = [
+        "created_at",
         "title",
         "price",
         "floor_plan",
         "building_area",
         "land_area",
-        "parking",
         "construction",
+        "show_in_front",
         "featured",
         "premium",
     ]

@@ -157,48 +157,47 @@ def get_listing_data(url):
 
 def persist_property(property_data: dict):
     try:
+        property_price = int(property_data['property_price'].replace(',', ''))
+        if property_price > MAX_PRICE_TO_PULL:
+            print(f"Property {property_data['property_title']} exceed price limit.")
+            return
         property, created = Property.objects.get_or_create(
             url=property_data['property_url']
         )
-        if created:
-            property_price = int(property_data['property_price'].replace(',', ''))
-            if property_price > MAX_PRICE_TO_PULL:
-                print(f"Property {property.title} exceed price limit.")
-                return
-            else:
-                property.url = property_data['property_url']
-                property.title = property_data['property_title']
-                property.traffic=property_data['traffic']
-                property.location=property_data['location']
-                property.description=property_data['remarks']
-                property.construction_date=property_data['building_age']
-                # property.land_rights=property_data['land_rights']
-                property.building_structure=property_data['building_structure']
-                property.road_condition=property_data['road_condition']
-                property.setback=property_data['setback']
-                property.city_planning=property_data['city_planning']
-                property.zoning=property_data['zoning']
-                property.land_category=property_data['land_category']
-                property.building_coverage_ratio=property_data['building_coverage_ratio']
-                property.floor_area_ratio=property_data['floor_area_ratio']
-                property.current_status=property_data['current_status']
-                property.handover=property_data['handover']
-                property.transaction_type=property_data['transaction_type']
-                property.price=property_price
-                property.floor_plan=property_data['floor_plan']
-                property.building_area=property_data['building_area']
-                property.land_area=property_data['land_area']
-                property.parking=property_data['parking']
-                property.construction=property_data['building_age']
-                property.land_rights=property_data['land_rights']
-                
-                property.save()
-
-                for image_url in property_data.get('image_urls', []):
-                    PropertyImage.objects.create(property=property, file=image_url)
+        if created:                
+            property.url = property_data['property_url']
+            property.title = property_data['property_title']
+            property.traffic=property_data['traffic']
+            property.location=property_data['location']
+            property.description=property_data['remarks']
+            property.construction_date=property_data['building_age']
+            # property.land_rights=property_data['land_rights']
+            property.building_structure=property_data['building_structure']
+            property.road_condition=property_data['road_condition']
+            property.setback=property_data['setback']
+            property.city_planning=property_data['city_planning']
+            property.zoning=property_data['zoning']
+            property.land_category=property_data['land_category']
+            property.building_coverage_ratio=property_data['building_coverage_ratio']
+            property.floor_area_ratio=property_data['floor_area_ratio']
+            property.current_status=property_data['current_status']
+            property.handover=property_data['handover']
+            property.transaction_type=property_data['transaction_type']
+            property.price=property_price
+            property.floor_plan=property_data['floor_plan']
+            property.building_area=property_data['building_area']
+            property.land_area=property_data['land_area']
+            property.parking=property_data['parking']
+            property.construction=property_data['building_age']
+            property.land_rights=property_data['land_rights']
             
-                property.save()
-                print(f"Property {property.title} saved successfully.")
+            property.save()
+
+            for image_url in property_data.get('image_urls', []):
+                PropertyImage.objects.create(property=property, file=image_url)
+        
+            property.save()
+            print(f"Property {property.title} saved successfully.")
 
     except Exception as e:
         print(f"Error saving property: {e}")
