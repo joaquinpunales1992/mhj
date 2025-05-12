@@ -145,7 +145,7 @@ def get_listing_data(url):
         'floor_area_ratio': google_translator.translate(table_data['容積率'][:MAX_CHAR_LENGTH]) if table_data['容積率'] else "",
         'current_status': google_translator.translate(table_data['現況'][:MAX_CHAR_LENGTH]) if table_data['現況'] else "",
         'handover': google_translator.translate(table_data['引渡し'][:MAX_CHAR_LENGTH]) if table_data['引渡し'] else "",
-        # 'equipment': google_translator.translate(table_data['設備']), TODO:FIX
+        'equipment': google_translator.translate(table_data['設備'][:MAX_CHAR_LENGTH]) if table_data['設備'] else "",
         'transaction_type': google_translator.translate(table_data['取引態様'][:MAX_CHAR_LENGTH]) if table_data['取引態様'] else "",
         'remarks':  google_translator.translate(table_data['備考'][:MAX_CHAR_LENGTH]) if table_data['備考'] else "",
         'land_rights': google_translator.translate(table_data['土地権利'][:MAX_CHAR_LENGTH]) if table_data['土地権利'] else "",
@@ -181,6 +181,7 @@ def persist_property(property_data: dict):
             property.floor_area_ratio=property_data['floor_area_ratio']
             property.current_status=property_data['current_status']
             property.handover=property_data['handover']
+            property.equipment=property_data['equipment']
             property.transaction_type=property_data['transaction_type']
             property.price=property_price
             property.floor_plan=property_data['floor_plan']
