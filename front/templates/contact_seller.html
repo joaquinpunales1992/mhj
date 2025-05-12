@@ -3,7 +3,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google tag (gtag.js) -->
+
+    <script type="application/ld+json">
+        {
+          "@context": "https://schema.org",
+          "@type": "RealEstateListing",
+          "name": "{{ property.title }} –{{ property.get_price_for_front}}",
+          "description": "{{ property.description }}",
+          "url": "https://akiyainjapan.com/contact-seller/{{property.pk}}/",
+          "datePosted": "{{ property.created_at|date:'Y-m-d' }}",
+          "mainEntityOfPage": "https://akiyainjapan.com/contact-seller/{{property.pk}}/",
+          "image": [
+            {% for image in property.images.all %}
+              "{{ image.file }}"{% if not forloop.last %},{% endif %}
+            {% endfor %}
+          ],
+          "address": {
+            "@type": "PostalAddress",
+            "addressCountry": "JP",
+            "addressLocality": "{{ property.location }}",
+            "addressRegion": "{{ property.get_location_for_front }}",
+          },
+          "offers": {
+            "@type": "Offer",
+            "price": "{{ property.get_price_for_front}}",
+            "priceCurrency": "USD",
+            "availability": "https://schema.org/InStock"
+          },
+          "itemCondition": "https://schema.org/UsedCondition",
+          "seller": {
+            "@type": "RealEstateAgent",
+            "name": "My Akiya in Japan",
+            "url": "https://akiyainjapan.com"
+          }
+        }
+        </script>
+<!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
