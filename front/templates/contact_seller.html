@@ -981,8 +981,8 @@ class ImageCarousel {
           <br>
         <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
             <div class="p-6 border-b border-accent/20">
-              <h3 class="font-serif text-xxl text-primary mb-1">Learn More about this property & the buying process</h3>
-              <p class="text-xxl">We handle everything—from start to finish</p>
+              <h3 class="font-serif text-xxl text-primary mb-1">Learn More about this Property & the Buying Process</h3>
+              <p class="text-xxl">We handle everything—from inquiry to key delivery</p>
             </div>            
             
             <!-- Book Button -->
@@ -990,13 +990,13 @@ class ImageCarousel {
                 <div class="p-6">
                     <button id="book-button"
                     class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
-                        <span class="lock-icon"></span>Discover More
+                        <span class="lock-icon"></span>I'm interested in this property
                     </button>
                 </div>
             {% else %}
                 <div class="p-6">
                     <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-                        <span class="lock-icon"></span>Discover More
+                        <span class="lock-icon"></span>I'm interested in this property
                     </button>
                 </div>
             {% endif %}
