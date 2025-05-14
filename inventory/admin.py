@@ -1,6 +1,7 @@
 from django.contrib import admin
 from inventory.models import Property, PropertyImage
 from django.db import models
+from django.utils.html import format_html
 
 
 class PropertyImageInline(admin.TabularInline):
@@ -11,6 +12,7 @@ class PropertyImageInline(admin.TabularInline):
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
     list_display = [
+        "image_tag",
         "created_at",
         "title",
         "price",
@@ -25,6 +27,13 @@ class PropertyAdmin(admin.ModelAdmin):
     search_fields = ["title", "premium", "featured"]
 
     inlines = [PropertyImageInline,]
+
+    def image_tag(self, obj):
+        if obj.images.first():
+            return format_html('<img src="{}" style="max-height: 150px; max-width: 150px;" />'.format(obj.images.first().file))
+
+    image_tag.short_description = 'Image'
+
 
 
 
