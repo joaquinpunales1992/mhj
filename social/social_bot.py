@@ -245,11 +245,11 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
         flat=True
     )
 
-    properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
+    properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
 
     for property in properties_to_post_facebook:
         try:
-            post_to_facebook(property=property, use_ai_caption=True)
+            post_to_facebook(property=property, use_ai_caption=False)
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
             continue
@@ -265,7 +265,7 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
         try:
             post_to_instagram(
                 property=property,
-                use_ai_caption=True)
+                use_ai_caption=False)
                
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
