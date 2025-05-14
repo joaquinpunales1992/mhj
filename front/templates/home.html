@@ -161,6 +161,44 @@
 								</article>
 							{% endif %}
 						{% endfor %}
+
+						<!-- FINAL PROPERTY CARD -->
+						<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
+							<a href="{% static 'images/access_full_listing.png' %}" class="image"><img src="{% static 'images/access_full_listing.png' %}" alt="This is a premium property"/></a>							
+							<div class="details-box" style="
+								padding: 1rem 1.5rem;
+								border-radius: 8px;
+								box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+								background: rgba(0, 0, 0, 0.5);
+								min-width: 300px;
+								max-width: 400px;
+								display: flex;
+								flex-direction: column;
+								justify-content: space-between;
+								height: 200%;
+							">
+								<!-- Bottom-aligned row -->
+								<div style="
+									display: flex;
+									justify-content: space-between;
+									align-items: flex-end;
+									width: 100%;
+								">
+									<!-- Info on the left -->
+									<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
+										{% if user.is_authenticated or request.COOKIES.email %}
+											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
+												<span class="lock-icon">🔒</span> Upgrade to Access Full Listing
+											</button>
+										{% else %}
+											<button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+												<span class="lock-icon">🔒</span> Upgrade to Access Full Listing
+											</button>
+										{% endif %}
+									</div>
+								</div>
+							</div>
+						</article>
 					</div>
 
 				<!-- Footer -->
