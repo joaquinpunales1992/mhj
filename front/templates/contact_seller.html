@@ -978,11 +978,11 @@ class ImageCarousel {
           </main>
       </div>
 
-          <br>
+        <br>
         <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
             <div class="p-6 border-b border-accent/20">
-              <h3 class="font-serif text-xxl text-primary mb-1">Learn More about this Property & the Buying Process</h3>
-              <p class="text-xxl">We handle everything—from inquiry to key delivery</p>
+              <h3 class="font-serif text-xxl text-primary mb-1">Initial Consultation <small>USD 38</small></h3>
+              <p class="text-xxl">Have a one-on-one conversation with our team. We'll guide you through the steps to acquire a home in Japan, including property options, taxes, and what to expect throughout the process.</p>
             </div>            
             
             <!-- Book Button -->
@@ -990,13 +990,13 @@ class ImageCarousel {
                 <div class="p-6">
                     <button id="book-button"
                     class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
-                        <span class="lock-icon"></span>I'm interested in this property
+                        Book a Consultation
                     </button>
                 </div>
             {% else %}
                 <div class="p-6">
                     <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-                        <span class="lock-icon"></span>I'm interested in this property
+                        Book a Consultation
                     </button>
                 </div>
             {% endif %}
@@ -1013,13 +1013,59 @@ class ImageCarousel {
                   <div class="ml-3">
                     <h3 class="font-serif text-xll text-primary mb-1">Consultation Booked</h3>    
                     <p class="text-l text-secondary">
-                      You'll receive a confirmation email shortly with details about your appointment and how to prepare for your real estate consultation.
+                      We've received your request and will be in touch shortly to confirm your appointment.
                     </p>
                   </div>
                 </div>
               </div>
             </div>    
         </div>
+
+
+
+
+        <!-- <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
+            <div class="p-6 border-b border-accent/20">
+              <h3 class="font-serif text-xxl text-primary mb-1">Inspect this Property Virtually <small> USD 149</small></h3>
+              <p class="text-xxl">An official inspector will inspect this property and we'll provide you a report</p>
+            </div>
+            
+            {% if user.is_authenticated or request.COOKIES.email %}
+                <div class="p-6">
+                    <button id="book-button"
+                    class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
+                        Book an Inspection
+                    </button>
+                </div>
+            {% else %}
+                <div class="p-6">
+                    <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
+                        Book an Inspection
+                    </button>
+                </div>
+            {% endif %}
+
+    
+            <div id="success-confirmation" class="mt-8 hidden">
+              <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
+                <div class="flex items-start">
+                  <div class="flex-shrink-0 mt-0.5">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#81C784]" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                  </div>
+                  <div class="ml-3">
+                    <h3 class="font-serif text-xll text-primary mb-1">Inspection Requested</h3>    
+                    <p class="text-l text-secondary">
+                      We've received your request and will be in touch shortly to confirm your Virtual Inspection.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>    
+        </div> -->
+
+        
         </div>
                 
       </div>
