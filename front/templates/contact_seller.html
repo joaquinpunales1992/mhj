@@ -3,7 +3,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    
 
     <script type="application/ld+json">
         {
@@ -455,6 +454,62 @@ input:checked + .toggle-slider:before {
 .fade-in {
     animation: fadeIn 0.4s ease-in-out;
 }
+
+
+/* Booking Flow */
+.step-container {
+      position: relative;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding-left: 40px;
+      border-left: 3px solid #ccc;
+    }
+
+    .step {
+      position: relative;
+      margin-bottom: 50px;
+    }
+
+    .step::before {
+      content: attr(data-step);
+      position: absolute;
+      left: -30px;
+      top: 0;
+      width: 24px;
+      height: 24px;
+      background: #337ab7;
+      color: white;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 24px;
+      font-weight: bold;
+      font-size: 14px;
+    }
+
+    .step h3 {
+      margin: 0 0 0.5rem;
+      color: #333;
+    }
+
+    .step p {
+      margin: 0.3rem 0;
+      color: #555;
+    }
+
+    .step button {
+      background-color: #337ab7;
+      color: white;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 2rem;
+      margin-top: 0.8rem;
+    }
+
+    .step button:hover {
+      background-color: rgba(71, 117, 57, 0.9);
+    }
 
 </style>
 
@@ -979,93 +1034,72 @@ class ImageCarousel {
       </div>
 
         <br>
-        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
-            <div class="p-6 border-b border-accent/20">
-              <h3 class="font-serif text-xxl text-primary mb-1">Initial Consultation <small>USD 38</small></h3>
-              <p class="text-xxl">Have a one-on-one conversation with our team. We'll guide you through the steps to acquire a home in Japan, including property options, taxes, and what to expect throughout the process.</p>
-            </div>            
-            
-            <!-- Book Button -->
-            {% if user.is_authenticated or request.COOKIES.email %}
-                <div class="p-6">
-                    <button id="book-button"
-                    class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
-                        Book a Consultation
-                    </button>
-                </div>
-            {% else %}
-                <div class="p-6">
-                    <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-                        Book a Consultation
-                    </button>
-                </div>
-            {% endif %}
-
-
-            <div id="success-confirmation" class="mt-8 hidden">
-              <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
-                <div class="flex items-start">
-                  <div class="flex-shrink-0 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#81C784]" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  <div class="ml-3">
-                    <h3 class="font-serif text-xll text-primary mb-1">Consultation Booked</h3>    
-                    <p class="text-l text-secondary">
-                      We've received your request and will be in touch shortly to confirm your appointment.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>    
-        </div>
-
-
-
-
-        <!-- <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
-            <div class="p-6 border-b border-accent/20">
-              <h3 class="font-serif text-xxl text-primary mb-1">Inspect this Property Virtually <small> USD 149</small></h3>
-              <p class="text-xxl">An official inspector will inspect this property and we'll provide you a report</p>
-            </div>
-            
-            {% if user.is_authenticated or request.COOKIES.email %}
-                <div class="p-6">
-                    <button id="book-button"
-                    class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
-                        Book an Inspection
-                    </button>
-                </div>
-            {% else %}
-                <div class="p-6">
-                    <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-                        Book an Inspection
-                    </button>
-                </div>
-            {% endif %}
-
-    
-            <div id="success-confirmation" class="mt-8 hidden">
-              <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
-                <div class="flex items-start">
-                  <div class="flex-shrink-0 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#81C784]" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  <div class="ml-3">
-                    <h3 class="font-serif text-xll text-primary mb-1">Inspection Requested</h3>    
-                    <p class="text-l text-secondary">
-                      We've received your request and will be in touch shortly to confirm your Virtual Inspection.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>    
-        </div> -->
 
         
+        <div class="step-container">
+            <div id="success-confirmation" class="mt-8 hidden py-10 mb-12">
+                <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
+                  <div class="flex items-start">
+                    <div class="flex-shrink-0 mt-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#81C784]" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                      </svg>
+                    </div>
+                    <div class="ml-3">
+                      <h3 class="font-serif text-xll text-primary mb-1">Consultation Booked</h3>    
+                      <p class="text-l text-secondary">
+                        We've received your request and will be in touch shortly to confirm your appointment.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>  
+
+            <div class="step" data-step="1">
+              <h3>Start with a One-on-One Session <small>USD 38</small></h3>
+              <p>Connect with our team in a personal session. We’ll walk you through the entire home-buying journey in Japan—from property types and locations to taxes.</p>
+              {% if user.is_authenticated or request.COOKIES.email %}
+                <div>
+                    <button id="book-button"
+                    class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
+                        Book Your Intro Call
+                    </button>
+                </div>
+            {% else %}
+                <div>
+                    <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
+                        Book Your Intro Call
+                    </button>
+                </div>
+            {% endif %}
+            </div>
+        
+            <div class="step" data-step="2">
+              <h4>Sign the MyAkiyaInJapan service contract and choose up to 3 properties.</h4>
+              <small>We will support you throughout the entire purchase process, ensuring a smooth and confident experience.</small>
+            </div>
+        
+            <div class="step" data-step="3">
+              <h4>Request a Virtual Inspection</h4>
+              <small>We’ll coordinate a virtual or in-person inspection of your selected properties, providing a detailed condition report.</small>
+            </div>
+    
+            <div class="step" data-step="4">
+              <h4>Submit your offer for the property you’ve chosen.</h4>
+              <small>We’ll formally submit your offer to the property owner and help with the negotiation process.</small>
+            </div>
+        
+            <div class="step" data-step="5">
+              <h4>Finalize the details, costs, and documentation.</h4>
+              <small>Complete all necessary paperwork, tax payments, and contract signings to finalize your purchase.</small>
+            </div>
+
+            <div class="step" data-step="6">
+                <h4>Receive the keys to your new home in Japan.</h4>
+                <small>Congratulations! Your new home is ready for you!</small>
+              </div>
+          </div>
+        </div>        
         </div>
                 
       </div>
