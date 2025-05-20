@@ -24,6 +24,8 @@ def refresh_access_token():
         return None
     
 def get_fresh_token():
+    if not new_token:
+        refresh_access_token()
     return new_token
 
 def load_llm_model(load_local_model=True):
