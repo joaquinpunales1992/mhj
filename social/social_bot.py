@@ -62,7 +62,7 @@ def post_to_instagram(property, use_ai_caption):
     caption = generate_caption_for_post(
         property_location=property_location,
         property_price=property_price,
-        use_ai_caption=use_ai_caption
+        use_ai_caption=USE_AI_CAPTION
     )
 
     media_ids = []
@@ -138,7 +138,7 @@ def post_to_facebook(property, use_ai_caption=True):
     caption = generate_caption_for_post(
         property_location=property_location,
         property_price=property_price,
-        use_ai_caption=use_ai_caption
+        use_ai_caption=USE_AI_CAPTION
     )
 
     # Upload each image (unpublished)
