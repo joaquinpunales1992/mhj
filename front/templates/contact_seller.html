@@ -1,4 +1,4 @@
-{% load static %}
+{% load static social_share %}
 
 <!DOCTYPE html>
 <html lang="en">
@@ -75,6 +75,41 @@
   <!-- <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script> -->
 
 <style>
+
+    .popup.hidden {
+        display: none;
+    }
+
+    /* Popup container - visible */
+    .popup {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.5);
+        z-index: 1000;
+    }
+
+    /* Popup content */
+    .popup-content {
+        background-color: hsl(60, 30%, 96%);
+        margin: 10% auto;
+        padding: 20px;
+        width: 300px;
+        position: relative;
+        border-radius: 3px;
+    }
+
+    /* Close button */
+    .close-btn {
+        position: absolute;
+        top: 10px;
+        right: 15px;
+        font-size: 20px;
+        cursor: pointer;
+    }
+
   /* Base styles and reset */
 *, *::before, *::after {
     box-sizing: border-box;
@@ -514,6 +549,29 @@ input:checked + .toggle-slider:before {
 </style>
 
   <script>
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const openBtn = document.getElementById('openPopup');
+        const closeBtn = document.getElementById('closePopup');
+        const popup = document.getElementById('sharePopup');
+
+        openBtn.addEventListener('click', function () {
+            popup.classList.remove('hidden');
+        });
+
+        closeBtn.addEventListener('click', function () {
+            popup.classList.add('hidden');
+        });
+
+        window.addEventListener('click', function (event) {
+            if (event.target === popup) {
+            popup.classList.add('hidden');
+            }
+        });
+    });
+
+
+
     document.addEventListener('DOMContentLoaded', () => {
     // Initialize the image carousel
     const carousel = new ImageCarousel('imageCarousel');
@@ -987,15 +1045,30 @@ class ImageCarousel {
           <div class="flex items-center justify-between mb-6">
             <h1 class="text-4xl font-serif font-light text-primary">{{ property.title }}</h1>
             <div class="flex items-center space-x-2">
-              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                </svg>
+
+              <div class="h-13 w-18  bg-primary/10 flex items-center justify-center text-primary">
+                <button id="openPopup" class="w-full bg-primary text-white py-4 rounded-md font-medium hover:bg-primary/90 transition-colors" style="padding: 0.3rem;">🔗 Share this Property</button>
               </div>
-              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                </svg>
+              
+              <div id="sharePopup" class="popup hidden">
+                <div class="popup-content">
+                  <span class="close-btn" id="closePopup">&times;</span>
+                  <h4 class="text-4xl font-serif text-primary">Share this Property</h4><br>
+                  <div>
+                    <div style="display: flex; padding-left: 6rem;">
+                        <img src="{% static 'images/social_icons/facebook.png' %}" alt="" style="width: 20px; height: 20px;">
+                        &nbsp;{% post_to_facebook "https://akiyainajapan.com" "Share on Facebook" %}
+                    </div><br>
+                    <div style="display: flex; padding-left: 6rem;">
+                        <img src="{% static 'images/social_icons/twitter.png' %}" alt="" style="width: 20px; height: 20px;">
+                        &nbsp; {% post_to_twitter "I've found this Property in Japan!"  "https://akiyainjapan.com" "Share on X" %} 
+                    </div><br>
+                    <div style="display: flex; padding-left: 6rem;">
+                        <img src="{% static 'images/social_icons/whatsapp.png' %}" alt="" style="width: 20px; height: 20px;">
+                        &nbsp; {% post_to_whatsapp "https://akiyainjapan.com" "Share on Whatsapp" %} 
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>    
