@@ -3,7 +3,7 @@ import urllib.parse
 from social.constants import *
 
 
-USE_AI_CAPTION = True
+USE_AI_CAPTION = False
 
 def load_llm_model(load_local_model=True):
     from llama_cpp import Llama
