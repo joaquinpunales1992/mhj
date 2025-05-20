@@ -1,10 +1,12 @@
 import requests
 import urllib.parse
-from llama_cpp import Llama
 from social.constants import *
 
 
+USE_AI_CAPTION = True
+
 def load_llm_model(load_local_model=True):
+    from llama_cpp import Llama
     global llm_model
     if load_local_model:  
         llm_model = Llama(model_path="social/pretrained_llm_models/qwen2-0_5b-instruct-fp16.gguf")
@@ -234,8 +236,8 @@ def post_instagram_reel():
 from inventory.models import Property
 from social.models import SocialPost
 
-
-load_llm_model()
+if USE_AI_CAPTION:
+    load_llm_model()
 
 def post_on_facebook_batch(price_limit: int, batch_size: int):
     facebook_posted_urls = SocialPost.objects.filter(
@@ -246,7 +248,6 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
     )
 
     properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
-
     for property in properties_to_post_facebook:
         try:
             post_to_facebook(property=property, use_ai_caption=False)
