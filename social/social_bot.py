@@ -1,4 +1,5 @@
 import requests
+import json
 import urllib.parse
 from social.constants import *
 
@@ -9,24 +10,30 @@ USE_AI_CAPTION = False
 global new_token
 
 def refresh_access_token():
+    def save_token(token):
+        with open("social_access_token.json", "w") as f:
+            json.dump({"access_token": token}, f)
+
     url = "https://graph.facebook.com/v19.0/me/accounts/"
     params = {
-    "access_token": PAGE_ACCESS_TOKEN
-}
+        "access_token": PAGE_ACCESS_TOKEN
+    }
 
     response = requests.get(url, params=params)
     if response.status_code == 200:
-        new_token = response.json().get("access_token")
+        new_token = response.json().get('data')[0].get('access_token')
+        save_token(new_token)
         print("✅ Access token refreshed successfully.")
-        return new_token
     else:
         print(f"❌ Failed to refresh access token: {response.json()}")
         return None
     
 def get_fresh_token():
-    if not new_token:
-        refresh_access_token()
-    return new_token
+    try:
+        with open("social_access_token.json", "r") as f:
+            return json.load(f)["access_token"]
+    except (FileNotFoundError, KeyError):
+        return None
 
 def load_llm_model(load_local_model=True):
     from llama_cpp import Llama
