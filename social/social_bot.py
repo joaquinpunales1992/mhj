@@ -3,11 +3,7 @@ import json
 import urllib.parse
 from social.constants import *
 
-
 USE_AI_CAPTION = False
-
-
-global new_token
 
 def refresh_access_token():
     def save_token(token):
