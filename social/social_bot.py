@@ -5,6 +5,27 @@ from social.constants import *
 
 USE_AI_CAPTION = False
 
+
+global new_token
+
+def refresh_access_token():
+    url = "https://graph.facebook.com/v19.0/me/accounts/"
+    params = {
+    "access_token": PAGE_ACCESS_TOKEN
+}
+
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        new_token = response.json().get("access_token")
+        print("✅ Access token refreshed successfully.")
+        return new_token
+    else:
+        print(f"❌ Failed to refresh access token: {response.json()}")
+        return None
+    
+def get_fresh_token():
+    return new_token
+
 def load_llm_model(load_local_model=True):
     from llama_cpp import Llama
     global llm_model
@@ -78,7 +99,7 @@ def post_to_instagram(property, use_ai_caption):
         payload = {
             "image_url": image_url,
             "is_carousel_item": True,
-            "access_token": PAGE_ACCESS_TOKEN
+            "access_token": get_fresh_token()
         }
         response = requests.post(upload_url, data=payload)
         result = response.json()
@@ -96,7 +117,7 @@ def post_to_instagram(property, use_ai_caption):
             "media_type": "CAROUSEL",
             "children": ",".join(media_ids),
             "caption": caption,
-            "access_token": PAGE_ACCESS_TOKEN
+            "access_token": get_fresh_token()
         }
 
         carousel_response = requests.post(carousel_url, data=payload)
@@ -107,7 +128,7 @@ def post_to_instagram(property, use_ai_caption):
             publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
             publish_payload = {
                 "creation_id": creation_id,
-                "access_token": PAGE_ACCESS_TOKEN
+                "access_token": get_fresh_token()
             }
             publish_response = requests.post(publish_url, data=publish_payload)
             if publish_response.status_code == 200:
@@ -153,7 +174,7 @@ def post_to_facebook(property, use_ai_caption=True):
         payload = {
             'url': image_url,
             'published': 'false',
-            'access_token': PAGE_ACCESS_TOKEN,
+            'access_token': get_fresh_token(),
         }
         response = requests.post(upload_url, data=payload)
         result = response.json()
@@ -169,7 +190,7 @@ def post_to_facebook(property, use_ai_caption=True):
         post_url = f'https://graph.facebook.com/v19.0/{PAGE_ID}/feed'
         payload = {
             'message': caption,
-            'access_token': PAGE_ACCESS_TOKEN,
+            'access_token': get_fresh_token(),
         }
         for i, media_id in enumerate(media_fbids):
             payload[f'attached_media[{i}]'] = f'{{"media_fbid":"{media_id}"}}'
@@ -234,6 +255,7 @@ def post_instagram_reel():
 # RUN SOCIAL BOT
 from inventory.models import Property
 from social.models import SocialPost
+import time
 
 if USE_AI_CAPTION:
     load_llm_model()
