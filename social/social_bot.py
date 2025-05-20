@@ -79,7 +79,10 @@ def generate_caption_for_post(property_location, property_price, use_ai_caption)
             print(f"Error generating caption: {e}")
             caption = f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind out more at https://akiyainjapan.com\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
 
-    return caption
+        return caption
+    else:
+        return f"Price: {property_price}\nLocation: {property_location}\n\nFind out more at https://akiyainjapan.com\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+    
 
 def post_to_instagram(property, use_ai_caption):
 
