@@ -30,14 +30,13 @@ def prepare_image_url_for_facebook(image_url):
     
     return image_url
 
-def generate_caption_for_post(property_location, property_price, use_ai_caption=True):
-    regular_caption = f"Location: {property_location} - Price: {property_price} "
+def generate_caption_for_post(property_location, property_price, use_ai_caption):
+    caption = f"Location: {property_location} - Price: {property_price} "
     
     if use_ai_caption:
         try:
             # Generate caption using LLM
-            # caption_prompt = f"Write an engaing caption for a Facebook post: {regular_caption}"
-            caption_full_prompt = f"{DOMAIN_CONTEXT}\nUser: {regular_caption}\nBot:"
+            caption_full_prompt = f"{DOMAIN_CONTEXT}\nUser: {caption}\nBot:"
             output = llm_model(caption_full_prompt, max_tokens=80)
 
             caption = output["choices"][0]["text"].strip()
@@ -62,7 +61,7 @@ def post_to_instagram(property, use_ai_caption):
     caption = generate_caption_for_post(
         property_location=property_location,
         property_price=property_price,
-        use_ai_caption=USE_AI_CAPTION
+        use_ai_caption=use_ai_caption
     )
 
     media_ids = []
@@ -138,7 +137,7 @@ def post_to_facebook(property, use_ai_caption=True):
     caption = generate_caption_for_post(
         property_location=property_location,
         property_price=property_price,
-        use_ai_caption=USE_AI_CAPTION
+        use_ai_caption=use_ai_caption
     )
 
     # Upload each image (unpublished)
@@ -250,7 +249,7 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
     properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
     for property in properties_to_post_facebook:
         try:
-            post_to_facebook(property=property, use_ai_caption=False)
+            post_to_facebook(property=property, use_ai_caption=USE_AI_CAPTION)
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
             continue
@@ -266,7 +265,7 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
         try:
             post_to_instagram(
                 property=property,
-                use_ai_caption=False)
+                use_ai_caption=USE_AI_CAPTION)
                
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
