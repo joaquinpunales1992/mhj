@@ -905,69 +905,79 @@ class ImageCarousel {
   
   <script>
     document.addEventListener("DOMContentLoaded", () => {
-      const bookButton = document.getElementById('book-button');
-      const successConfirmation = document.getElementById('success-confirmation'); // Assuming you have this element
+    const bookButton = document.getElementById('book-button');
+    const successConfirmation = document.getElementById('success-confirmation');
 
-      bookButton.addEventListener('click', function(event) {
-          // Show loading state
-          const originalText = bookButton.textContent;
-          bookButton.textContent = 'Booking...';
-          bookButton.disabled = true;
+    if (!bookButton || !successConfirmation) return;
 
-          // Create a ripple effect
-          const ripple = document.createElement('span');
-          ripple.classList.add('ripple');
-          const rect = bookButton.getBoundingClientRect();
-          const size = Math.max(rect.width, rect.height);
-          ripple.style.width = ripple.style.height = `${size}px`;
-          ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
-          ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
-          bookButton.appendChild(ripple);
+    function showBookingConfirmation(event = null) {
+        console.log('Booking button clicked');
+        const originalText = bookButton.textContent;
+        bookButton.textContent = 'Booking...';
+        bookButton.disabled = true;
 
-          const property_url = window.location.href;
+        // Create a ripple effect if event is provided (like on button click)
+        if (event) {
+            const ripple = document.createElement('span');
+            ripple.classList.add('ripple');
+            const rect = bookButton.getBoundingClientRect();
+            const size = Math.max(rect.width, rect.height);
+            ripple.style.width = ripple.style.height = `${size}px`;
+            ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
+            ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
+            bookButton.appendChild(ripple);
+        }
 
-          // Send booking confirmation email
-          fetch('/api/send-booking-confirmation', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                'url': property_url,
-                'user_email': '{{ user_email }}',
-              })
-          })
-          .then(response => {
-              if (!response.ok) {
-                  throw new Error('Failed to send confirmation email.');
-              }
-              return response.json();
-          })
-          .then(data => {
-              // Remove ripple
-              ripple.remove();
+        const property_url = window.location.href;
 
-              // Show success confirmation
-              successConfirmation.classList.remove('hidden');
+        fetch('/api/send-booking-confirmation', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                url: property_url,
+                user_email: '{{ user_email }}'
+            })
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to send confirmation email.');
+            }
+            return response.json();
+        })
+        .then(data => {
+            const ripple = bookButton.querySelector('.ripple');
+            if (ripple) ripple.remove();
 
-              // Scroll to the success message
-              successConfirmation.scrollIntoView({ behavior: 'smooth' });
+            successConfirmation.classList.remove('hidden');
+            successConfirmation.scrollIntoView({ behavior: 'smooth' });
 
-              // Reset button state
-              bookButton.textContent = originalText;
-              bookButton.disabled = false;
+            bookButton.textContent = originalText;
+            bookButton.disabled = false;
 
-              console.log('Booking confirmed');
-          })
-          .catch(error => {
-              ripple.remove();
-              bookButton.textContent = originalText;
-              bookButton.disabled = false;
-              alert('There was an error sending the confirmation email. Please try again.');
-              console.error(error);
-          });
-      });
+            console.log('Booking confirmed');
+        })
+        .catch(error => {
+            const ripple = bookButton.querySelector('.ripple');
+            if (ripple) ripple.remove();
+
+            bookButton.textContent = originalText;
+            bookButton.disabled = false;
+            alert('There was an error sending the confirmation email. Please try again.');
+            console.error(error);
+        });
+    }
+
+    bookButton.addEventListener('click', function(event) {
+        showBookingConfirmation(event);
     });
+
+    // Automatically trigger booking if user just registered
+    if ('{{ user_just_registered }}' == '1') {
+        showBookingConfirmation();
+    }
+});
 
   </script>
 

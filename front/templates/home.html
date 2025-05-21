@@ -5,6 +5,7 @@
 	<head>
 		<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-9036062810934993"
 		crossorigin="anonymous"></script>
+		
 		<script>
 			(function (c, s, q, u, a, r, e) {
 				c.hj=c.hj||function(){(c.hj.q=c.hj.q||[]).push(arguments)};
@@ -151,7 +152,7 @@
 													{% if property.price %}
 														<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
 													{% endif %}
-														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk %}'">
+														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk 0 %}'">
 															<span class="lock-icon"></span> Learn More
 														</button>
 													

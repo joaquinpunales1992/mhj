@@ -77,7 +77,7 @@
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-serif font-light text-primary">{% if redirect_to_premium == '1' %}Register to Learn More{% else %}Register for FREE to Learn More{% endif %}</h1>
+            <h1 class="text-3xl font-serif font-light text-primary">{% if redirect_to_premium == '1' %}Sign up to Upgrade{% else %}Sign up to Book your Intro Call{% endif %}</h1>
             <div class="flex items-center space-x-2">
               <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -106,18 +106,18 @@
         <!-- Booking Form -->
         <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
           <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">Register with your email</p>
+            <p class="text-secondary text-l">Sign up with your email</p>
             <p class="text-secondary text-sm">
               <form action="/register-via-email/{{ property_pk }}/{{ redirect_to_premium }}/" method="POST" class="flex items-center space-x-5">
                 {% csrf_token %}
                 <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid; color: black;" placeholder="Enter your email" required>
-                <button type="submit" class="primary">Register</button>
+                <button type="submit" class="primary">Sign Up</button>
               </form>
             </p>
           </div>
           
           <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">or Register with your Google Account</p>
+            <p class="text-secondary text-l">or Sign up with your Google Account</p>
             <p class="text-secondary text-sm">
                 <a href="{% provider_login_url 'google' %}"
                 class="btn btn-light "

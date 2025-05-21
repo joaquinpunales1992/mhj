@@ -18,7 +18,8 @@ def register_via_email(request, pk, redirect_to_premium=0):
             response = redirect(reverse('upgrade_premium'))
             response.set_cookie('email', email)
             return response
-        response = redirect(reverse('contact_seller', args=[pk]))
+        user_just_registered = 1
+        response = redirect(reverse('contact_seller', args=[pk, user_just_registered]))
         response.set_cookie('email', email)
         return response
 

@@ -80,7 +80,7 @@ def send_booking_confirmation(request):
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
 
-def contact_seller(request, pk):
+def contact_seller(request, pk, user_just_registered=0):
     property = Property.objects.filter(pk=pk).first()
     user_email = request.user.email if request.user.is_authenticated else request.COOKIES.get('email')
-    return render(request, 'contact_seller.html', context={'property': property, 'user_email': user_email})
+    return render(request, 'contact_seller.html', context={'property': property, 'user_email': user_email, 'user_just_registered': user_just_registered})
