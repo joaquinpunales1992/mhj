@@ -18,5 +18,5 @@ urlpatterns = [
     path('approved-membership-payment/', membership_views.approved_membership_payment, name='approved_membership_payment'),
     path("admin/", admin.site.urls),
     path('accounts/', include('allauth.urls')),
-    path('contact-seller/<int:pk>/', front_views.contact_seller, name='contact_seller')
+    path('contact-seller/<int:pk>/<str:user_just_registered>/', front_views.contact_seller, name='contact_seller')
 ]
