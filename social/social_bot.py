@@ -289,7 +289,7 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
     social_media='instagram'
     ).values_list('property_url', flat=True)
 
-    properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=price_limit).exclude(url__in=instagram_posted_urls).order_by('price').distinct()[:batch_size]
+    properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=instagram_posted_urls).order_by('price').distinct()[:batch_size]
 
     for property in properties_to_post_instagram:
         try:
