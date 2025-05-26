@@ -1031,11 +1031,11 @@ class ImageCarousel {
 
           {% if user.is_authenticated or request.COOKIES.email %}
             <button class="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "upgrade_premium" %}'">
-                <span class="lock-icon">🔒 </span>Go Premium for Full Access
+                <span class="lock-icon">🔒 </span>Unlock Details
             </button>
           {% else %}
             <button class="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
-                <span class="lock-icon">🔒 </span>Go Premium for Full Access
+                <span class="lock-icon">🔒 </span>Unlock Details
             </button>
           {% endif %}
           
