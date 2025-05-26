@@ -5,6 +5,7 @@ from django.urls import path, include
 from django.views.generic import TemplateView
 from front import sitemap 
 
+handler404 = 'front.views.redirect_404_view'
 
 urlpatterns = [
     path("", front_views.display_home, name="home"),
