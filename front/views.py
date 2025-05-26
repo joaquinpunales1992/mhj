@@ -6,6 +6,7 @@ from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.template.loader import render_to_string
+from django.shortcuts import redirect
 
 
 def display_home(request):
@@ -88,4 +89,4 @@ def contact_seller(request, pk, user_just_registered=0):
 
 
 def redirect_404_view(request):
-    return display_home(request)
+    return redirect('home')
