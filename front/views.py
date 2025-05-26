@@ -81,10 +81,11 @@ def send_booking_confirmation(request):
 
 
 def contact_seller(request, pk, user_just_registered=0):
+    import pdb;pdb.set_trace()  
     property = Property.objects.filter(pk=pk).first()
     user_email = request.user.email if request.user.is_authenticated else request.COOKIES.get('email')
     return render(request, 'contact_seller.html', context={'property': property, 'user_email': user_email, 'user_just_registered': user_just_registered})
 
 
-def redirect_404_view(request, exception):
-    return render(request, 'home.html', status=404)
+def redirect_404_view(request):
+    return display_home(request)
