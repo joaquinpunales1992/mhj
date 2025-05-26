@@ -66,6 +66,8 @@
   <link rel="canonical" href="https://{{ request.get_host }}{{ request.get_full_path }}" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
+  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
+
   <!-- <link rel="stylesheet" href="{% static 'assets/css/other.css' %}"> -->
   <!-- <link rel="stylesheet" href="{% static 'assets/css/noscript2.css' %}"> -->
   <link rel="stylesheet" href="{% static 'assets/js/main.js' %}">
@@ -1006,26 +1008,31 @@ class ImageCarousel {
           <!-- Top Row: Main Property Info -->
           <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
             <div class="flex-1">
-              <p class="text-xll text-gray-500"><strong>Price</strong></p>
+              <p class="text-xll font-semibold" style="color: black; font-weight: bold;">Price</p>
               <p class="text-xll font-semibold">{{ property.get_price_for_front }}</p>
               <hr>
             </div>
             <div class="flex-1">
-              <p class="text-xll text-gray-500"><strong>Location</strong></p>
+              <p class="text-xll" style="color: black; font-weight: bold;">Location</p>
               <p class="text-xll">{{ property.location }}</p>
               <hr>
             </div>
             <div class="flex-1">
-              <p class="text-xll text-gray-500"><strong>Building Area</strong></p>
+              <p class="text-xll" style="color: black; font-weight: bold;">Building Area</p>
               <p class="text-xll">{{ property.building_area }}</p>
               <hr>
             </div>
             <div class="flex-1">
-              <p class="text-xll text-gray-500"><strong>Land Area</strong></p>
+              <p class="text-xll" style="color: black; font-weight: bold;">Land Area</p>
               <p class="text-xll">{{ property.land_area }} </p>
             </div>
           </div>
-        
+          <br>
+
+          <button id="book-button" class="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "upgrade_premium" %}'">
+            <span class="lock-icon">🔒 </span>Go Premium for Full Access
+          </button>
+
           <!-- Collapsible Section -->
           <!-- <div x-data="{ open: false }" class="mt-6 pt-4 w-full">
             <button 
