@@ -6,9 +6,9 @@ def notify_user_registered_via_email(new_user_email):
     email = EmailMessage(
         subject='Your Akiya in Japan - NEW USER REGISTERD VIA EMAIL',
         body=f"New User Registered via Emial: {new_user_email}",
-        from_email='noreply@myhouseinjapan.com',
+        from_email='hello@myakiyainjapan.com',
         to=['joaquinpunales@gmail.com'],
-        reply_to=['noreply@myhouseinjapan.com']
+        reply_to=['hello@myakiyainjapan.com']
     )
 
     email.content_subtype = 'html'

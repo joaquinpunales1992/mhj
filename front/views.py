@@ -13,13 +13,6 @@ def display_home(request):
     properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
     return render(request, 'home.html', context={'properties': properties})
 
-def property_detail(request, pk):
-    import pdb;pdb.set_trace()
-    # Fetch the property details from the database
-    property = Property.objects.filter(pk=pk).first()
-
-    return render(request, 'property_detail.html', context={'property': property})
-
 @csrf_exempt
 def submit_premium_request(request):
     if request.method == 'POST':
@@ -34,10 +27,10 @@ def submit_premium_request(request):
         email = EmailMessage(
             subject='Your Akiya in Japan - Premium Account Request',
             body=html_message,
-            from_email='noreply@myakiyainjapan.com',
+            from_email='hello@myakiyainjapan.com',
             to=[user_email],
             bcc=['joaquinpunales@gmail.com'],
-            reply_to=['noreply@myakiyainjapan.com']
+            reply_to=['hello@myakiyainjapan.com']
         )
 
         email.content_subtype = 'html'
@@ -65,10 +58,10 @@ def send_booking_confirmation(request):
         email = EmailMessage(
             subject='Your Akiya in Japan - Booking Confirmation',
             body=html_message,
-            from_email='noreply@myakiyainjapan.com',
+            from_email='hello@myakiyainjapan.com',
             to=[user_email],
             bcc=['joaquinpunales@gmail.com'],
-            reply_to=['noreply@myakiyainjapan.com']
+            reply_to=['hello@myakiyainjapan.com']
         )
 
         email.content_subtype = 'html'
