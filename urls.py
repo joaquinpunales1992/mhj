@@ -10,7 +10,6 @@ handler404 = 'front.views.redirect_404_view'
 urlpatterns = [
     path("", front_views.display_home, name="home"),
     path('sitemap.xml', sitemap.display_sitemaps, name='django.contrib.sitemaps.views.sitemap'),
-    path("p/<int:pk>/", front_views.property_detail, name="property_detail"),
     path("api/send-booking-confirmation", front_views.send_booking_confirmation, name="send_booking_confirmation"),
     path("api/submit-premium-request", front_views.submit_premium_request, name="submit_premium_request"),
     path('authenticate/<int:pk>/<str:redirect_to_premium>/', membership_views.show_authenticate_page, name='authenticate'),
