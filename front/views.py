@@ -89,4 +89,5 @@ def contact_seller(request, pk, user_just_registered=0):
 
 
 def redirect_404_view(request):
-    return redirect('home')
+    properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
+    return render(request, 'home.html', context={'properties': properties})
