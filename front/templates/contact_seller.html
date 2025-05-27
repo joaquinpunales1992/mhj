@@ -991,7 +991,7 @@ class ImageCarousel {
     <!-- Sidebar -->
     <aside class="lg:w-120 bg-neutral-light border-r border-accent/50 p-5 flex flex-col">
       <div class="mb-8">
-        <h1 class="font-serif text-xl text-primary mb-1">My Akiya in Japan</h1>
+        <h1 class="text-xl text-primary mb-1">My Akiya in Japan</h1>
       </div>
       
       <nav class="space-y-6 mb-auto">
@@ -1030,11 +1030,11 @@ class ImageCarousel {
           <br>
 
           {% if user.is_authenticated or request.COOKIES.email %}
-            <button class="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "upgrade_premium" %}'">
+            <button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
                 <span class="lock-icon">🔒 </span>Unlock Details
             </button>
           {% else %}
-            <button class="w-full bg-primary text-white py-2 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+            <button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
                 <span class="lock-icon">🔒 </span>Unlock Details
             </button>
           {% endif %}
@@ -1068,17 +1068,17 @@ class ImageCarousel {
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-4xl font-serif font-light text-primary">{{ property.title }}</h1>
+            <h1 class="text-4xl text-primary">{{ property.title }}</h1>
             <div class="flex items-center space-x-2">
 
               <div class="h-13 w-18  bg-primary/10 flex items-center justify-center text-primary">
-                <button id="openPopup" class="w-full bg-primary text-white py-4 rounded-md font-medium hover:bg-primary/90 transition-colors" style="padding: 0.3rem;">🔗</button>
+                <button id="openPopup" class="primary text-white py-5" style="padding: 0.rem;">Share</button>
               </div>
               
               <div id="sharePopup" class="popup hidden">
                 <div class="popup-content">
                   <span class="close-btn" id="closePopup">&times;</span>
-                  <h4 class="text-4xl font-serif text-primary">Share this Property</h4><br>
+                  <h4 class="text-4xl text-primary">Share this Property</h4><br>
                   <div>
                     <div style="display: flex; padding-left: 6rem;">
                         <img src="{% static 'images/social_icons/facebook.png' %}" alt="" style="width: 20px; height: 20px;">
@@ -1144,7 +1144,7 @@ class ImageCarousel {
                       </svg>
                     </div>
                     <div class="ml-3">
-                      <h3 class="font-serif text-xll text-primary mb-1">Consultation Booked</h3>    
+                      <h3 class="text-xll text-primary mb-1">Consultation Booked</h3>    
                       <p class="text-l text-secondary">
                         We've received your request and will be in touch shortly to confirm your appointment.
                       </p>
@@ -1159,13 +1159,13 @@ class ImageCarousel {
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
                     <button id="book-button"
-                    class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors">
+                    class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">
                         Book Your Intro Call
                     </button>
                 </div>
             {% else %}
                 <div>
-                    <button class="w-full bg-primary text-white py-6 rounded-md font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
+                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
                         Book Your Intro Call
                     </button>
                 </div>
