@@ -10,7 +10,7 @@ from django.template.loader import render_to_string
 
 def display_home(request):
     properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
-    return render(request, 'home.html', context={'properties': properties})
+    return render(request, 'home.html', context={'properties': properties, 'nav': 'home'})
 
 @csrf_exempt
 def submit_premium_request(request):
@@ -134,7 +134,7 @@ def filter_properties(request, category):
         city_filters |= Q(location__icontains=city)
 
     properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).filter(city_filters)[:settings.PROPERTIES_TO_DISPLAY]
-    return render(request, 'home.html', context={'properties': properties})
+    return render(request, 'home.html', context={'properties': properties, 'nav': category})
 
 def redirect_404_view(request, exception=None):
     properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]

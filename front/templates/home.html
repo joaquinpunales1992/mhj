@@ -77,6 +77,21 @@
 					border-radius: 8px;
 					margin-bottom: 2rem;
 				">
+
+					<button class="filter-button" onclick="window.location.href='{% url "home" %}'" style="
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					background: none;
+					border: none;
+					color: white;
+					cursor: pointer;
+					">
+					<span class="icon solid fa-recycle" style="font-size: 2rem; {% if nav == 'home' %} color: #34a58e; {% endif %}"></span>
+					<span style="font-size: 0.8rem;">Explore All</span>
+					</button>
+
+
 					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "beach" %}'" style="
 						display: flex;
 						flex-direction: column;
@@ -86,9 +101,10 @@
 						color: white;
 						cursor: pointer;
 					">
-						<span class="icon solid fa-umbrella-beach" style="font-size: 2rem;"></span>
+						<span class="icon solid fa-umbrella-beach" style="font-size: 2rem; {% if nav == 'beach' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Beach Town</span>
 					</button>
+
 					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "snow" %}'" style="
 						display: flex;
 						flex-direction: column;
@@ -98,7 +114,7 @@
 						color: white;
 						cursor: pointer;
 					">
-						<span class="icon solid fa-snowflake" style="font-size: 2rem;"></span>
+						<span class="icon solid fa-snowflake" style="font-size: 2rem; {% if nav == 'snow' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Snow Town</span>
 					</button>
 					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "mountain" %}'" style="
@@ -110,7 +126,7 @@
 						color: white;
 						cursor: pointer;
 					">
-						<span class="icon solid fa-mountain" style="font-size: 2rem;"></span>
+						<span class="icon solid fa-mountain" style="font-size: 2rem;  {% if nav == 'mountain' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Mountain Town</span>
 					</button>
 					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "onsen" %}'" style="
@@ -122,7 +138,7 @@
 						color: white;
 						cursor: pointer;
 					">
-						<span class="icon solid fa-fire" style="font-size: 2rem;"></span>
+						<span class="icon solid fa-fire" style="font-size: 2rem; {% if nav == 'onsen' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Onsen</span>
 					</button>
 				</div>
