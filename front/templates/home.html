@@ -74,21 +74,39 @@
 					gap: 1rem;
 					padding: 1rem;
 					background-color: rgba(0, 0, 0, 0.8);
-					border-radius: 8px;
 					margin-bottom: 2rem;
+					flex-wrap: wrap;
 				">
+					<style>
+						@media (max-width: 768px) {
+							#filter-bar {
+								gap: 0.9rem;
+								padding: 1.5rem;
+							}
+							.filter-button {
+								flex: 1 1 calc(50% - 1rem);
+								max-width: calc(50% - 0.1rem);
+								padding: 1.9rem;
+								font-size: 0.8rem;
+							}
+							.filter-button span {
+								font-size: 0.4rem;
+			
+							}
+						}
+					</style>
 
 					<button class="filter-button" onclick="window.location.href='{% url "home" %}'" style="
-					display: flex;
-					flex-direction: column;
-					align-items: center;
-					background: none;
-					border: none;
-					color: white;
-					cursor: pointer;
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						background: none;
+						color: white;
+						cursor: pointer;
+						box-shadow: none;
 					">
-					<span class="icon solid fa-recycle" style="font-size: 2rem; {% if nav == 'home' %} color: #34a58e; {% endif %}"></span>
-					<span style="font-size: 0.8rem;">Explore All</span>
+						<span class="icon solid fa-recycle" style="font-size: 2rem; {% if nav == 'home' %} color: #34a58e; {% endif %}"></span>
+						<span style="font-size: 0.8rem;">Explore All</span>
 					</button>
 
 
@@ -100,6 +118,7 @@
 						border: none;
 						color: white;
 						cursor: pointer;
+						box-shadow: none;
 					">
 						<span class="icon solid fa-umbrella-beach" style="font-size: 2rem; {% if nav == 'beach' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Beach Town</span>
@@ -113,6 +132,7 @@
 						border: none;
 						color: white;
 						cursor: pointer;
+						box-shadow: none;
 					">
 						<span class="icon solid fa-snowflake" style="font-size: 2rem; {% if nav == 'snow' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Snow Town</span>
@@ -125,6 +145,7 @@
 						border: none;
 						color: white;
 						cursor: pointer;
+						box-shadow: none;
 					">
 						<span class="icon solid fa-mountain" style="font-size: 2rem;  {% if nav == 'mountain' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Mountain Town</span>
@@ -137,6 +158,7 @@
 						border: none;
 						color: white;
 						cursor: pointer;
+						box-shadow: none;
 					">
 						<span class="icon solid fa-fire" style="font-size: 2rem; {% if nav == 'onsen' %} color: #34a58e; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Onsen</span>
