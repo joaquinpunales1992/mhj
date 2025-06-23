@@ -1031,13 +1031,14 @@ class ImageCarousel {
 
           {% if user.is_authenticated or request.COOKIES.email %}
             <button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-                <span class="lock-icon">🔒 </span>Unlock Details
+                <span class="lock-icon">🔒 </span>Unlock Extra Details
             </button>
           {% else %}
             <button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
-                <span class="lock-icon">🔒 </span>Unlock Details
+                <span class="lock-icon">🔒 </span>Unlock Extra Details
             </button>
           {% endif %}
+          <hr>
           
 
           <!-- Collapsible Section -->
@@ -1080,15 +1081,15 @@ class ImageCarousel {
                   <span class="close-btn" id="closePopup">&times;</span>
                   <h4 class="text-4xl text-primary">Share this Property</h4><br>
                   <div>
-                    <div style="display: flex; padding-left: 6rem;">
+                    <div style="display: flex; padding-left: 5rem;">
                         <img src="{% static 'images/social_icons/facebook.png' %}" alt="" style="width: 20px; height: 20px;">
                         &nbsp;{% post_to_facebook "https://akiyainajapan.com" "Share on Facebook" %}
                     </div><br>
-                    <div style="display: flex; padding-left: 6rem;">
+                    <div style="display: flex; padding-left: 5rem;">
                         <img src="{% static 'images/social_icons/twitter.png' %}" alt="" style="width: 20px; height: 20px;">
                         &nbsp; {% post_to_twitter "I've found this Property in Japan!"  "https://akiyainjapan.com" "Share on X" %} 
                     </div><br>
-                    <div style="display: flex; padding-left: 6rem;">
+                    <div style="display: flex; padding-left: 5rem;">
                         <img src="{% static 'images/social_icons/whatsapp.png' %}" alt="" style="width: 20px; height: 20px;">
                         &nbsp; {% post_to_whatsapp "https://akiyainjapan.com" "Share on Whatsapp" %} 
                     </div>
