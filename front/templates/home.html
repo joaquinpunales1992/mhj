@@ -66,6 +66,67 @@
 		<!-- Wrapper -->
 			<div id="wrapper">
 
+				<!-- Filter Bar -->
+				<div id="filter-bar" style="
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					gap: 1rem;
+					padding: 1rem;
+					background-color: rgba(0, 0, 0, 0.8);
+					border-radius: 8px;
+					margin-bottom: 2rem;
+				">
+					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "beach" %}'" style="
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						background: none;
+						border: none;
+						color: white;
+						cursor: pointer;
+					">
+						<span class="icon solid fa-umbrella-beach" style="font-size: 2rem;"></span>
+						<span style="font-size: 0.8rem;">Beach Town</span>
+					</button>
+					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "snow" %}'" style="
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						background: none;
+						border: none;
+						color: white;
+						cursor: pointer;
+					">
+						<span class="icon solid fa-snowflake" style="font-size: 2rem;"></span>
+						<span style="font-size: 0.8rem;">Snow Town</span>
+					</button>
+					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "mountain" %}'" style="
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						background: none;
+						border: none;
+						color: white;
+						cursor: pointer;
+					">
+						<span class="icon solid fa-mountain" style="font-size: 2rem;"></span>
+						<span style="font-size: 0.8rem;">Mountain Town</span>
+					</button>
+					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "onsen" %}'" style="
+						display: flex;
+						flex-direction: column;
+						align-items: center;
+						background: none;
+						border: none;
+						color: white;
+						cursor: pointer;
+					">
+						<span class="icon solid fa-fire" style="font-size: 2rem;"></span>
+						<span style="font-size: 0.8rem;">Onsen</span>
+					</button>
+				</div>
+
 				<!-- Header -->
 					<header id="header">
 						<h1><strong>My Akiya in Japan</strong></h1>
@@ -155,7 +216,7 @@
 														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk 0 %}'">
 															<span class="lock-icon"></span> Learn More
 														</button>
-													
+											
 												{% endif %}
 											</div>
 										</div>

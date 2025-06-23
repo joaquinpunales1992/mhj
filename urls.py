@@ -2,13 +2,13 @@ from django.contrib import admin
 from front import views as front_views
 from membership import views as membership_views
 from django.urls import path, include
-from django.views.generic import TemplateView
 from front import sitemap 
 
 handler404 = 'front.views.redirect_404_view'
 
 urlpatterns = [
     path("", front_views.display_home, name="home"),
+    path("filter/<str:category>/", front_views.filter_properties, name="filter_properties"),
     path('sitemap.xml', sitemap.display_sitemaps, name='django.contrib.sitemaps.views.sitemap'),
     path("api/send-booking-confirmation", front_views.send_booking_confirmation, name="send_booking_confirmation"),
     path("api/submit-premium-request", front_views.submit_premium_request, name="submit_premium_request"),
