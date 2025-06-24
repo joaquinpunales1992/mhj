@@ -16,7 +16,6 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         try:
             region = kwargs.get('region')
-            import pdb;pdb.set_trace()
             if region:
                 page_from = 1
                 page_to = 50

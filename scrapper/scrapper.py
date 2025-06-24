@@ -25,29 +25,28 @@ def pull_properties(listing_url: str, page_from: int= 1, page_to: int= 50):
     keep_looking = True
     listings_url_list = []
     current_number = page_from
-
     while keep_looking:
         try:
             url = f"{listing_url}?page={current_number}"
             response = requests.get(url, headers=headers)
 
-            if response.status_code != 200 or current_number == page_to:
+            if response.status_code != 200:
                 print(f"Failed to retrieve data: {response.status_code}")
+
+            if current_number == page_to:
                 keep_looking = False
-                break
             
             soup = BeautifulSoup(response.text, 'html.parser')
             # Find the listings
             listings = soup.find_all('div', class_='mod-mergeBuilding--sale cKodate ui-frame ui-frame-cacao-bar')
             if not listings:
                 print("No more listings found.")
-                break
-
-            # extract the url of the listing
-            listing_urls = [listing.find('div', class_='moduleInner').find('div', class_='moduleBody').find('a').get('href') for listing in listings]
-            
-            for url in listing_urls:
-                persist_property(property_data=get_listing_data(url=url))
+            else:
+                # extract the url of the listing
+                listing_urls = [listing.find('div', class_='moduleInner').find('div', class_='moduleBody').find('a').get('href') for listing in listings]
+                
+                for url in listing_urls:
+                    persist_property(property_data=get_listing_data(url=url))
         except Exception as e:
             print(f"Error occurred: {e}")
         finally:
