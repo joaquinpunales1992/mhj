@@ -1031,11 +1031,11 @@ class ImageCarousel {
 
           {% if user.is_authenticated or request.COOKIES.email %}
             <button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-                <span class="lock-icon">🔒 </span>Unlock Extra Details
+                <span class="icon solid fa-lock"> </span>Unlock Extra Details
             </button>
           {% else %}
             <button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
-                <span class="lock-icon">🔒 </span>Unlock Extra Details
+                <span class="icon solid fa-lock"> </span>Unlock Extra Details
             </button>
           {% endif %}
           <hr>
@@ -1073,7 +1073,7 @@ class ImageCarousel {
             <div class="flex items-center space-x-2">
 
               <div class="h-13 w-18  bg-primary/10 flex items-center justify-center text-primary">
-                <button id="openPopup" class="primary text-white py-5" style="padding: 0.rem;">Share</button>
+                <button id="openPopup" class="primary text-white py-5" style="padding: 0.rem;"> <span class="icon solid fa-share"> </span>Share</button>
               </div>
               
               <div id="sharePopup" class="popup hidden">
