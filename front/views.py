@@ -133,7 +133,7 @@ def filter_properties(request, category):
     for city in [city for city, categories in city_categories.items() if category in categories]:
         city_filters |= Q(location__icontains=city)
 
-    properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).filter(city_filters)[:settings.PROPERTIES_TO_DISPLAY]
+    properties = Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0).filter(city_filters).order_by('-featured', 'price')[:settings.PROPERTIES_TO_DISPLAY]
     return render(request, 'home.html', context={'properties': properties, 'nav': category})
 
 def redirect_404_view(request, exception=None):
