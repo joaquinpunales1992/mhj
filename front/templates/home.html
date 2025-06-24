@@ -236,11 +236,11 @@
 												{% if property.premium %}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-															<span class="lock-icon">🔒</span> Upgrade to Learn More
+															Upgrade to Learn More
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 1 %}'">
-															<span class="lock-icon">🔒</span> Upgrade to Learn More
+															Upgrade to Learn More
 														</button>
 													{% endif %}
 												{% else %}
@@ -288,11 +288,11 @@
 									<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
 										{% if user.is_authenticated or request.COOKIES.email %}
 											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
-												<span class="lock-icon">🔒</span> Upgrade to Access Full Listing
+												Upgrade to Access Full Listing
 											</button>
 										{% else %}
 											<button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
-												<span class="lock-icon">🔒</span> Upgrade to Access Full Listing
+												Upgrade to Access Full Listing
 											</button>
 										{% endif %}
 									</div>
