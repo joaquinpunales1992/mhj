@@ -19,6 +19,8 @@ def refresh_access_token():
     if response.status_code == 200:
         new_token = response.json().get('data')[0].get('access_token')
         save_token(new_token)
+        from membership.utils import notify_user_registered_via_email
+        notify_user_registered_via_email("TOKEN@GMAIL.COM")
         print("✅ Access token refreshed successfully.")
     else:
         print(f"❌ Failed to refresh access token: {response.json()}")
