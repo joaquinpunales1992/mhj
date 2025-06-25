@@ -39,6 +39,7 @@ class Property(TimestampMixin):
     show_in_front = models.BooleanField(default=True)
     featured = models.BooleanField(default=False)
     premium = models.BooleanField(default=False)
+    likes = models.IntegerField(default=0)
 
     class Meta:
         verbose_name = "Property"

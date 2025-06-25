@@ -555,6 +555,35 @@ input:checked + .toggle-slider:before {
   <script>
 
     document.addEventListener('DOMContentLoaded', function () {
+
+        const likeButton = document.getElementById('likeButton');
+        const likeCount = document.getElementById('likeCount');
+
+        likeButton.addEventListener('click', function () {
+            fetch('{% url "update_like_count" property.pk %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ property_id: '{{ property.pk }}' })
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to update like count.');
+                }
+                return response.json();
+            })
+            .then(data => {
+                likeCount.textContent = `${data.likes} people Liked this Property`;
+                likeButton.disabled = true; 
+            })
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+
         const openBtn = document.getElementById('openPopup');
         const closeBtn = document.getElementById('closePopup');
         const popup = document.getElementById('sharePopup');
@@ -572,7 +601,7 @@ input:checked + .toggle-slider:before {
             popup.classList.add('hidden');
             }
         });
-    });
+    
 
 
 
@@ -1073,27 +1102,28 @@ class ImageCarousel {
             <h1 class="text-4xl text-primary">{{ property.title }}</h1>
             <div class="flex items-center space-x-2">
 
-              <div class="h-13 w-18  bg-primary/10 flex items-center justify-center text-primary">
-                <button id="openPopup" class="primary text-white py-5" style="padding: 0.rem;"> <span class="icon solid fa-share"> </span>Share</button>
-                <div class="h-13 w-18 bg-primary/10 flex items-center justify-center text-primary">
-                    <button id="likeButton" class="primary text-white py-5" style="padding: 0.rem;">
-                        {% url 'update_like_count' property.pk as update_like_count %}
-                    </button>
-                    <span id="likeCount" class="ml-2 text-primary">0</span>
+        
+                <div class="w-full bg-primary/10 p-4">
+                    <div class="flex items-center justify-center space-x-4 mb-2">
+                        <button id="openPopup" class="primary text-white px-4 py-2">
+                            <span class="icon solid fa-share"></span> Share
+                        </button>
+                        <button id="likeButton" class="primary text-white px-4 py-2">
+                            <span class="icon solid fa-thumbs-up"></span> Like
+                        </button>
+                    </div>
+                
+                    <!-- Like Count Below Buttons -->
+                    {% if property.likes == 0 %}
+                        <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
+                            First to Like?
+                        </span>
+                    {% else %}
+                    <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
+                        {{ property.likes }} people Liked this Property
+                    </span>
+                    {% endif %}
                 </div>
-
-                <script>
-                    document.addEventListener('DOMContentLoaded', function () {
-                        const likeButton = document.getElementById('likeButton');
-                        const likeCount = document.getElementById('likeCount');
-                        let count = 0;
-
-                        likeButton.addEventListener('click', function () {
-                            count++;
-                            likeCount.textContent = count;
-                        });
-                    });
-                </script>
               </div>
               
               <div id="sharePopup" class="popup hidden">
