@@ -1,6 +1,23 @@
 from django.core.mail import EmailMessage
 
 
+
+def notify_social_token_expired():
+    email = EmailMessage(
+        subject='Your Akiya in Japan - SOCIAL TOKEN EXPIRED',
+        body="The social token has expired. Please refresh it.",    
+        from_email='hello@myakiyainjapan.com',
+        to=['joaquinpunales@gmail.com'],
+        reply_to=['hello@myakiyainjapan.com']
+    )
+
+    email.content_subtype = 'html'
+    try:
+        email.send()
+    except Exception as e:
+        print(f"Error sending email: {e}")
+
+
 def notify_user_registered_via_email(new_user_email):
 
     email = EmailMessage(
