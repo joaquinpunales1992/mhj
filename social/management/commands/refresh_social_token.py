@@ -7,5 +7,6 @@ class Command(BaseCommand):
     def handle(self, *args, **kwargs):
         try:
             refresh_access_token()
+            self.stdout.write(self.style.SUCCESS('Successfully refreshed the access token.'))
         except Exception as e:
             self.stderr.write(self.style.ERROR(f'Error while Refreshing TOKEN: {e}'))
