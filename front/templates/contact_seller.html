@@ -1,5 +1,6 @@
 {% load static social_share %}
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1074,6 +1075,25 @@ class ImageCarousel {
 
               <div class="h-13 w-18  bg-primary/10 flex items-center justify-center text-primary">
                 <button id="openPopup" class="primary text-white py-5" style="padding: 0.rem;"> <span class="icon solid fa-share"> </span>Share</button>
+                <div class="h-13 w-18 bg-primary/10 flex items-center justify-center text-primary">
+                    <button id="likeButton" class="primary text-white py-5" style="padding: 0.rem;">
+                        {% url 'update_like_count' property.pk as update_like_count %}
+                    </button>
+                    <span id="likeCount" class="ml-2 text-primary">0</span>
+                </div>
+
+                <script>
+                    document.addEventListener('DOMContentLoaded', function () {
+                        const likeButton = document.getElementById('likeButton');
+                        const likeCount = document.getElementById('likeCount');
+                        let count = 0;
+
+                        likeButton.addEventListener('click', function () {
+                            count++;
+                            likeCount.textContent = count;
+                        });
+                    });
+                </script>
               </div>
               
               <div id="sharePopup" class="popup hidden">

@@ -72,6 +72,28 @@ def send_booking_confirmation(request):
         return JsonResponse({'message': 'Email sent'})
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+def update_like_count(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        property_id = data.get('property_id')
+        user_email = data.get('user_email')
+
+        if not property_id or not user_email:
+            return JsonResponse({'error': 'Invalid data'}, status=400)
+
+        try:
+            property = Property.objects.get(pk=property_id)
+            if user_email in property.liked_by:
+                property.liked_by.remove(user_email)
+            else:
+                property.liked_by.add(user_email)
+            property.save()
+            return JsonResponse({'message': 'Like updated successfully'})
+        except Property.DoesNotExist:
+            return JsonResponse({'error': 'Property not found'}, status=404)
+
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
 
 def contact_seller(request, pk, user_just_registered=0):
     property = Property.objects.filter(pk=pk).first()
