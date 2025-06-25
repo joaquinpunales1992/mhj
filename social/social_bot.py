@@ -18,6 +18,7 @@ def refresh_access_token():
     response = requests.get(url, params=params)
     if response.status_code == 200:
         new_token = response.json().get('data')[0].get('access_token')
+        import pdb;pdb.set_trace()
         save_token(new_token)
         from membership.utils import notify_user_registered_via_email
         notify_user_registered_via_email("TOKEN@GMAIL.COM")
@@ -142,7 +143,7 @@ def post_to_instagram(property, use_ai_caption):
             }
             publish_response = requests.post(publish_url, data=publish_payload)
             if publish_response.status_code == 200:
-                print('✅ Successfully posted carousel to Instagram.')
+                print('✅✅✅ Successfully posted carousel to Instagram.')
                 SocialPost.objects.create(
                     caption=caption,
                     property_url=property_url,
@@ -209,7 +210,7 @@ def post_to_facebook(property, use_ai_caption=True):
         result = response.json()
 
         if response.status_code == 200:
-            print('✅ Successfully posted to Facebook with multiple images.')
+            print('✅✅✅ Successfully posted to Facebook with multiple images.')
             SocialPost.objects.create(
                 caption=caption,
                 property_url=property.url,
