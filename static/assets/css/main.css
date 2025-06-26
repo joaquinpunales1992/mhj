@@ -1535,7 +1535,7 @@ input, select, textarea {
 	@media screen and (max-width: 736px) {
 
 		body {
-			padding: 4em 0 0 0;
+			padding: 0em 0 0 0;
 		}
 
 		#header {
