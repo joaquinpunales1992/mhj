@@ -1,3 +1,4 @@
+import urllib.parse
 from django.db import models
 from inventory.utils import convert_price_string, convert_yen_to_usd, infer_location
 
@@ -54,6 +55,9 @@ class Property(TimestampMixin):
     @property
     def get_price_for_front(self):
         return convert_yen_to_usd(convert_price_string(self.price))
+    
+    def get_location_url(self):
+        return f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(self.location, safe='')}"
     
     def property_has_any_image(self):
         return self.images.exists()
