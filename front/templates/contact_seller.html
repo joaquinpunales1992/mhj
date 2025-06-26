@@ -553,466 +553,266 @@ input:checked + .toggle-slider:before {
 </style>
 
   <script>
+    // Wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', () => {
+  const likeButton = document.getElementById('likeButton');
+  const likeCount = document.getElementById('likeCount');
 
-    document.addEventListener('DOMContentLoaded', function () {
+  likeButton.addEventListener('click', () => {
+    fetch('{% url "update_like_count" property.pk %}', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRFToken': '{{ csrf_token }}'
+      },
+      body: JSON.stringify({ property_id: '{{ property.pk }}' })
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to update like count.');
+        return response.json();
+      })
+      .then(data => {
+        likeCount.textContent = `${data.likes} people Liked this Property`;
+        likeButton.disabled = true;
+      })
+      .catch(error => console.error('Error:', error));
+  });
 
-        const likeButton = document.getElementById('likeButton');
-        const likeCount = document.getElementById('likeCount');
+  const openBtn = document.getElementById('openPopup');
+  const closeBtn = document.getElementById('closePopup');
+  const popup = document.getElementById('sharePopup');
 
-        likeButton.addEventListener('click', function () {
-            fetch('{% url "update_like_count" property.pk %}', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRFToken': '{{ csrf_token }}'
-                },
-                body: JSON.stringify({ property_id: '{{ property.pk }}' })
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Failed to update like count.');
-                }
-                return response.json();
-            })
-            .then(data => {
-                likeCount.textContent = `${data.likes} people Liked this Property`;
-                likeButton.disabled = true; 
-            })
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
-        });
+  openBtn.addEventListener('click', () => popup.classList.remove('hidden'));
+  closeBtn.addEventListener('click', () => popup.classList.add('hidden'));
 
-        const openBtn = document.getElementById('openPopup');
-        const closeBtn = document.getElementById('closePopup');
-        const popup = document.getElementById('sharePopup');
+  window.addEventListener('click', event => {
+    if (event.target === popup) popup.classList.add('hidden');
+  });
 
-        openBtn.addEventListener('click', function () {
-            popup.classList.remove('hidden');
-        });
-
-        closeBtn.addEventListener('click', function () {
-            popup.classList.add('hidden');
-        });
-
-        window.addEventListener('click', function (event) {
-            if (event.target === popup) {
-            popup.classList.add('hidden');
-            }
-        });
-    
-
-
-
-    document.addEventListener('DOMContentLoaded', () => {
-    // Initialize the image carousel
-    const carousel = new ImageCarousel('imageCarousel');
-    carousel.init();
+  const carousel = new ImageCarousel('imageCarousel');
+  carousel.init();
 });
 
 class ImageCarousel {
-    constructor(carouselId) {
-        // Main elements
-        this.carousel = document.getElementById(carouselId);
-        this.track = this.carousel.querySelector('.carousel-track');
-        this.slides = Array.from(this.carousel.querySelectorAll('.carousel-slide'));
-        this.indicators = this.carousel.querySelector('.carousel-indicators');
-        this.status = this.carousel.querySelector('.carousel-status');
-        
-        // Control elements
-        this.prevButton = this.carousel.querySelector('.prev');
-        this.nextButton = this.carousel.querySelector('.next');
-        this.autoplayToggle = document.getElementById('autoplayToggle');
-        
-        // State variables
-        this.slideCount = this.slides.length;
-        this.currentIndex = 0;
-        this.autoplayInterval = null;
-        this.autoplayDelay = 5000; // 5 seconds between slides
-        this.isAutoplayEnabled = this.autoplayToggle?.checked || true;
-        
-        // Touch/swipe handling
-        this.touchStartX = 0;
-        this.touchEndX = 0;
-        this.minSwipeDistance = 50;
-        this.isSwiping = false;
-        
-        // Animation flags
-        this.isTransitioning = false;
-        this.transitionDuration = 400; // match CSS transition speed
-    }
-    
-    init() {
-        // Create indicators
-        this.createIndicators();
-        
-        // Set initial slide
-        this.goToSlide(0);
-        
-        // Add event listeners
-        this.addEventListeners();
-        
-        // Start autoplay if enabled
-        if (this.isAutoplayEnabled) {
-            this.startAutoplay();
-        }
-        
-        // Make first slide active for caption animation and styling
-        if (this.slides.length > 0) {
-            this.slides[0].classList.add('active');
-        }
-        
-        // Initial responsive adjustment
-        this.handleResize();
-        
-        console.log('Carousel initialized with', this.slideCount, 'slides');
-    }
-    
-    createIndicators() {
-        // Create dots for each slide
-        for (let i = 0; i < this.slideCount; i++) {
-            const indicator = document.createElement('div');
-            indicator.classList.add('indicator');
-            indicator.setAttribute('data-index', i);
-            indicator.setAttribute('role', 'button');
-            indicator.setAttribute('aria-label', `Go to slide ${i + 1}`);
-            indicator.setAttribute('tabindex', '0');
-            this.indicators.appendChild(indicator);
-        }
-        
-        this.indicatorDots = Array.from(this.carousel.querySelectorAll('.indicator'));
-    }
-    
-    addEventListeners() {
-        // Navigation controls
-        this.prevButton.addEventListener('click', () => this.prevSlide());
-        this.nextButton.addEventListener('click', () => this.nextSlide());
-        
-        // Indicator dots
-        this.indicatorDots.forEach(dot => {
-            dot.addEventListener('click', () => {
-                const index = parseInt(dot.getAttribute('data-index'));
-                this.goToSlide(index);
-            });
-            
-            // Keyboard accessibility for dots
-            dot.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    const index = parseInt(dot.getAttribute('data-index'));
-                    this.goToSlide(index);
-                }
-            });
-        });
-        
-        // Touch events for swipe
-        this.track.addEventListener('touchstart', (e) => this.handleTouchStart(e), { passive: true });
-        this.track.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: true });
-        this.track.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: true });
-        
-        // Mouse events to simulate swipe
-        this.track.addEventListener('mousedown', (e) => this.handleMouseDown(e));
-        document.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-        document.addEventListener('mouseup', (e) => this.handleMouseUp(e));
-        
-        // Pause autoplay on hover
-        this.carousel.addEventListener('mouseenter', () => this.pauseAutoplay());
-        this.carousel.addEventListener('mouseleave', () => this.resumeAutoplay());
-        
-        // Keyboard navigation
-        document.addEventListener('keydown', (e) => this.handleKeyDown(e));
-        
-        // Autoplay toggle
-        if (this.autoplayToggle) {
-            this.autoplayToggle.addEventListener('change', () => {
-                this.isAutoplayEnabled = this.autoplayToggle.checked;
-                if (this.isAutoplayEnabled) {
-                    this.startAutoplay();
-                } else {
-                    this.stopAutoplay();
-                }
-            });
-        }
-        
-        // Pause when page is not visible
-        document.addEventListener('visibilitychange', () => {
-            if (document.hidden) {
-                this.pauseAutoplay();
-            } else {
-                this.resumeAutoplay();
-            }
-        });
-        
-        // Resize handler for responsive adjustments
-        window.addEventListener('resize', () => this.handleResize());
-    }
-    
-    goToSlide(index) {
-        // Don't proceed if already transitioning
-        if (this.isTransitioning) return;
-        
-        // Ensure index is within bounds
-        if (index < 0) index = this.slideCount - 1;
-        if (index >= this.slideCount) index = 0;
-        
-        // Don't do anything if it's the same slide
-        if (index === this.currentIndex) return;
-        
-        this.isTransitioning = true;
-        
-        // Get the appropriate slide width based on screen size
-        let slideWidth = 33.333; // Default 3 slides per row
-        
-        if (window.innerWidth <= 768 && window.innerWidth > 480) {
-            slideWidth = 50; // 2 slides per row on tablets
-        } else if (window.innerWidth <= 480) {
-            slideWidth = 100; // 1 slide per row on phones
-        }
-        
-        // Apply the transform with the correct width
-        this.track.style.transform = `translateX(-${index * slideWidth}%)`;
-        
-        // Remove active class from all slides and add it to current
-        this.slides.forEach(slide => slide.classList.remove('active'));
-        this.slides[index].classList.add('active', 'fade-in');
-        
-        // Update indicators
-        this.indicatorDots.forEach(dot => dot.classList.remove('active'));
-        this.indicatorDots[index].classList.add('active');
-        
-        // Update screen reader status
-        this.updateStatus(index);
-        
-        // Set current index
-        this.currentIndex = index;
-        
-        // Reset transition flag after animation completes
-        setTimeout(() => {
-            this.isTransitioning = false;
-            this.slides[index].classList.remove('fade-in');
-        }, this.transitionDuration);
-    }
-    
-    prevSlide() {
-        this.goToSlide(this.currentIndex - 1);
-    }
-    
-    nextSlide() {
-        this.goToSlide(this.currentIndex + 1);
-    }
-    
-    startAutoplay() {
-        if (this.autoplayInterval) clearInterval(this.autoplayInterval);
-        this.autoplayInterval = setInterval(() => {
-            this.nextSlide();
-        }, this.autoplayDelay);
-    }
-    
-    stopAutoplay() {
-        if (this.autoplayInterval) {
-            clearInterval(this.autoplayInterval);
-            this.autoplayInterval = null;
-        }
-    }
-    
-    pauseAutoplay() {
-        if (this.isAutoplayEnabled) {
-            this.stopAutoplay();
-        }
-    }
-    
-    resumeAutoplay() {
-        if (this.isAutoplayEnabled && !this.autoplayInterval) {
-            this.startAutoplay();
-        }
-    }
-    
-    updateStatus(index) {
-        this.status.textContent = `Slide ${index + 1} of ${this.slideCount}`;
-    }
-    
-    handleTouchStart(e) {
-        this.touchStartX = e.touches[0].clientX;
-        this.isSwiping = true;
-        this.pauseAutoplay();
-    }
-    
-    handleTouchMove(e) {
-        if (!this.isSwiping) return;
-        this.touchEndX = e.touches[0].clientX;
-    }
-    
-    handleTouchEnd() {
-        if (!this.isSwiping) return;
-        
-        this.isSwiping = false;
-        this.handleSwipe();
-        this.resumeAutoplay();
-    }
-    
-    handleMouseDown(e) {
-        this.touchStartX = e.clientX;
-        this.isSwiping = true;
-        this.pauseAutoplay();
-        
-        // Prevent default to avoid text selection during swipe
-        e.preventDefault();
-    }
-    
-    handleMouseMove(e) {
-        if (!this.isSwiping) return;
-        this.touchEndX = e.clientX;
-    }
-    
-    handleMouseUp() {
-        if (!this.isSwiping) return;
-        
-        this.isSwiping = false;
-        this.handleSwipe();
-        this.resumeAutoplay();
-    }
-    
-    handleSwipe() {
-        const swipeDistance = this.touchEndX - this.touchStartX;
-        
-        if (Math.abs(swipeDistance) > this.minSwipeDistance) {
-            if (swipeDistance > 0) {
-                // Swiped right, go to previous slide
-                this.prevSlide();
-            } else {
-                // Swiped left, go to next slide
-                this.nextSlide();
-            }
-        }
-        
-        // Reset values
-        this.touchStartX = 0;
-        this.touchEndX = 0;
-    }
-    
-    handleKeyDown(e) {
-        // Only respond to keyboard if carousel is focused or a child is focused
-        const isFocused = this.carousel.contains(document.activeElement) || 
-                          document.activeElement === document.body;
-        
-        if (!isFocused) return;
-        
-        switch (e.key) {
-            case 'ArrowLeft':
-                e.preventDefault();
-                this.prevSlide();
-                break;
-            case 'ArrowRight':
-                e.preventDefault();
-                this.nextSlide();
-                break;
-            case 'Home':
-                e.preventDefault();
-                this.goToSlide(0);
-                break;
-            case 'End':
-                e.preventDefault();
-                this.goToSlide(this.slideCount - 1);
-                break;
-        }
-    }
-    
-    handleResize() {
-        // Force the current slide to be correctly positioned after resize
-        // Update slide width based on screen size
-        let slideWidth = 33.333; // Default 3 slides per row
-        
-        if (window.innerWidth <= 768 && window.innerWidth > 480) {
-            slideWidth = 50; // 2 slides per row on tablets
-        } else if (window.innerWidth <= 480) {
-            slideWidth = 100; // 1 slide per row on phones
-        }
-        
-        // Update position with correct width
-        this.track.style.transform = `translateX(-${this.currentIndex * slideWidth}%)`;
-    }
-}
-  </script>
+  constructor(carouselId) {
+    this.carousel = document.getElementById(carouselId);
+    this.track = this.carousel.querySelector('.carousel-track');
+    this.slides = Array.from(this.carousel.querySelectorAll('.carousel-slide'));
+    this.indicators = this.carousel.querySelector('.carousel-indicators');
+    this.status = this.carousel.querySelector('.carousel-status');
+    this.prevButton = this.carousel.querySelector('.prev');
+    this.nextButton = this.carousel.querySelector('.next');
+    this.autoplayToggle = document.getElementById('autoplayToggle');
 
-  
-  <script>
-    document.addEventListener("DOMContentLoaded", () => {
-    const bookButton = document.getElementById('book-button');
-    const successConfirmation = document.getElementById('success-confirmation');
+    this.slideCount = this.slides.length;
+    this.currentIndex = 0;
+    this.autoplayInterval = null;
+    this.autoplayDelay = 5000;
+    this.isAutoplayEnabled = this.autoplayToggle?.checked || true;
 
-    if (!bookButton || !successConfirmation) return;
+    this.touchStartX = 0;
+    this.touchEndX = 0;
+    this.minSwipeDistance = 50;
+    this.isSwiping = false;
 
-    function showBookingConfirmation(event = null) {
-        console.log('Booking button clicked');
-        const originalText = bookButton.textContent;
-        bookButton.textContent = 'Booking...';
-        bookButton.disabled = true;
+    this.isTransitioning = false;
+    this.transitionDuration = 400;
+  }
 
-        // Create a ripple effect if event is provided (like on button click)
-        if (event) {
-            const ripple = document.createElement('span');
-            ripple.classList.add('ripple');
-            const rect = bookButton.getBoundingClientRect();
-            const size = Math.max(rect.width, rect.height);
-            ripple.style.width = ripple.style.height = `${size}px`;
-            ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
-            ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
-            bookButton.appendChild(ripple);
-        }
+  init() {
+    this.createIndicators();
+    this.goToSlide(0);
+    this.addEventListeners();
+    if (this.isAutoplayEnabled) this.startAutoplay();
+    if (this.slides.length > 0) this.slides[0].classList.add('active');
+    this.handleResize();
+    console.log('Carousel initialized with', this.slideCount, 'slides');
+  }
 
-        const property_url = window.location.href;
-
-        fetch('/api/send-booking-confirmation', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                url: property_url,
-                user_email: '{{ user_email }}'
-            })
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('Failed to send confirmation email.');
-            }
-            return response.json();
-        })
-        .then(data => {
-            const ripple = bookButton.querySelector('.ripple');
-            if (ripple) ripple.remove();
-
-            successConfirmation.classList.remove('hidden');
-            successConfirmation.scrollIntoView({ behavior: 'smooth' });
-
-            bookButton.textContent = originalText;
-            bookButton.disabled = false;
-
-            console.log('Booking confirmed');
-        })
-        .catch(error => {
-            const ripple = bookButton.querySelector('.ripple');
-            if (ripple) ripple.remove();
-
-            bookButton.textContent = originalText;
-            bookButton.disabled = false;
-            alert('There was an error sending the confirmation email. Please try again.');
-            console.error(error);
-        });
+  createIndicators() {
+    for (let i = 0; i < this.slideCount; i++) {
+      const indicator = document.createElement('div');
+      indicator.classList.add('indicator');
+      indicator.setAttribute('data-index', i);
+      indicator.setAttribute('role', 'button');
+      indicator.setAttribute('aria-label', `Go to slide ${i + 1}`);
+      indicator.setAttribute('tabindex', '0');
+      this.indicators.appendChild(indicator);
     }
+    this.indicatorDots = Array.from(this.carousel.querySelectorAll('.indicator'));
+  }
 
-    bookButton.addEventListener('click', function(event) {
-        showBookingConfirmation(event);
+  addEventListeners() {
+    this.prevButton.addEventListener('click', () => this.prevSlide());
+    this.nextButton.addEventListener('click', () => this.nextSlide());
+
+    this.indicatorDots.forEach(dot => {
+      dot.addEventListener('click', () => this.goToSlide(parseInt(dot.dataset.index)));
+      dot.addEventListener('keydown', e => {
+        if (['Enter', ' '].includes(e.key)) {
+          e.preventDefault();
+          this.goToSlide(parseInt(dot.dataset.index));
+        }
+      });
     });
 
-    // Automatically trigger booking if user just registered
-    if ('{{ user_just_registered }}' == '1') {
-        showBookingConfirmation();
+    this.track.addEventListener('touchstart', e => this.handleTouchStart(e), { passive: true });
+    this.track.addEventListener('touchmove', e => this.handleTouchMove(e), { passive: true });
+    this.track.addEventListener('touchend', e => this.handleTouchEnd(e), { passive: true });
+
+    this.track.addEventListener('mousedown', e => this.handleMouseDown(e));
+    document.addEventListener('mousemove', e => this.handleMouseMove(e));
+    document.addEventListener('mouseup', e => this.handleMouseUp(e));
+
+    this.carousel.addEventListener('mouseenter', () => this.pauseAutoplay());
+    this.carousel.addEventListener('mouseleave', () => this.resumeAutoplay());
+
+    document.addEventListener('keydown', e => this.handleKeyDown(e));
+
+    if (this.autoplayToggle) {
+      this.autoplayToggle.addEventListener('change', () => {
+        this.isAutoplayEnabled = this.autoplayToggle.checked;
+        this.isAutoplayEnabled ? this.startAutoplay() : this.stopAutoplay();
+      });
     }
+
+    document.addEventListener('visibilitychange', () => {
+      document.hidden ? this.pauseAutoplay() : this.resumeAutoplay();
+    });
+
+    window.addEventListener('resize', () => this.handleResize());
+  }
+
+  goToSlide(index) {
+    if (this.isTransitioning || index === this.currentIndex) return;
+    if (index < 0) index = this.slideCount - 1;
+    if (index >= this.slideCount) index = 0;
+
+    this.isTransitioning = true;
+
+    let slideWidth = 33.333;
+    if (window.innerWidth <= 768 && window.innerWidth > 480) slideWidth = 50;
+    else if (window.innerWidth <= 480) slideWidth = 100;
+
+    this.track.style.transform = `translateX(-${index * slideWidth}%)`;
+    this.slides.forEach(s => s.classList.remove('active'));
+    this.slides[index].classList.add('active', 'fade-in');
+    this.indicatorDots.forEach(d => d.classList.remove('active'));
+    this.indicatorDots[index].classList.add('active');
+    this.updateStatus(index);
+    this.currentIndex = index;
+
+    setTimeout(() => {
+      this.isTransitioning = false;
+      this.slides[index].classList.remove('fade-in');
+    }, this.transitionDuration);
+  }
+
+  prevSlide() { this.goToSlide(this.currentIndex - 1); }
+  nextSlide() { this.goToSlide(this.currentIndex + 1); }
+  startAutoplay() {
+    clearInterval(this.autoplayInterval);
+    this.autoplayInterval = setInterval(() => this.nextSlide(), this.autoplayDelay);
+  }
+  stopAutoplay() { clearInterval(this.autoplayInterval); this.autoplayInterval = null; }
+  pauseAutoplay() { if (this.isAutoplayEnabled) this.stopAutoplay(); }
+  resumeAutoplay() { if (this.isAutoplayEnabled && !this.autoplayInterval) this.startAutoplay(); }
+  updateStatus(index) { this.status.textContent = `Slide ${index + 1} of ${this.slideCount}`; }
+
+  handleTouchStart(e) { this.touchStartX = e.touches[0].clientX; this.isSwiping = true; this.pauseAutoplay(); }
+  handleTouchMove(e) { if (this.isSwiping) this.touchEndX = e.touches[0].clientX; }
+  handleTouchEnd() { if (!this.isSwiping) return; this.isSwiping = false; this.handleSwipe(); this.resumeAutoplay(); }
+
+  handleMouseDown(e) { this.touchStartX = e.clientX; this.isSwiping = true; this.pauseAutoplay(); e.preventDefault(); }
+  handleMouseMove(e) { if (this.isSwiping) this.touchEndX = e.clientX; }
+  handleMouseUp() { if (!this.isSwiping) return; this.isSwiping = false; this.handleSwipe(); this.resumeAutoplay(); }
+
+  handleSwipe() {
+    const distance = this.touchEndX - this.touchStartX;
+    if (Math.abs(distance) > this.minSwipeDistance) {
+      distance > 0 ? this.prevSlide() : this.nextSlide();
+    }
+    this.touchStartX = this.touchEndX = 0;
+  }
+
+  handleKeyDown(e) {
+    const isFocused = this.carousel.contains(document.activeElement) || document.activeElement === document.body;
+    if (!isFocused) return;
+    switch (e.key) {
+      case 'ArrowLeft': e.preventDefault(); this.prevSlide(); break;
+      case 'ArrowRight': e.preventDefault(); this.nextSlide(); break;
+      case 'Home': e.preventDefault(); this.goToSlide(0); break;
+      case 'End': e.preventDefault(); this.goToSlide(this.slideCount - 1); break;
+    }
+  }
+
+  handleResize() {
+    let slideWidth = 33.333;
+    if (window.innerWidth <= 768 && window.innerWidth > 480) slideWidth = 50;
+    else if (window.innerWidth <= 480) slideWidth = 100;
+    this.track.style.transform = `translateX(-${this.currentIndex * slideWidth}%)`;
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  const bookButton = document.getElementById('book-button');
+  const successConfirmation = document.getElementById('success-confirmation');
+  if (!bookButton || !successConfirmation) return;
+
+  function showBookingConfirmation(event = null) {
+    console.log('Booking button clicked');
+    const originalText = bookButton.textContent;
+    bookButton.textContent = 'Booking...';
+    bookButton.disabled = true;
+
+    if (event) {
+      const ripple = document.createElement('span');
+      ripple.classList.add('ripple');
+      const rect = bookButton.getBoundingClientRect();
+      const size = Math.max(rect.width, rect.height);
+      ripple.style.width = ripple.style.height = `${size}px`;
+      ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
+      ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
+      bookButton.appendChild(ripple);
+    }
+
+    const propertyUrl = window.location.href;
+
+    fetch('/api/send-booking-confirmation', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: propertyUrl, user_email: '{{ user_email }}' })
+    })
+      .then(response => {
+        if (!response.ok) throw new Error('Failed to send confirmation email.');
+        return response.json();
+      })
+      .then(() => {
+        const ripple = bookButton.querySelector('.ripple');
+        if (ripple) ripple.remove();
+
+        successConfirmation.classList.remove('hidden');
+        successConfirmation.scrollIntoView({ behavior: 'smooth' });
+        bookButton.textContent = originalText;
+        bookButton.disabled = false;
+        console.log('Booking confirmed');
+      })
+      .catch(error => {
+        const ripple = bookButton.querySelector('.ripple');
+        if (ripple) ripple.remove();
+        bookButton.textContent = originalText;
+        bookButton.disabled = false;
+        alert('There was an error sending the confirmation email. Please try again.');
+        console.error(error);
+      });
+  }
+
+  bookButton.addEventListener('click', event => showBookingConfirmation(event));
+  if ('{{ user_just_registered }}' == '1') showBookingConfirmation();
 });
 
-  </script>
+</script>
+    
 
 </head>
 
@@ -1113,7 +913,6 @@ class ImageCarousel {
                         </button>
                     </div>
                 
-                    <!-- Like Count Below Buttons -->
                     {% if property.likes == 0 %}
                         <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
                             First to Like?
