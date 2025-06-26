@@ -9,7 +9,7 @@
         {
           "@context": "https://schema.org",
           "@type": "RealEstateListing",
-          "name": "{{ property.title }} – Akiya in Japan",
+          "name": "{{ property.title }} - {{ property.get_location_for_front }} – Akiya in Japan",
           "description": "{{ property.description }}. Akiya in Japan is a platform that connects you with properties in Japan. We help you find your dream home in Japan.",
           "url": "https://akiyainjapan.com/contact-seller/{{property.pk}}/",
           "datePosted": "{{ property.created_at|date:'Y-m-d' }}",
@@ -819,9 +819,9 @@ document.addEventListener('DOMContentLoaded', () => {
 <body>
   <div class="flex flex-col lg:flex-row min-h-screen">
     <!-- Sidebar -->
-    <aside class="lg:w-120 bg-neutral-light border-r border-accent/50 p-5 flex flex-col">
+    <aside class="lg:w-64 bg-neutral-light border-r border-accent/30 p-5 flex flex-col">
       <div class="mb-8">
-        <h1 class="text-xl text-primary mb-1">My Akiya in Japan</h1>
+        <h1 class="font-serif text-xl text-primary mb-1">My Akiya in Japan</h1>
       </div>
       
       <nav class="space-y-6 mb-auto">
@@ -899,7 +899,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-4xl text-primary">{{ property.title }}</h1>
+            <h1 class="text-4xl text-primary">{{ property.title }} </h1>
             <div class="flex items-center space-x-2">
 
         
@@ -1014,8 +1014,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <p>Connect with our team in a personal session. We’ll walk you through the entire home-buying journey in Japan—from property types and locations to taxes</p>
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
-                    <button id="book-button"
-                    class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">
+                    <button id="book-button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">
                         I'm Interested in this Property
                     </button>
                 </div>
