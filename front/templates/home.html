@@ -243,12 +243,18 @@
 														</button>
 													{% endif %}
 												{% else %}
-													{% if property.location %}
-														<p style="margin: 0;">📍 {{ property.get_location_for_front }}</p>
+													{% if property.location and property.price %}
+														<p style="margin: 1rem;">📍 {{ property.get_location_for_front }} - {{ property.get_price_for_front }}</p>
+													{% else %}
+														{% if property.location %}
+															<p style="margin: 0;"><span ></span> {{ property.get_location_for_front }}</p>
+														{% endif %}
+														{% if property.price %}
+															<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
+														{% endif %}
 													{% endif %}
-													{% if property.price %}
-														<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
-													{% endif %}
+
+													
 														<button class="primary" onclick="window.location.href='{% url "contact_seller" property.pk 0 %}'">
 															<span class="lock-icon"></span> Learn More
 														</button>

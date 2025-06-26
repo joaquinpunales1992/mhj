@@ -918,9 +918,15 @@ document.addEventListener('DOMContentLoaded', () => {
                             First to Like?
                         </span>
                     {% else %}
-                    <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
-                        {{ property.likes }} people Liked this Property
-                    </span>
+                        {% if property.likes == 1 %}
+                            <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
+                                {{ property.likes }} person Liked this Property
+                            </span>
+                        {% else %}
+                            <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
+                                {{ property.likes }} people Liked this Property
+                            </span>
+                        {% endif %}
                     {% endif %}
                 </div>
               </div>
