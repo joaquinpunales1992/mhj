@@ -1016,13 +1016,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 <div>
                     <button id="book-button"
                     class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">
-                        Book Your Intro Call
+                        I'm Interested in this Property
                     </button>
                 </div>
             {% else %}
                 <div>
                     <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-                        Book Your Intro Call
+                        I'm Interested in this Property
                     </button>
                 </div>
             {% endif %}
