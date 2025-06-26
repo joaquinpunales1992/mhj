@@ -844,7 +844,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>
             <div class="flex-1">
               <p class="text-xll" style="color: black; font-weight: bold;">Location</p>
-              <p class="text-xll">{{ property.location }}</p>
+              <p class="text-xll">{{ property.location }} | <a href="{{ property.get_location_url }}" target="_blank" class="text-blue-500 hover:underline">View on Map</a></p>
               <hr>
             </div>
             <div class="flex-1">
