@@ -275,7 +275,7 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
         'property_url',
         flat=True
     )
-    properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
+    properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
     for property in properties_to_post_facebook:
         try:
             post_to_facebook(property=property, use_ai_caption=USE_AI_CAPTION)
