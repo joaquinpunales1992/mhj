@@ -65,15 +65,15 @@ def generate_caption_for_post(property_location: str, property_url: str, propert
       
             if not caption.endswith('.'):
                 caption = caption[:caption.rfind('.') + 1]
-            caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at {property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+            caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
 
         except Exception as e:
             print(f"Error generating caption: {e}")
-            caption = f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at {property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+            caption = f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
 
         return caption
     else:
-        return f"Price: {property_price}\nLocation: {property_location}\n\nFind it at {property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+        return f"Price: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
     
 
 def post_to_instagram(property: Property, use_ai_caption: bool = True):
