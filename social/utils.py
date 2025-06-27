@@ -213,7 +213,7 @@ def post_instagram_reel():
 
     output_file = "property_video.mp4"
     target_dir = os.path.join("static", "assets")
-    target_path = os.path.join(target_dir, "video.mp4")
+    target_path = os.path.join(target_dir, "property_video.mp4")
 
     # Create the target directory if it doesn't exist
     os.makedirs(target_dir, exist_ok=True)
