@@ -1014,13 +1014,13 @@ document.addEventListener('DOMContentLoaded', () => {
               <p>Connect with our team in a personal session. We’ll walk you through the entire home-buying journey in Japan—from property types and locations to taxes</p>
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
-                    <button id="book-button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">
-                        I'm Interested in this Property
+                    <button id="book-button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg">
+                      I'm Interested in this Property
                     </button>
                 </div>
             {% else %}
                 <div>
-                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
+                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
                         I'm Interested in this Property
                     </button>
                 </div>
