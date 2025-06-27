@@ -1,5 +1,6 @@
 import urllib.parse
 from django.db import models
+from django.urls import reverse
 from inventory.utils import convert_price_string, convert_yen_to_usd, infer_location
 
 
@@ -67,6 +68,10 @@ class Property(TimestampMixin):
     
     def get_location_for_front(self):
         return infer_location(self.location)
+    
+    @property
+    def get_public_url(self):
+        return reverse('contact_seller_optional', kwargs={'pk': self.pk})
     
 
 class PropertyImage(models.Model):

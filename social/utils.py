@@ -55,6 +55,7 @@ def generate_caption_for_post(property_location: str, property_url: str, propert
             caption = ai.invoke_ai(
                 instruction=f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details."
             )
+            caption = caption.replace('"', '')
       
             if not caption.endswith('.'):
                 caption = caption[:caption.rfind('.') + 1]
@@ -74,7 +75,7 @@ def post_to_instagram(property: Property, use_ai_caption: bool = True):
     
     caption = generate_caption_for_post(
         property_location=property.location,
-        property_url=property.url,
+        property_url=property.get_public_url,
         property_price=property.get_price_for_front,
         use_ai_caption=use_ai_caption
     )
@@ -145,7 +146,7 @@ def post_to_facebook(property: Property, use_ai_caption: bool =True):
 
     caption = generate_caption_for_post(
         property_location=property.location,
-        property_url=property.url,
+        property_url=property.get_public_url,
         property_price=property.get_price_for_front,
         use_ai_caption=use_ai_caption
     )
