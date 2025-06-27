@@ -1,10 +1,14 @@
 import requests
 import json
+import tempfile
 import urllib.parse
 from social.constants import *
 from ai.hugging import HuggingFaceAI
 from social.models import SocialPost
-from inventory.models import Property
+from inventory.models import Property, PropertyImage
+import time
+
+from moviepy import ImageClip, concatenate_videoclips
 
 
 def refresh_access_token():
@@ -199,3 +203,131 @@ def post_to_facebook(property: Property, use_ai_caption: bool =True):
             print(f'❌ Failed to create post: {result}')
     else:
         print("❌ No images were uploaded; skipping post.")
+
+
+def post_instagram_reel():
+    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM).first()
+    create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
+    # INSTAGRAM_USER_ID = "17841473089014615"
+
+    # Ensure the static/assets directory exists
+    # static_dir = os.path.join(os.path.dirname(__file__), '..', 'static', 'assets')
+    # static_dir = os.path.abspath(static_dir)
+    # os.makedirs(static_dir, exist_ok=True)
+
+    # # Move the generated video to static/assets/
+    # shutil.move("property_video.mp4", os.path.join(static_dir, "property_video.mp4"))
+    video_url = 'https://akiyainjapan.com/static/assets/property_video.mp4'
+    caption = generate_caption_for_post(property_to_post_instagram_reel.location,
+                                        property_to_post_instagram_reel.get_public_url,
+                                        property_to_post_instagram_reel.get_price_for_front,
+                                        use_ai_caption=USE_AI_CAPTION
+                        )
+
+    # Step 1: Create media container
+    media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
+    media_payload = {
+        "media_type": "REELS",
+        "video_url": video_url,
+        "caption": caption,
+        "access_token": get_fresh_token()
+    }
+    media_response = requests.post(media_url, data=media_payload)
+    print("📥 Media upload response:", media_response.text)
+
+    time.sleep(45)
+    if "id" in media_response.json():
+        creation_id = media_response.json()["id"]
+
+        # Step 2: Publish the video
+        publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
+        publish_payload = {
+            "creation_id": creation_id,
+            "access_token": get_fresh_token()
+        }
+
+        publish_response = requests.post(publish_url, data=publish_payload)
+        print("🚀 Publish response:", publish_response.text)
+
+        if publish_response.status_code == 200:
+            print("✅ Successfully posted to Instagram Reels!")
+        else:
+            print("❌ Failed to publish Reel.")
+    else:
+        print("❌ Failed to create media container.")
+
+
+def _download_image_to_tempfile(url):
+    """Download remote image to a temp file with .jpg extension."""
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    response = requests.get(url, stream=True, headers=headers)
+    response.raise_for_status()
+
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+    with open(tmp_file.name, 'wb') as f:
+        for chunk in response.iter_content(1024):
+            f.write(chunk)
+    return tmp_file.name
+
+
+def create_property_video(property_id, output_path="property_video.mp4", duration_per_image=3):
+    images = PropertyImage.objects.filter(property_id=property_id).order_by('id')
+    if not images:
+        print("❌ No images found.")
+        return
+
+    clips = []
+    for img_obj in images:
+        # Use the correct field name for your image URL here:
+        img_url = prepare_image_url_for_facebook(img_obj.file.url)  # ← change if your field is different
+        print(f"📷 Downloading: {img_url}")
+        try:
+            local_path = _download_image_to_tempfile(img_url)
+            clip = ImageClip(local_path, duration=duration_per_image)
+
+            # clip = clip(duration_per_image).resize(height=1920).on_color(
+            #     size=(1080, 1920), color=(0, 0, 0), pos=('center', 'center')
+            # )
+
+            # Resize & pad to portrait (1080x1920)
+            # clip = clip.resize(height=1920)
+            # clip = clip.on_color(
+            #     size=(1080, 1920),
+            #     color=(0, 0, 0),
+            #     pos=('center', 'center')
+            # )
+            clips.append(clip)
+        except Exception as e:
+            print(f"⚠️ Skipping image {img_url}: {e}")
+
+    if not clips:
+        print("❌ No valid images to create video.")
+        return
+
+    final_video = concatenate_videoclips(clips, method="compose")
+
+    # Limit total duration TODO FIX
+    # if final_video.duration > 60:
+    #     final_video = final_video.subclip(0, 60)
+
+    # Write final video
+    final_video.write_videofile(
+        output_path,
+        fps=30,
+        codec='libx264',
+        audio=False,
+        bitrate="3500k",
+        preset="medium",
+        ffmpeg_params=[
+            "-profile:v", "high",
+            "-level", "4.1",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            "-g", "60",
+            "-sc_threshold", "0"
+        ]
+    )
+
+    print(f"✅ IG-ready video saved: {output_path}")
