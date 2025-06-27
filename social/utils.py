@@ -1,5 +1,7 @@
 import requests
 import json
+import shutil
+import os
 import tempfile
 import urllib.parse
 from social.constants import *
@@ -206,17 +208,19 @@ def post_to_facebook(property: Property, use_ai_caption: bool =True):
 
 
 def post_instagram_reel():
-    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM).first()
+    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).first()
     create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
-    # INSTAGRAM_USER_ID = "17841473089014615"
 
-    # Ensure the static/assets directory exists
-    # static_dir = os.path.join(os.path.dirname(__file__), '..', 'static', 'assets')
-    # static_dir = os.path.abspath(static_dir)
-    # os.makedirs(static_dir, exist_ok=True)
+    output_file = "property_video.mp4"
+    target_dir = os.path.join("static", "assets")
+    target_path = os.path.join(target_dir, "video.mp4")
 
-    # # Move the generated video to static/assets/
-    # shutil.move("property_video.mp4", os.path.join(static_dir, "property_video.mp4"))
+    # Create the target directory if it doesn't exist
+    os.makedirs(target_dir, exist_ok=True)
+
+    # Move the file
+    shutil.move(output_file, target_path)
+    
     video_url = 'https://akiyainjapan.com/static/assets/property_video.mp4'
     caption = generate_caption_for_post(property_to_post_instagram_reel.location,
                                         property_to_post_instagram_reel.get_public_url,
