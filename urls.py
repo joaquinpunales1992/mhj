@@ -3,6 +3,8 @@ from front import views as front_views
 from membership import views as membership_views
 from django.urls import path, include
 from front import sitemap 
+from django.conf import settings
+from django.conf.urls.static import static
 
 handler404 = 'front.views.redirect_404_view'
 
@@ -21,4 +23,4 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('contact-seller/<int:pk>/<str:user_just_registered>/', front_views.contact_seller, name='contact_seller'),
     path('contact-seller/<int:pk>/', front_views.contact_seller, name='contact_seller_optional')    
-]
+] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
