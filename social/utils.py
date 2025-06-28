@@ -48,8 +48,10 @@ def prepare_image_url_for_facebook(image_url):
     decoded_final = urllib.parse.unquote(decoded_once)
     
     # Ensure the URL starts with 'https://'
-    if not decoded_final.startswith('https://'):
-        image_url = decoded_final.replace('media/https:/', 'https://', 1)
+    if  decoded_final.startswith('media/https:/'):
+            image_url = decoded_final.replace('media/https:/', 'https://', 1)
+    elif decoded_final.startswith('https:/'):
+        image_url = decoded_final.replace('https:/', 'https://', 1)
     
     return image_url
 
