@@ -9,6 +9,7 @@ from ai.hugging import HuggingFaceAI
 from social.models import SocialPost
 from inventory.models import Property, PropertyImage
 import time
+from django.conf import settings
 
 from moviepy import ImageClip, concatenate_videoclips
 
@@ -211,15 +212,25 @@ def post_instagram_reel():
     property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).first()
     create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
-    output_file = "property_video.mp4"
-    target_dir = os.path.join("static", "assets")
-    target_path = os.path.join(target_dir, "property_video.mp4")
+    # output_file = "property_video.mp4"
+    # target_dir = os.path.join("static", "assets")
+    # target_path = os.path.join(target_dir, "property_video.mp4")
 
-    # Create the target directory if it doesn't exist
-    os.makedirs(target_dir, exist_ok=True)
+    # # Create the target directory if it doesn't exist
+    # os.makedirs(target_dir, exist_ok=True)
 
-    # Move the file
-    shutil.move(output_file, target_path)
+    # # Move the file
+    # shutil.move(output_file, target_path)
+
+    # Ensure media subfolder exists
+    media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
+    os.makedirs(media_dir, exist_ok=True)
+
+    # Final destination path
+    target_path = os.path.join(media_dir, "property_video.mp4")
+
+    # Move the video file from temp to MEDIA_ROOT
+    shutil.move("property_video.mp4", target_path)
     
     video_url = 'https://akiyainjapan.com/static/assets/property_video.mp4'
     caption = generate_caption_for_post(property_to_post_instagram_reel.location,
