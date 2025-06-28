@@ -23,4 +23,4 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('contact-seller/<int:pk>/<str:user_just_registered>/', front_views.contact_seller, name='contact_seller'),
     path('contact-seller/<int:pk>/', front_views.contact_seller, name='contact_seller_optional')    
-] + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
