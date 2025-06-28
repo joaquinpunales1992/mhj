@@ -336,10 +336,6 @@ def create_property_video(property_id, output_path="property_video.mp4", duratio
     # if final_video.duration > 60:
     #     final_video = final_video.subclip(0, 60)
 
-    audio = AudioFileClip("Jamie Bathgate - Status.mp3")
-
-    # Set audio on video
-    final_video = final_video.set_audio(audio)
     # Write final video
     final_video.write_videofile(
         output_path,
