@@ -229,7 +229,7 @@ def post_instagram_reel():
     # Move the video file from temp to MEDIA_ROOT
     shutil.move("property_video.mp4", target_path)
 
-    video_url = 'https://akiyainjapan.com/generated_videos/property_video.mp4'
+    video_url = 'https://akiyainjapan.com/media/generated_videos/property_video.mp4'
     caption = generate_caption_for_post(property_to_post_instagram_reel.location,
                                         property_to_post_instagram_reel.get_public_url,
                                         property_to_post_instagram_reel.get_price_for_front,
