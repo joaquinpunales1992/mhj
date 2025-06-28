@@ -221,7 +221,7 @@ def post_instagram_reel():
     social_media='instagram', content_type='reel'
     ).values_list('property_url', flat=True)
 
-    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
+    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
     create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
     media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
@@ -304,7 +304,7 @@ def create_property_video(property_id, output_path, duration_per_image=3):
     for img_obj in images:
         # Use the correct field name for your image URL here:
         img_url = prepare_image_url_for_facebook(img_obj.file.url)  # ← change if your field is different
-        print(f"📷 Downloading: {img_url}")
+        print(f"Downloading: {img_url}")
         try:
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
