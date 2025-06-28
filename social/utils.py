@@ -73,11 +73,11 @@ def generate_caption_for_post(property_location: str, property_url: str, propert
       
             if not caption.endswith('.'):
                 caption = caption[:caption.rfind('.') + 1]
-            caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+            caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n#akiya #japan #japanlife #cheaphouses #myakiyainjapan"
 
         except Exception as e:
             print(f"Error generating caption: {e}")
-            caption = f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+            caption = f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n#akiya #japan #japanlife #cheaphouses #myakiyainjapan"
 
         return caption
     else:
@@ -342,6 +342,8 @@ def create_property_video(property_id, output_path, duration_per_image=3):
 
     video_text = f"{property.get_price_for_front}\n{property.get_location_for_front()} \n "
 
+    # logo = (ImageClip("static/images/logo_maj.png", duration=images.count() * duration_per_image)).with_position(('left', 'top'), relative=True)
+
     text_clip = TextClip(
         font="static/fonts/Montserrat-Bold.ttf",
         text=video_text,
@@ -349,72 +351,14 @@ def create_property_video(property_id, output_path, duration_per_image=3):
         color='white'
     ).with_duration(images.count() * duration_per_image).with_position((0.7, 0.7), relative=True)
 
-    final_video = CompositeVideoClip([clip, text_clip])
+    text_clip_top = TextClip(
+        font="static/fonts/Montserrat-Light.ttf",
+        text="Link in Bio \n ",
+        font_size=30,
+        color='white'
+    ).with_duration(images.count() * duration_per_image).with_position(('center', 0.03), relative=True)
+
+    final_video = CompositeVideoClip([clip, text_clip, text_clip_top])
     final_video.write_videofile(output_path)
 
-    print(f"✅ IG-ready video saved: {output_path}")
-
-
-# def create_property_video(property_id, output_path="property_video.mp4", duration_per_image=3):
-#     images = PropertyImage.objects.filter(property_id=property_id).order_by('id')
-#     if not images:
-#         print("❌ No images found.")
-#         return
-
-#     clips = []
-
-#     for img_obj in images:
-#         try:
-#             img_url = prepare_image_url_for_facebook(img_obj.file.url) 
-#             print(f"📷 Downloading: {img_url}")
-#             img_path = _download_image_to_tempfile(img_url)
-
-#             clip = ImageClip(img_path, duration=duration_per_image)
-#             clip = clip.resize(height=1920).on_color(
-#                 size=(1080, 1920),
-#                 color=(0, 0, 0),
-#                 pos='center'
-#             )
-#             clips.append(clip)
-#         except Exception as e:
-#             print(f"⚠️ Skipping image {img_obj}: {e}")
-
-#     if not clips:
-#         print("❌ No valid images to create video.")
-#         return
-
-#     final_video = concatenate_videoclips(clips, method="compose")
-
-#     # Load and process background audio
-#     try:
-#         audio = AudioFileClip("Jamie Bathgate - Status.mp3").subclip(0, final_video.duration)
-#         audio = audio.audio_fadeout(1.5).volumex(0.4)
-#         final_video = final_video.set_audio(audio)
-#     except Exception as e:
-#         print(f"⚠️ Failed to add audio: {e}")
-
-#     # Ensure output directory
-#     output_dir = os.path.dirname(output_path)
-#     if output_dir:
-#         os.makedirs(output_dir, exist_ok=True)
-
-#     # Write final video
-#     final_video.write_videofile(
-#         output_path,
-#         fps=30,
-#         codec='libx264',
-#         audio=True,
-#         audio_codec='aac',
-#         bitrate="3500k",
-#         preset="medium",
-#         ffmpeg_params=[
-#             "-profile:v", "high",
-#             "-level", "4.1",
-#             "-pix_fmt", "yuv420p",
-#             "-movflags", "+faststart",
-#             "-g", "60",
-#             "-sc_threshold", "0"
-#         ]
-#     )
-
-#     print(f"✅ IG-ready video saved: {output_path}")
+    print(f"✅ IG-ready video saved at: {output_path}")
