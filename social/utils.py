@@ -211,7 +211,12 @@ def post_to_facebook(property: Property, use_ai_caption: bool =True):
 
 
 def post_instagram_reel():
-    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False).first()
+
+    instagram_reels_urls = SocialPost.objects.filter(
+    social_media='instagram', content_type='reel'
+    ).values_list('property_url', flat=True)
+
+    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
     create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
     # Ensure media subfolder exists
@@ -224,7 +229,7 @@ def post_instagram_reel():
     # Move the video file from temp to MEDIA_ROOT
     shutil.move("property_video.mp4", target_path)
 
-    video_url = 'https://akiyainjapan.com/media/generated_videos/property_video.mp4'
+    video_url = 'https://akiyainjapan.com/generated_videos/property_video.mp4'
     caption = generate_caption_for_post(property_to_post_instagram_reel.location,
                                         property_to_post_instagram_reel.get_public_url,
                                         property_to_post_instagram_reel.get_price_for_front,

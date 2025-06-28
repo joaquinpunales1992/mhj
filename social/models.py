@@ -8,6 +8,7 @@ class SocialPost(models.Model):
     datetime = models.DateTimeField(auto_now_add=True)
     property_url = models.URLField(max_length=255, blank=True)
     social_media = models.CharField(max_length=50, choices=[('facebook', 'Facebook'), ('instagram', 'Instagram')])
+    content_type = models.CharField(max_length=50, choices=[('post', 'Post'), ('reel', 'Reel')], default='post')
 
     def __str__(self):
         return f"Posted {self.property_url} on {self.social_media} at {self.datetime}"
