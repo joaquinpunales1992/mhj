@@ -349,7 +349,7 @@ def create_property_video(property_id, output_path, duration_per_image=3):
         text=video_text,
         font_size=30,
         color='white'
-    ).with_duration(images.count() * duration_per_image).with_position((0.7, 0.7), relative=True)
+    ).with_duration(images.count() * duration_per_image).with_position((0.1, 0.7), relative=True)
 
     text_clip_top = TextClip(
         font="static/fonts/Montserrat-Light.ttf",
