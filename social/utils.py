@@ -15,9 +15,8 @@ import shutil
 import requests
 import tempfile
 from moviepy.video.VideoClip import ImageClip
-from moviepy.audio.io.AudioFileClip import AudioFileClip
-
-from moviepy import ImageClip, concatenate_videoclips, AudioFileClip
+from moviepy import ImageClip, concatenate_videoclips, TextClip, CompositeVideoClip, VideoFileClip
+from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 
 
 def refresh_access_token():
@@ -222,14 +221,12 @@ def post_instagram_reel():
     social_media='instagram', content_type='reel'
     ).values_list('property_url', flat=True)
 
-    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
+    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
     create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
-    # Ensure media subfolder exists
     media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
     os.makedirs(media_dir, exist_ok=True)
 
-    # Final destination path
     target_path = os.path.join(media_dir, "property_video.mp4")
 
     # Move the video file from temp to MEDIA_ROOT
@@ -296,8 +293,9 @@ def _download_image_to_tempfile(url):
     return tmp_file.name
 
 
-def create_property_video(property_id, output_path="property_video.mp4", duration_per_image=3):
+def create_property_video(property_id, output_path, duration_per_image=3):
     images = PropertyImage.objects.filter(property_id=property_id).order_by('id')
+    property = Property.objects.get(pk=property_id)
     if not images:
         print("❌ No images found.")
         return
@@ -310,18 +308,6 @@ def create_property_video(property_id, output_path="property_video.mp4", duratio
         try:
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
-
-            # clip = clip(duration_per_image).resize(height=1920).on_color(
-            #     size=(1080, 1920), color=(0, 0, 0), pos=('center', 'center')
-            # )
-
-            # Resize & pad to portrait (1080x1920)
-            # clip = clip.resize(height=1920)
-            # clip = clip.on_color(
-            #     size=(1080, 1920),
-            #     color=(0, 0, 0),
-            #     pos=('center', 'center')
-            # )
             clips.append(clip)
         except Exception as e:
             print(f"⚠️ Skipping image {img_url}: {e}")
@@ -329,16 +315,12 @@ def create_property_video(property_id, output_path="property_video.mp4", duratio
     if not clips:
         print("❌ No valid images to create video.")
         return
-
+    
     final_video = concatenate_videoclips(clips, method="compose")
-
-    # Limit total duration TODO FIX
-    # if final_video.duration > 60:
-    #     final_video = final_video.subclip(0, 60)
 
     # Write final video
     final_video.write_videofile(
-        output_path,
+        "property_video_without_label.mp4",
         fps=30,
         codec='libx264',
         audio=False,
@@ -353,6 +335,22 @@ def create_property_video(property_id, output_path="property_video.mp4", duratio
             "-sc_threshold", "0"
         ]
     )
+
+    clip = (
+        VideoFileClip("property_video_without_label.mp4").subclipped(0, images.count() * duration_per_image)
+    )
+
+    video_text = f"{property.get_price_for_front}\n{property.get_location_for_front()} \n "
+
+    text_clip = TextClip(
+        font="static/fonts/Montserrat-Bold.ttf",
+        text=video_text,
+        font_size=30,
+        color='white'
+    ).with_duration(images.count() * duration_per_image).with_position((0.7, 0.7), relative=True)
+
+    final_video = CompositeVideoClip([clip, text_clip])
+    final_video.write_videofile(output_path)
 
     print(f"✅ IG-ready video saved: {output_path}")
 
