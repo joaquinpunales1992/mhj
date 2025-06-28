@@ -223,14 +223,11 @@ def post_instagram_reel():
     # shutil.move(output_file, target_path)
 
     # Ensure media subfolder exists
-    media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
-    os.makedirs(media_dir, exist_ok=True)
-
-    # Final destination path
-    target_path = os.path.join(media_dir, "property_video.mp4")
-
-    # Move the video file from temp to MEDIA_ROOT
-    shutil.move("property_video.mp4", target_path)
+    output_file = "property_video.mp4"
+    target_dir = os.path.join("static", "assets")
+    target_path = os.path.join(target_dir, "property_video.mp4")
+    os.makedirs(target_dir, exist_ok=True)
+    shutil.move(output_file, target_path)
     
     video_url = 'https://akiyainjapan.com/static/assets/property_video.mp4'
     caption = generate_caption_for_post(property_to_post_instagram_reel.location,
