@@ -48,8 +48,8 @@ def prepare_image_url_for_facebook(image_url):
     decoded_final = urllib.parse.unquote(decoded_once)
     
     # Ensure the URL starts with 'https://'
-    if not decoded_final.startswith('https://'):
-        image_url = decoded_final.replace('https:/', 'https://', 1)
+    if not decoded_final.startswith('media/https://'):
+        image_url = decoded_final.replace('media/https:/', 'https://', 1)
     
     return image_url
 
@@ -209,7 +209,7 @@ def post_to_facebook(property: Property, use_ai_caption: bool =True):
 
 
 def post_instagram_reel():
-    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).first()
+    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False).first()
     create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
     # output_file = "property_video.mp4"
