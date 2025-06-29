@@ -17,6 +17,7 @@ import tempfile
 from moviepy.video.VideoClip import ImageClip
 from moviepy import ImageClip, concatenate_videoclips, TextClip, CompositeVideoClip, VideoFileClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+from membership.utils import notify_social_token_expired
 
 
 def refresh_access_token():
@@ -216,66 +217,69 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
 
 
 def post_instagram_reel():
+    try:
+        instagram_reels_urls = SocialPost.objects.filter(
+        social_media='instagram', content_type='reel'
+        ).values_list('property_url', flat=True)
 
-    instagram_reels_urls = SocialPost.objects.filter(
-    social_media='instagram', content_type='reel'
-    ).values_list('property_url', flat=True)
+        property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
+        create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
-    property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
-    create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
+        media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
+        os.makedirs(media_dir, exist_ok=True)
 
-    media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
-    os.makedirs(media_dir, exist_ok=True)
+        target_path = os.path.join(media_dir, "property_video.mp4")
 
-    target_path = os.path.join(media_dir, "property_video.mp4")
+        # Move the video file from temp to MEDIA_ROOT
+        shutil.move("property_video.mp4", target_path)
 
-    # Move the video file from temp to MEDIA_ROOT
-    shutil.move("property_video.mp4", target_path)
+        video_url = 'https://akiyainjapan.com/media/generated_videos/property_video.mp4'
+        caption = generate_caption_for_post(property_to_post_instagram_reel.location,
+                                            property_to_post_instagram_reel.get_public_url,
+                                            property_to_post_instagram_reel.get_price_for_front,
+                                            use_ai_caption=USE_AI_CAPTION
+                            )
 
-    video_url = 'https://akiyainjapan.com/media/generated_videos/property_video.mp4'
-    caption = generate_caption_for_post(property_to_post_instagram_reel.location,
-                                        property_to_post_instagram_reel.get_public_url,
-                                        property_to_post_instagram_reel.get_price_for_front,
-                                        use_ai_caption=USE_AI_CAPTION
-                        )
-
-    # Step 1: Create media container
-    media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
-    media_payload = {
-        "media_type": "REELS",
-        "video_url": video_url,
-        "caption": caption,
-        "access_token": get_fresh_token()
-    }
-    media_response = requests.post(media_url, data=media_payload)
-    print("📥 Media upload response:", media_response.text)
-
-    time.sleep(180)
-    if "id" in media_response.json():
-        creation_id = media_response.json()["id"]
-
-        # Step 2: Publish the video
-        publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
-        publish_payload = {
-            "creation_id": creation_id,
+        # Step 1: Create media container
+        media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
+        media_payload = {
+            "media_type": "REELS",
+            "video_url": video_url,
+            "caption": caption,
             "access_token": get_fresh_token()
         }
+        media_response = requests.post(media_url, data=media_payload)
+        print("📥 Media upload response:", media_response.text)
 
-        publish_response = requests.post(publish_url, data=publish_payload)
-        print("🚀 Publish response:", publish_response.text)
+        time.sleep(180)
+        if "id" in media_response.json():
+            creation_id = media_response.json()["id"]
 
-        if publish_response.status_code == 200:
-            print("✅ Successfully posted to Instagram Reels!")
-            SocialPost.objects.create(
-                caption=caption,
-                property_url=property_to_post_instagram_reel.url,
-                social_media='instagram',
-                content_type='reel'
-            )
+            # Step 2: Publish the video
+            publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
+            publish_payload = {
+                "creation_id": creation_id,
+                "access_token": get_fresh_token()
+            }
+
+            publish_response = requests.post(publish_url, data=publish_payload)
+            print("🚀 Publish response:", publish_response.text)
+
+            if publish_response.status_code == 200:
+                print("✅ Successfully posted to Instagram Reels!")
+                SocialPost.objects.create(
+                    caption=caption,
+                    property_url=property_to_post_instagram_reel.url,
+                    social_media='instagram',
+                    content_type='reel'
+                )
+            else:
+                print("❌ Failed to publish Reel.")
         else:
-            print("❌ Failed to publish Reel.")
-    else:
-        print("❌ Failed to create media container.")
+            print("❌ Failed to create media container.")
+    except Exception as e:
+        print(f"❌ Error posting Instagram Reel: {e}")
+        notify_social_token_expired(message=f"Error posting Instagram Reel: {e}")
 
 
 def _download_image_to_tempfile(url):
