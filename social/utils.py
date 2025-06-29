@@ -84,7 +84,7 @@ def generate_caption_for_post(property_location: str, property_url: str, propert
         return f"Price: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
     
 
-def post_to_instagram(property: Property, use_ai_caption: bool = True):
+def post_to_instagram(property: Property, use_ai_caption: bool):
     property_image_urls=[image.file.url for image in property.images.all()][:5]
     
     caption = generate_caption_for_post(
@@ -155,7 +155,7 @@ def post_to_instagram(property: Property, use_ai_caption: bool = True):
         print("❌ No media uploaded; skipping Instagram post.")
 
 
-def post_to_facebook(property: Property, use_ai_caption: bool =True):
+def post_to_facebook(property: Property, use_ai_caption: bool):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
 
     caption = generate_caption_for_post(
