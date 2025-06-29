@@ -250,7 +250,7 @@ def post_instagram_reel():
     media_response = requests.post(media_url, data=media_payload)
     print("📥 Media upload response:", media_response.text)
 
-    time.sleep(80)
+    time.sleep(180)
     if "id" in media_response.json():
         creation_id = media_response.json()["id"]
 
