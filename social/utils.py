@@ -294,7 +294,7 @@ def _download_image_to_tempfile(url):
 
 
 def create_property_video(property_id, output_path, duration_per_image=3):
-    images = PropertyImage.objects.filter(property_id=property_id).order_by('id')
+    images = PropertyImage.objects.filter(property_id=property_id).order_by('id')[:7]
     property = Property.objects.get(pk=property_id)
     if not images:
         print("❌ No images found.")
