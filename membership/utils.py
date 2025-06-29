@@ -2,10 +2,10 @@ from django.core.mail import EmailMessage
 
 
 
-def notify_social_token_expired():
+def notify_social_token_expired(message=None):
     email = EmailMessage(
         subject='Your Akiya in Japan - SOCIAL TOKEN EXPIRED',
-        body="The social token has expired. Please refresh it.",    
+        body=message,    
         from_email='hello@myakiyainjapan.com',
         to=['joaquinpunales@gmail.com'],
         reply_to=['hello@myakiyainjapan.com']
