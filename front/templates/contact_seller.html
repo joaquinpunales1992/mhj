@@ -1,4 +1,4 @@
-{% load static social_share %}
+{% load static social_share inventory_tags %}
 
 
 <!DOCTYPE html>
@@ -79,6 +79,85 @@
   <!-- <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script> -->
 
 <style>
+
+  .related-properties-container {
+  margin-bottom: 2rem;
+}
+
+.related-properties-heading {
+  font-size: 1.25rem;
+  margin-bottom: 1rem;
+  color: #333;
+}
+
+.related-properties-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  justify-content: flex-start;
+}
+
+.related-property-card {
+  flex: 1 1 300px;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 1.5rem;
+  transition: box-shadow 0.2s ease;
+}
+
+.property-image-link {
+  display: block;
+  width: 100%;
+}
+
+.property-image {
+  width: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+  max-height: 180px;
+}
+
+.property-info {
+  margin-top: 1rem;
+}
+
+.property-title {
+  font-size: 1.1rem;
+  color: #2c3e50;
+  margin-bottom: 0.5rem;
+}
+
+.property-location {
+  font-size: 1.4rem;
+  color: #555;
+  margin-bottom: 0.3rem;
+}
+
+.property-price {
+  font-weight: bold;
+  font-size: 1.4rem;
+  color: #3498db;
+  margin-bottom: 0.7rem;
+}
+
+.property-details-button {
+  display: inline-block;
+  margin-top: 0.5rem;
+  color: white;
+  background-color: #3498db;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  transition: background-color 0.2s ease;
+}
+
+.property-details-button:hover {
+  background-color: #2980b9;
+}
+
 
     .popup.hidden {
         display: none;
@@ -1051,11 +1130,40 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h4>Receive the keys to your new home in Japan</h4>
                 <small>Congratulations! Your new home is ready for you!</small>
               </div>
+            </div>
+            <hr>
+            <div class="related-properties-container">
+            <h4 class="related-properties-heading">You might also like:</h4>
+            {% find_related_properties property.pk as related_properties %}
+              <div class="related-properties-row">
+                {% for property in related_properties %}
+                  <div class="related-property-card">
+                    {% with property.get_ordered_images.first as first_image %}
+                      {% if first_image.show_in_front %}
+                        <a href="{% url 'contact_seller' property.pk 0 %}" class="property-image-link">
+                          <img src="{{ first_image.file }}" alt="{{ first_image.alt }}" class="property-image">
+                        </a>
+                      {% endif %}
+                    {% endwith %}
+                    <div class="property-info">
+                      <p class="property-location">Akiya in 📍 {{ property.get_location_for_front }}</p>
+                      <p class="property-price">{{ property.get_price_for_front }}</p>
+                      <a href="{% url 'contact_seller' property.pk 0 %}" class="property-details-button">Learn More</a>
+                    </div>
+                  </div>
+                {% endfor %}
+              </div>
           </div>
-        </div>        
+        </div>       
+        
         </div>
+
+
+        
                 
       </div>
+
+      
     </main>
   </div>
 </body>
