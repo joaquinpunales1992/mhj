@@ -1094,13 +1094,13 @@ document.addEventListener('DOMContentLoaded', () => {
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
                     <button id="book-button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg">
-                      I'm Interested in this Property
+                      Buy this Property
                     </button>
                 </div>
             {% else %}
                 <div>
                     <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
-                        I'm Interested in this Property
+                        Buy this Property
                     </button>
                 </div>
             {% endif %}
