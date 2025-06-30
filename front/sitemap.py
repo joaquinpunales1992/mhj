@@ -10,7 +10,7 @@ def display_sitemaps(request):
 
     # Property pages
     for property in Property.objects.filter(show_in_front=True, premium=False):
-        views.append({'url': f"contact-seller/{property.pk}/", 'priority': '0.6', 'changefreq': 'monthly'},)
+        views.append({'url': f"japanese-houses/{property.pk}/", 'priority': '0.6', 'changefreq': 'monthly'},)
 
     # Create XML structure
     urlset = Element('urlset', xmlns="http://www.sitemaps.org/schemas/sitemap/0.9")

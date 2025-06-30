@@ -1,7 +1,8 @@
 import json
 from django.db.models import Q, F
 from django.conf import settings
-from django.shortcuts import render
+from django.shortcuts import render, redirect
+from django.views import View
 from inventory.models import Property
 from django.core.mail import EmailMessage
 from django.http import JsonResponse
@@ -89,11 +90,16 @@ def update_like_count(request, property_id, user_email=None):
 
     return JsonResponse({'error': 'Invalid request method'}, status=405)
 
-
-def contact_seller(request, pk, user_just_registered=0):
+def property_detail(request, pk, user_just_registered=0):
     property = Property.objects.filter(pk=pk).first()
     user_email = request.user.email if request.user.is_authenticated else request.COOKIES.get('email')
     return render(request, 'contact_seller.html', context={'property': property, 'user_email': user_email, 'user_just_registered': user_just_registered})
+
+def legacy_contact_seller_redirect(request, pk):
+    return redirect('property_detail', pk=pk, permanent=True)
+
+def legacy_contact_seller_optional_redirect(request, pk,  user_just_registered):
+    return redirect('property_detail', pk=pk, permanent=True, user_just_registered=user_just_registered)
 
 def filter_properties(request, category):
 

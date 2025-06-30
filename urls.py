@@ -21,6 +21,9 @@ urlpatterns = [
     path('approved-membership-payment/', membership_views.approved_membership_payment, name='approved_membership_payment'),
     path("admin/", admin.site.urls),
     path('accounts/', include('allauth.urls')),
-    path('contact-seller/<int:pk>/<str:user_just_registered>/', front_views.contact_seller, name='contact_seller'),
-    path('contact-seller/<int:pk>/', front_views.contact_seller, name='contact_seller_optional')    
+    path('japanese-houses/<int:pk>/<str:user_just_registered>/', front_views.property_detail, name='property_detail'),
+    path('japanese-houses/<int:pk>/', front_views.property_detail, name='property_detail_optional'),    
+    # Redirect for legacy URLs
+    path('contact-seller/<int:pk>/<str:user_just_registered>/', front_views.legacy_contact_seller_optional_redirect, name='legacy_contact_seller_optional_redirect'),
+    path('contact-seller/<int:pk>/', front_views.legacy_contact_seller_redirect, name='legacy_contact_seller_redirect '),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

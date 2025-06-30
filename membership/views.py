@@ -19,7 +19,7 @@ def register_via_email(request, pk, redirect_to_premium=0):
             response.set_cookie('email', email)
             return response
         user_just_registered = 1
-        response = redirect(reverse('contact_seller', args=[pk, user_just_registered]))
+        response = redirect(reverse('property_detail', args=[pk, user_just_registered]))
         response.set_cookie('email', email)
         return response
 

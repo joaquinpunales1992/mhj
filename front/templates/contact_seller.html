@@ -11,9 +11,9 @@
           "@type": "RealEstateListing",
           "name": "{{ property.title }} - {{ property.get_location_for_front }} – Akiya in Japan",
           "description": "{{ property.description }}. Akiya in Japan is a platform that connects you with properties in Japan. We help you find your dream home in Japan.",
-          "url": "https://akiyainjapan.com/contact-seller/{{property.pk}}/",
+          "url": "https://akiyainjapan.com/japanese-houses/{{property.pk}}/",
           "datePosted": "{{ property.created_at|date:'Y-m-d' }}",
-          "mainEntityOfPage": "https://akiyainjapan.com/contact-seller/{{property.pk}}/",
+          "mainEntityOfPage": "https://akiyainjapan.com/japanese-houses/{{property.pk}}/",
           "image": [
             {% for image in property.images.all %}
               "{{ image.file }}"{% if not forloop.last %},{% endif %}
@@ -1140,7 +1140,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   <div class="related-property-card">
                     {% with property.get_ordered_images.first as first_image %}
                       {% if first_image.show_in_front %}
-                        <a href="{% url 'contact_seller' property.pk 0 %}" class="property-image-link">
+                        <a href="{% url 'property_detail' property.pk 0 %}" class="property-image-link">
                           <img src="{{ first_image.file }}" alt="{{ first_image.alt }}" class="property-image">
                         </a>
                       {% endif %}
@@ -1148,7 +1148,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="property-info">
                       <p class="property-location">Akiya in 📍 {{ property.get_location_for_front }}</p>
                       <p class="property-price">{{ property.get_price_for_front }}</p>
-                      <a href="{% url 'contact_seller' property.pk 0 %}" class="property-details-button">Learn More</a>
+                      <a href="{% url 'property_detail' property.pk 0 %}" class="property-details-button">Learn More</a>
                     </div>
                   </div>
                 {% endfor %}
