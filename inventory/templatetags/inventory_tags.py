@@ -8,4 +8,4 @@ register = template.Library()
 
 @register.simple_tag
 def find_related_properties(property_pk: int) -> QuerySet:
-    return Property.objects.filter(location__icontains=Property.objects.get(pk=property_pk).get_location_for_front(), premium=False).exclude(pk=property_pk).order_by('price')[:MAX_RELATED_PROPERTIES]
+    return Property.objects.filter(location__icontains=Property.objects.get(pk=property_pk).get_location_for_front(), premium=False, images__isnull=False).exclude(pk=property_pk).order_by('price')[:MAX_RELATED_PROPERTIES]
