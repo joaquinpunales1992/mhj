@@ -225,6 +225,7 @@ def post_instagram_reel():
         property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
         create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
+        import pdb;pdb.set_trace()
         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
         os.makedirs(media_dir, exist_ok=True)
         target_path = os.path.join(media_dir, "property_video.mp4")
@@ -334,7 +335,6 @@ def create_property_video(property_id, output_path, duration_per_image=3):
         bitrate="3500k",
         preset="medium",
         ffmpeg_params=[
-            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
             "-profile:v", "high",
             "-level", "4.1",
             "-pix_fmt", "yuv420p",
@@ -343,7 +343,7 @@ def create_property_video(property_id, output_path, duration_per_image=3):
             "-sc_threshold", "0"
         ]
     )
-
+    import pdb;pdb.set_trace()
     clip = (
         VideoFileClip("property_video_without_label.mp4").subclipped(0, images.count() * duration_per_image)
     )
@@ -353,14 +353,14 @@ def create_property_video(property_id, output_path, duration_per_image=3):
     # logo = (ImageClip("static/images/logo_maj.png", duration=images.count() * duration_per_image)).with_position(('left', 'top'), relative=True)
 
     text_clip = TextClip(
-        font="static/fonts/Montserrat-Bold.ttf",
+        font="/home/planlxry/myhouseinjapan/static/fonts/Montserrat-Bold.ttf",
         text=video_text,
         font_size=30,
         color='white'
     ).with_duration(images.count() * duration_per_image).with_position((0.1, 0.7), relative=True)
 
     text_clip_top = TextClip(
-        font="static/fonts/Montserrat-Light.ttf",
+        font="/home/planlxry/myhouseinjapan/static/fonts/Montserrat-Light.ttf",
         text="Link in Bio \n ",
         font_size=30,
         color='white'
