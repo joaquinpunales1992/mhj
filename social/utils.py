@@ -225,7 +225,6 @@ def post_instagram_reel():
         property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
         create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
-        import pdb;pdb.set_trace()
         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
         os.makedirs(media_dir, exist_ok=True)
         target_path = os.path.join(media_dir, "property_video.mp4")
@@ -343,7 +342,6 @@ def create_property_video(property_id, output_path, duration_per_image=3):
             "-sc_threshold", "0"
         ]
     )
-    import pdb;pdb.set_trace()
     clip = (
         VideoFileClip("property_video_without_label.mp4").subclipped(0, images.count() * duration_per_image)
     )
