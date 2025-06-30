@@ -227,7 +227,6 @@ def post_instagram_reel():
 
         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
         os.makedirs(media_dir, exist_ok=True)
-
         target_path = os.path.join(media_dir, "property_video.mp4")
 
         # Move the video file from temp to MEDIA_ROOT
@@ -312,6 +311,10 @@ def create_property_video(property_id, output_path, duration_per_image=3):
         try:
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
+
+            if clip.w % 2 != 0 or clip.h % 2 != 0:
+                clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
+
             clips.append(clip)
         except Exception as e:
             print(f"⚠️ Skipping image {img_url}: {e}")
@@ -350,14 +353,14 @@ def create_property_video(property_id, output_path, duration_per_image=3):
     # logo = (ImageClip("static/images/logo_maj.png", duration=images.count() * duration_per_image)).with_position(('left', 'top'), relative=True)
 
     text_clip = TextClip(
-        font="/home/planlxry/myhouseinjapan/static/fonts/Montserrat-Bold.ttf",
+        font="static/fonts/Montserrat-Bold.ttf",
         text=video_text,
         font_size=30,
         color='white'
     ).with_duration(images.count() * duration_per_image).with_position((0.1, 0.7), relative=True)
 
     text_clip_top = TextClip(
-        font="/home/planlxry/myhouseinjapan/static/fonts/Montserrat-Light.ttf",
+        font="static/fonts/Montserrat-Light.ttf",
         text="Link in Bio \n ",
         font_size=30,
         color='white'
