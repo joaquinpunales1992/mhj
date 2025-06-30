@@ -331,6 +331,7 @@ def create_property_video(property_id, output_path, duration_per_image=3):
         bitrate="3500k",
         preset="medium",
         ffmpeg_params=[
+            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
             "-profile:v", "high",
             "-level", "4.1",
             "-pix_fmt", "yuv420p",
