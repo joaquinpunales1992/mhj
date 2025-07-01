@@ -71,7 +71,7 @@ class Property(TimestampMixin):
     
     @property
     def get_public_url(self):
-        return reverse('property_detail_optional', kwargs={'pk': self.pk})
+        return reverse('property_detail', kwargs={'pk': self.pk})
     
 
 class PropertyImage(models.Model):
