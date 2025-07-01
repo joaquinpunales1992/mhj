@@ -938,7 +938,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           <br>
 
-          {% if user.is_authenticated or request.COOKIES.email %}
+          <!-- {% if user.is_authenticated or request.COOKIES.email %}
             <button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
                 <span class="icon solid fa-lock"> </span>Unlock Extra Details
             </button>
@@ -946,7 +946,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
                 <span class="icon solid fa-lock"> </span>Unlock Extra Details
             </button>
-          {% endif %}
+          {% endif %} -->
           <hr>
           
 
