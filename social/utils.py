@@ -1,5 +1,6 @@
 import requests
 import json
+import random
 import shutil
 import os
 import tempfile
@@ -60,6 +61,28 @@ def prepare_image_url_for_facebook(image_url):
         image_url = decoded_final.replace('https:/', 'https://', 1)
     
     return image_url
+
+def _download_image_to_tempfile(url):
+    """Download remote image to a temp file with .jpg extension."""
+    headers = {
+        "User-Agent": "Mozilla/5.0"
+    }
+    response = requests.get(url, stream=True, headers=headers)
+    response.raise_for_status()
+
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
+    with open(tmp_file.name, 'wb') as f:
+        for chunk in response.iter_content(1024):
+            f.write(chunk)
+    return tmp_file.name
+
+
+def _get_random_mp3_full_path():
+    folder_path = os.path.join('static', 'audios_for_social_posts')
+    mp3_files = [f for f in os.listdir(folder_path) if f.endswith('.mp3')]
+    if not mp3_files:
+        return None
+    return os.path.join(folder_path, random.choice(mp3_files))
 
 def generate_caption_for_post(property_location: str, property_url: str, property_price: float, use_ai_caption: bool):
     caption = f"Location: {property_location} - Price: {property_price} "
@@ -281,21 +304,6 @@ def post_instagram_reel():
         notify_social_token_expired(message=f"Error posting Instagram Reel: {e}")
 
 
-def _download_image_to_tempfile(url):
-    """Download remote image to a temp file with .jpg extension."""
-    headers = {
-        "User-Agent": "Mozilla/5.0"
-    }
-    response = requests.get(url, stream=True, headers=headers)
-    response.raise_for_status()
-
-    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".jpg")
-    with open(tmp_file.name, 'wb') as f:
-        for chunk in response.iter_content(1024):
-            f.write(chunk)
-    return tmp_file.name
-
-
 def create_property_video(property_id, output_path, duration_per_image=3):
     images = PropertyImage.objects.filter(property_id=property_id).order_by('id')[:7]
     property = Property.objects.get(pk=property_id)
@@ -325,12 +333,14 @@ def create_property_video(property_id, output_path, duration_per_image=3):
     
     final_video = concatenate_videoclips(clips, method="compose")
 
+    audio_path = _get_random_mp3_full_path()
+
     # Write final video
     final_video.write_videofile(
         "property_video_without_label.mp4",
         fps=30,
         codec='libx264',
-        audio=False,
+        audio=audio_path,
         bitrate="3500k",
         preset="medium",
         ffmpeg_params=[
