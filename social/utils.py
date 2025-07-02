@@ -105,7 +105,7 @@ def generate_caption_for_post(property_location: str, property_url: str, propert
 
         return caption
     else:
-        return f"Price: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n #akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+        return f"Price: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n#akiya #japan #japanlife #cheaphouses #myakiyainjapan"
     
 
 def post_to_instagram(property: Property, use_ai_caption: bool):
