@@ -78,7 +78,7 @@ def _download_image_to_tempfile(url):
 
 
 def _get_random_mp3_full_path():
-    folder_path = os.path.join('static', 'audios_for_social_posts')
+    folder_path = os.path.join('/home/planlxry/myhouseinjapan/static/', 'audios_for_social_posts')
     mp3_files = [f for f in os.listdir(folder_path) if f.endswith('.mp3')]
     if not mp3_files:
         return None
