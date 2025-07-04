@@ -242,25 +242,33 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
 def post_instagram_reel():
     try:
         instagram_reels_urls = SocialPost.objects.filter(
-        social_media='instagram', content_type='reel'
+            social_media='instagram', content_type='reel'
         ).values_list('property_url', flat=True)
 
-        property_to_post_instagram_reel = Property.objects.filter(images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
+        property_to_post_instagram_reel = Property.objects.filter(
+            images__isnull=False,
+            price__lte=PRICE_LIMIT_INSTAGRAM,
+            featured=True
+        ).exclude(url__in=instagram_reels_urls).order_by('price').distinct().first()
+
+        if not property_to_post_instagram_reel:
+            print("⚠️ No suitable property found to post on Instagram Reels.")
+            return
+
         create_property_video(property_to_post_instagram_reel.pk, output_path="property_video.mp4", duration_per_image=3)
 
         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
         os.makedirs(media_dir, exist_ok=True)
         target_path = os.path.join(media_dir, "property_video.mp4")
-
-        # Move the video file from temp to MEDIA_ROOT
         shutil.move("property_video.mp4", target_path)
 
         video_url = 'https://akiyainjapan.com/media/generated_videos/property_video.mp4'
-        caption = generate_caption_for_post(property_to_post_instagram_reel.location,
-                                            property_to_post_instagram_reel.get_public_url,
-                                            property_to_post_instagram_reel.get_price_for_front,
-                                            use_ai_caption=USE_AI_CAPTION
-                            )
+        caption = generate_caption_for_post(
+            property_to_post_instagram_reel.location,
+            property_to_post_instagram_reel.get_public_url,
+            property_to_post_instagram_reel.get_price_for_front,
+            use_ai_caption=USE_AI_CAPTION
+        )
 
         # Step 1: Create media container
         media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
@@ -283,12 +291,24 @@ def post_instagram_reel():
                 "creation_id": creation_id,
                 "access_token": get_fresh_token()
             }
-
             publish_response = requests.post(publish_url, data=publish_payload)
             print("🚀 Publish response:", publish_response.text)
 
             if publish_response.status_code == 200:
+                media_id = publish_response.json().get("id")
                 print("✅ Successfully posted to Instagram Reels!")
+
+                # Step 3: Add comment to the published Reel
+                if media_id:
+                    comment_payload = {
+                        "message": "Find out More at www.akiyainjapan.com",
+                        "access_token": get_fresh_token()
+                    }
+                    comment_url = f"https://graph.facebook.com/v19.0/{media_id}/comments"
+                    comment_response = requests.post(comment_url, data=comment_payload)
+                    print("💬 Comment response:", comment_response.text)
+
+                # Log the post
                 SocialPost.objects.create(
                     caption=caption,
                     property_url=property_to_post_instagram_reel.url,
@@ -302,6 +322,65 @@ def post_instagram_reel():
     except Exception as e:
         print(f"❌ Error posting Instagram Reel: {e}")
         notify_social_token_expired(message=f"Error posting Instagram Reel: {e}")
+
+
+
+# def post_reel_to_facebook():
+#     try:
+#         facebook_reels_urls = SocialPost.objects.filter(
+#             social_media='facebook', content_type='reel'
+#         ).values_list('property_url', flat=True)
+
+#         property_to_post_facebook_reel = Property.objects.filter(
+#             images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
+#         ).exclude(url__in=facebook_reels_urls).order_by('price').distinct().first()
+
+#         if not property_to_post_facebook_reel:
+#             print("⚠️ No suitable property found to post on Facebook Reels.")
+#             return
+
+#         # Step 3: Create video
+#         create_property_video(property_to_post_facebook_reel.pk, output_path="property_video.mp4", duration_per_image=3)
+
+#         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
+#         os.makedirs(media_dir, exist_ok=True)
+#         target_path = os.path.join(media_dir, "property_video.mp4")
+#         shutil.move("property_video.mp4", target_path)
+
+#         # Step 4: Prepare video URL and caption
+#         video_url = 'https://akiyainjapan.com/media/generated_videos_facebook/property_video.mp4'
+#         caption = generate_caption_for_post(
+#             property_to_post_facebook_reel.location,
+#             property_to_post_facebook_reel.get_public_url,
+#             property_to_post_facebook_reel.get_price_for_front,
+#             use_ai_caption=USE_AI_CAPTION
+#         )
+
+#         # Step 5: Upload to Facebook
+#         fb_upload_url = f"https://graph.facebook.com/v19.0/{FACEBOOK_PAGE_ID}/videos"
+#         fb_payload = {
+#             "file_url": video_url,
+#             "title": "Property in Japan",
+#             "description": caption,
+#             "access_token": get_fresh_token()
+#         }
+
+#         fb_response = requests.post(fb_upload_url, data=fb_payload)
+#         print("📥 Facebook upload response:", fb_response.text)
+
+#         if fb_response.status_code == 200 and "id" in fb_response.json():
+#             print("✅ Successfully posted to Facebook Reels!")
+#             SocialPost.objects.create(
+#                 caption=caption,
+#                 property_url=property_to_post_facebook_reel.url,
+#                 social_media='facebook',
+#                 content_type='reel'
+#             )
+#         else:
+#             print("❌ Failed to post Reel to Facebook.")
+#     except Exception as e:
+#         print(f"❌ Error posting Facebook Reel: {e}")
+#         notify_social_token_expired(message=f"Error posting Facebook Reel: {e}")
 
 
 def create_property_video(property_id, output_path, duration_per_image=3):
