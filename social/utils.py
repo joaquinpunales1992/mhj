@@ -84,8 +84,10 @@ def _get_random_mp3_full_path():
         return None
     return os.path.join(folder_path, random.choice(mp3_files))
 
-def generate_caption_for_post(property_location: str, property_url: str, property_price: float, use_ai_caption: bool):
+def generate_caption_for_post(property_location: str, property_url: str, property_price: float, property_building_area: str , property_land_area: str, use_ai_caption: bool):
     caption = f"Location: {property_location} - Price: {property_price} "
+
+    hashtags = "#akiya #japan #japanlife #cheaphouse #vacationhouse #affordablehouse #japanesehouse #myakiyainjapan"
     
     if use_ai_caption:
         try:
@@ -97,15 +99,15 @@ def generate_caption_for_post(property_location: str, property_url: str, propert
       
             if not caption.endswith('.'):
                 caption = caption[:caption.rfind('.') + 1]
-            caption += f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n#akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+            caption += f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
 
         except Exception as e:
             print(f"Error generating caption: {e}")
-            caption = f"\n\nPrice: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n#akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+            caption = f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
 
         return caption
     else:
-        return f"Price: {property_price}\nLocation: {property_location}\n\nFind it at www.akiyainjapan.com{property_url}\n\n#akiya #japan #japanlife #cheaphouses #myakiyainjapan"
+        return f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
     
 
 def post_to_instagram(property: Property, use_ai_caption: bool):
@@ -115,6 +117,8 @@ def post_to_instagram(property: Property, use_ai_caption: bool):
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
+        property_building_area=property.building_area,
+        property_land_area=property.land_area,
         use_ai_caption=use_ai_caption
     )
 
@@ -186,6 +190,8 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
+        property_building_area=property.building_area,
+        property_land_area=property.land_area,
         use_ai_caption=use_ai_caption
     )
 
@@ -267,6 +273,8 @@ def post_instagram_reel():
             property_to_post_instagram_reel.location,
             property_to_post_instagram_reel.get_public_url,
             property_to_post_instagram_reel.get_price_for_front,
+            property_building_area=property.building_area,
+            property_land_area=property.land_area,
             use_ai_caption=USE_AI_CAPTION
         )
 
