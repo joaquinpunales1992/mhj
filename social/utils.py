@@ -273,8 +273,8 @@ def post_instagram_reel():
             property_to_post_instagram_reel.location,
             property_to_post_instagram_reel.get_public_url,
             property_to_post_instagram_reel.get_price_for_front,
-            property_building_area=property.building_area,
-            property_land_area=property.land_area,
+            property_to_post_instagram_reel.building_area,
+            property_to_post_instagram_reel.land_area,
             use_ai_caption=USE_AI_CAPTION
         )
 
