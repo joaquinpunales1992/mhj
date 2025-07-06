@@ -83,8 +83,8 @@
 
   .related-properties-container {
   margin-bottom: 2rem;
-  padding-left: 30px;
-  padding-right: 30px;
+  padding-left: 20px;
+  padding-right: 20px;
 }
 
 .related-properties-heading {
@@ -579,10 +579,10 @@ input:checked + .toggle-slider:before {
 /* Booking Flow */
 .step-container {
       position: relative;
-      max-width: 950px;
+      max-width: 1130px;
       margin: 0 auto;
-      padding-left: 30px;
-      padding-right: 30px;
+      padding-left: 20px;
+      padding-right: 20px;
     }
 
     .step {
@@ -591,7 +591,6 @@ input:checked + .toggle-slider:before {
     }
 
     .step::before {
-      content: attr(data-step);
       position: absolute;
       left: -30px;
       top: 0;
@@ -622,7 +621,7 @@ input:checked + .toggle-slider:before {
       padding: 0.6rem 1rem;
       border: none;
       cursor: pointer;
-      font-size: 2.9rem;
+      font-size: 2.2rem;
       margin-top: 0.8rem;
     }
 
@@ -944,7 +943,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="icon solid fa-lock"> </span>Unlock Extra Details
             </button>
           {% endif %} -->
-          <hr>
+          <hr style="border: 0; height: 2px; background: #3498db; margin: 2.5rem 0; border-radius: 2px; box-shadow: 0 2px 8px rgba(52,152,219,0.15);">
+
           
 
           <!-- Collapsible Section -->
@@ -975,7 +975,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            <h1 class="text-4xl text-primary">Akiya in {{ property.get_location_for_front }}: {{ property.title }}</h1>
+            <h1 class="text-4xl text-primary">Akiya in {{ property.get_location_for_front }}</h1>
             <div class="flex items-center space-x-2">
 
         
@@ -1086,9 +1086,10 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>   -->
 
             <div class="step" data-step="1">
-              <h2>Start with a One-on-One Session</h2>
+              <h3>Start Now</h3>
               <p style="font-size: 1.55rem;">
-                Connect with our team in a personal session. We’ll walk you through the entire home-buying journey in Japan—from property types and locations to taxes
+                Get personalized guidance on buying a home in Japan.
+                Our team will walk you through property types, locations, taxes, and every step of the process.
               </p>
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
@@ -1130,7 +1131,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <small>Congratulations! Your new home is ready for you!</small>
             </div> -->
             </div>
-            <hr>
+            <hr style="border: 0; height: 2px; background: #3498db; margin: 2.5rem 0; border-radius: 2px; box-shadow: 0 2px 8px rgba(52,152,219,0.15);">
             <div class="related-properties-container">
             <h4 class="related-properties-heading">Discover other traditional Japanese houses:</h4>
             {% find_related_properties property.pk as related_properties %}
