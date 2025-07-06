@@ -1099,7 +1099,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             {% else %}
                 <div>
-                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="window.location.href='{% url "authenticate" property.pk 0 %}'">
+                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="Calendly.initPopupWidget({url: 'https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&a1=Property%20Identifier%20{{ property.pk }}&primary_color=34a58e'});return false;">
                         Book Consultation
                     </button>
                 </div>
