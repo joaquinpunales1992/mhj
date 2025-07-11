@@ -1,17 +1,16 @@
 from django.core.mail import EmailMessage
 
 
-
 def notify_social_token_expired(message=None):
     email = EmailMessage(
-        subject='Your Akiya in Japan - SOCIAL TOKEN EXPIRED',
-        body=message,    
-        from_email='hello@myakiyainjapan.com',
-        to=['joaquinpunales@gmail.com'],
-        reply_to=['hello@myakiyainjapan.com']
+        subject="Your Akiya in Japan - SOCIAL TOKEN EXPIRED",
+        body=message,
+        from_email="hello@myakiyainjapan.com",
+        to=["joaquinpunales@gmail.com"],
+        reply_to=["hello@myakiyainjapan.com"],
     )
 
-    email.content_subtype = 'html'
+    email.content_subtype = "html"
     try:
         email.send()
     except Exception as e:
@@ -21,14 +20,14 @@ def notify_social_token_expired(message=None):
 def notify_user_registered_via_email(new_user_email):
 
     email = EmailMessage(
-        subject='Your Akiya in Japan - NEW USER REGISTERD VIA EMAIL',
+        subject="Your Akiya in Japan - NEW USER REGISTERD VIA EMAIL",
         body=f"New User Registered via Emial: {new_user_email}",
-        from_email='hello@myakiyainjapan.com',
-        to=['joaquinpunales@gmail.com'],
-        reply_to=['hello@myakiyainjapan.com']
+        from_email="hello@myakiyainjapan.com",
+        to=["joaquinpunales@gmail.com"],
+        reply_to=["hello@myakiyainjapan.com"],
     )
 
-    email.content_subtype = 'html'
+    email.content_subtype = "html"
     try:
         email.send()
     except Exception as e:

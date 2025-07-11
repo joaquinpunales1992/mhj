@@ -4,8 +4,9 @@ from social.utils import post_instagram_reel
 from membership.utils import notify_social_token_expired
 from social.constants import PRICE_LIMIT_INSTAGRAM, BATCH_SIZE_INSTAGRAM
 
+
 class Command(BaseCommand):
-    help = 'Post on Instagram Reel'
+    help = "Post on Instagram Reel"
 
     def handle(self, *args, **kwargs):
         post_instagram_reel()

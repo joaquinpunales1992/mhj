@@ -2,10 +2,7 @@ from social.constants import *
 from ai.hugging import HuggingFaceAI
 from social.models import SocialPost
 from inventory.models import Property
-from social.utils import (
-    post_to_facebook,
-    post_to_instagram
-)
+from social.utils import post_to_facebook, post_to_instagram
 import requests
 
 
@@ -22,7 +19,7 @@ def post_instagram_reel():
         "media_type": "REELS",
         "video_url": VIDEO_URL,
         "caption": CAPTION,
-        "access_token": ACCESS_TOKEN
+        "access_token": ACCESS_TOKEN,
     }
     media_response = requests.post(media_url, data=media_payload)
     print("📥 Media upload response:", media_response.text)
@@ -31,11 +28,10 @@ def post_instagram_reel():
         creation_id = media_response.json()["id"]
 
         # Step 2: Publish the video
-        publish_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
-        publish_payload = {
-            "creation_id": creation_id,
-            "access_token": ACCESS_TOKEN
-        }
+        publish_url = (
+            f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
+        )
+        publish_payload = {"creation_id": creation_id, "access_token": ACCESS_TOKEN}
 
         publish_response = requests.post(publish_url, data=publish_payload)
         print("🚀 Publish response:", publish_response.text)
@@ -50,12 +46,16 @@ def post_instagram_reel():
 
 def post_on_facebook_batch(price_limit: int, batch_size: int):
     facebook_posted_urls = SocialPost.objects.filter(
-    social_media='facebook'
-    ).values_list(
-        'property_url',
-        flat=True
+        social_media="facebook"
+    ).values_list("property_url", flat=True)
+    properties_to_post_facebook = (
+        Property.objects.filter(
+            images__isnull=False, price__lte=price_limit, featured=True
+        )
+        .exclude(url__in=facebook_posted_urls)
+        .order_by("price")
+        .distinct()[:batch_size]
     )
-    properties_to_post_facebook = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=facebook_posted_urls).order_by('price').distinct()[:batch_size]
     for property in properties_to_post_facebook:
         try:
             post_to_facebook(property=property, use_ai_caption=USE_AI_CAPTION)
@@ -63,19 +63,25 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
             print(f"Error posting property {property.id}: {e}")
             continue
 
+
 def post_on_instagram_batch(price_limit: int, batch_size: int):
     instagram_posted_urls = SocialPost.objects.filter(
-    social_media='instagram'
-    ).values_list('property_url', flat=True)
+        social_media="instagram"
+    ).values_list("property_url", flat=True)
 
-    properties_to_post_instagram = Property.objects.filter(images__isnull=False, price__lte=price_limit, featured=True).exclude(url__in=instagram_posted_urls).order_by('price').distinct()[:batch_size]
+    properties_to_post_instagram = (
+        Property.objects.filter(
+            images__isnull=False, price__lte=price_limit, featured=True
+        )
+        .exclude(url__in=instagram_posted_urls)
+        .order_by("price")
+        .distinct()[:batch_size]
+    )
 
     for property in properties_to_post_instagram:
         try:
-            post_to_instagram(
-                property=property,
-                use_ai_caption=USE_AI_CAPTION)
-               
+            post_to_instagram(property=property, use_ai_caption=USE_AI_CAPTION)
+
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
             continue

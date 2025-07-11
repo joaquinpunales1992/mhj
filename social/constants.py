@@ -1,6 +1,6 @@
-PAGE_ACCESS_TOKEN = ''
-PAGE_ID = '612249001976104' 
-INSTAGRAM_USER_ID = '17841473089014615'
+PAGE_ACCESS_TOKEN = ""
+PAGE_ID = "612249001976104"
+INSTAGRAM_USER_ID = "17841473089014615"
 
 DOMAIN_CONTEXT = (
     "You are a copywriting assistant for a website that sells houses in Japan to foreigners.\n"

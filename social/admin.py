@@ -1,6 +1,7 @@
 from social.models import SocialPost
 from django.contrib import admin
 
+
 @admin.register(SocialPost)
 class SocialPostAdmin(admin.ModelAdmin):
     list_display = [

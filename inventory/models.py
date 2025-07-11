@@ -27,16 +27,16 @@ class Property(TimestampMixin):
     zoning = models.CharField(max_length=255, default="", blank=True)
     land_category = models.CharField(max_length=255, default="", blank=True)
     building_coverage_ratio = models.CharField(max_length=255, default="", blank=True)
-    floor_area_ratio = models.CharField(max_length=255, default="", blank=True) 
+    floor_area_ratio = models.CharField(max_length=255, default="", blank=True)
     current_status = models.CharField(max_length=255, default="", blank=True)
     handover = models.CharField(max_length=255, default="", blank=True)
     transaction_type = models.CharField(max_length=255, default="", blank=True)
-    equipment = models.CharField(max_length=255, default="", blank=True) 
+    equipment = models.CharField(max_length=255, default="", blank=True)
     floor_plan = models.CharField(max_length=500)
     location = models.CharField(max_length=255, default="")
     construction_date = models.CharField(max_length=255, default="")
     land_rights = models.CharField(max_length=255, default="")
-    description = models.TextField(default="", blank=True) #remarks
+    description = models.TextField(default="", blank=True)  # remarks
     construction = models.CharField(max_length=255, blank=True)
     show_in_front = models.BooleanField(default=True)
     featured = models.BooleanField(default=False)
@@ -46,45 +46,47 @@ class Property(TimestampMixin):
     class Meta:
         verbose_name = "Property"
         verbose_name_plural = "Properties"
-    
+
     def __str__(self):
         return f"{self.title}: {self.price}"
-    
+
     def get_title_for_front(self):
         return self.title if len(self.title) < 20 else self.title[:20] + "..."
-    
+
     @property
     def get_price_for_front(self):
         return convert_yen_to_usd(convert_price_string(self.price))
-    
+
     def get_location_url(self):
         return f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(self.location, safe='')}"
-    
+
     def property_has_any_image(self):
         return self.images.exists()
-    
+
     def get_ordered_images(self):
-        return self.images.order_by('first_image', '-id')
-    
+        return self.images.order_by("first_image", "-id")
+
     def get_location_for_front(self):
         return infer_location(self.location)
-    
+
     @property
     def get_public_url(self):
-        return reverse('property_detail', kwargs={'pk': self.pk})
-    
+        return reverse("property_detail", kwargs={"pk": self.pk})
+
 
 class PropertyImage(models.Model):
-    property = models.ForeignKey(Property, related_name='images', on_delete=models.CASCADE, null=True)
-    file = models.FileField(upload_to="property_images/", max_length=254, null=True, blank=True)
+    property = models.ForeignKey(
+        Property, related_name="images", on_delete=models.CASCADE, null=True
+    )
+    file = models.FileField(
+        upload_to="property_images/", max_length=254, null=True, blank=True
+    )
     show_in_front = models.BooleanField(default=True)
     first_image = models.BooleanField(default=False)
 
     class Meta:
         verbose_name = "Property Image"
         verbose_name_plural = "Property Images"
-        
+
     def __str__(self):
         return f"{self.property.title} - Image"
-    
-

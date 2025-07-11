@@ -1,4 +1,4 @@
-MAX_PRICE_TO_PULL= 1000
+MAX_PRICE_TO_PULL = 1000
 
 LIFULL_HOMES_BASE_URL = "https://www.homes.co.jp"
 
@@ -49,5 +49,5 @@ LIFULL_HOMES_REGION_LIST = [
     "oita",
     "miyazaki",
     "kagoshima",
-    "okinawa"
+    "okinawa",
 ]

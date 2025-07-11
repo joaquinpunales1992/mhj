@@ -9,6 +9,7 @@ class PropertyImageInline(admin.TabularInline):
     extra = 1
     max_num = 10
 
+
 @admin.register(Property)
 class PropertyAdmin(admin.ModelAdmin):
     list_display = [
@@ -26,17 +27,16 @@ class PropertyAdmin(admin.ModelAdmin):
     ]
     search_fields = ["title", "premium", "featured"]
 
-    inlines = [PropertyImageInline,]
+    inlines = [
+        PropertyImageInline,
+    ]
 
     def image_tag(self, obj):
         if obj.images.first():
-            return format_html('<img src="{}" style="max-height: 150px; max-width: 150px;" />'.format(obj.images.first().file))
+            return format_html(
+                '<img src="{}" style="max-height: 150px; max-width: 150px;" />'.format(
+                    obj.images.first().file
+                )
+            )
 
-    image_tag.short_description = 'Image'
-
-
-
-
-    
-
-
+    image_tag.short_description = "Image"

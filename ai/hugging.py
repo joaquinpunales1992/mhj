@@ -4,7 +4,9 @@ from langchain_huggingface import HuggingFaceEndpoint
 
 
 class HuggingFaceAI:
-    def __init__(self, max_new_tokens: int = 512, top_p: float = 0.95, temperature: float = 0.5) -> None:
+    def __init__(
+        self, max_new_tokens: int = 512, top_p: float = 0.95, temperature: float = 0.5
+    ) -> None:
         self.endpoint_url = settings.HUGGING_FACE_AI_ENDPOINT_URL
         self.max_new_tokens = max_new_tokens
         self.top_p = top_p
@@ -20,10 +22,10 @@ class HuggingFaceAI:
             max_new_tokens=self.max_new_tokens,
             top_p=self.top_p,
             temperature=self.temperature,
-            huggingfacehub_api_token=self.api_token
+            huggingfacehub_api_token=self.api_token,
         )
         chat_model = self._create_chat_model(llm=llm)
-        
+
         messages = [("human", instruction)]
         response = chat_model.invoke(messages)
         return response.content
