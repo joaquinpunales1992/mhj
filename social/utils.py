@@ -280,7 +280,7 @@ def post_instagram_reel():
 
         property_to_post_instagram_reel = (
             Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
             )
             .exclude(url__in=instagram_reels_urls)
             .order_by("price")
