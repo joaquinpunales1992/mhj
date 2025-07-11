@@ -267,7 +267,7 @@ def post_instagram_reel():
             social_media="instagram", content_type="reel"
         )
         last_reel_posted_sound_track = (
-            instagram_reels.order_by("-created_at").first().sound_track
+            instagram_reels.order_by("-datetime").first().sound_track
             if instagram_reels
             else None
         )
