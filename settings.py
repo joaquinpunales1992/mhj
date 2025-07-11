@@ -1,9 +1,12 @@
 import os
 from pathlib import Path
+import environ
+
+env = environ.Env()
+environ.Env.read_env(".env")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -182,4 +185,4 @@ PROPERTIES_TO_DISPLAY = 300
 HUGGING_FACE_AI_ENDPOINT_URL = ""
 HUGGING_FACE_AI_TOKEN = ""
 
-CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
+CEREBRAS_API_KEY = env("CEREBRAS_API_KEY", default="")
