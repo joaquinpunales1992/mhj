@@ -318,6 +318,7 @@ def post_instagram_reel():
             "media_type": "REELS",
             "video_url": video_url,
             "caption": caption,
+            "share_to_feed": False,
             "access_token": get_fresh_token(),
         }
         media_response = requests.post(media_url, data=media_payload)
