@@ -2,46 +2,12 @@ from social.constants import *
 from ai.hugging import HuggingFaceAI
 from social.models import SocialPost
 from inventory.models import Property
-from social.utils import post_to_facebook, post_to_instagram
+from social.utils import post_to_facebook, post_to_instagram, post_instagram_reel
 import requests
 
 
-# TODO:
 def post_instagram_reel():
-    INSTAGRAM_USER_ID = "17841473089014615"
-    ACCESS_TOKEN = "your_facebook_page_access_token"
-    VIDEO_URL = "https://akiyainjapan.com/static/assets/video.mp4"  # must be public
-    CAPTION = "Experience modern living in Kyoto 🏯✨ #JapanHomes"
-
-    # Step 1: Create media container
-    media_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
-    media_payload = {
-        "media_type": "REELS",
-        "video_url": VIDEO_URL,
-        "caption": CAPTION,
-        "access_token": ACCESS_TOKEN,
-    }
-    media_response = requests.post(media_url, data=media_payload)
-    print("📥 Media upload response:", media_response.text)
-
-    if "id" in media_response.json():
-        creation_id = media_response.json()["id"]
-
-        # Step 2: Publish the video
-        publish_url = (
-            f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media_publish"
-        )
-        publish_payload = {"creation_id": creation_id, "access_token": ACCESS_TOKEN}
-
-        publish_response = requests.post(publish_url, data=publish_payload)
-        print("🚀 Publish response:", publish_response.text)
-
-        if publish_response.status_code == 200:
-            print("✅ Successfully posted to Instagram Reels!")
-        else:
-            print("❌ Failed to publish Reel.")
-    else:
-        print("❌ Failed to create media container.")
+    post_instagram_reel()
 
 
 def post_on_facebook_batch(price_limit: int, batch_size: int):

@@ -7,6 +7,7 @@ import tempfile
 import urllib.parse
 from social.constants import *
 from ai.hugging import HuggingFaceAI
+from ai.cerebras import CerebrasAI
 from social.models import SocialPost
 from inventory.models import Property, PropertyImage
 import time
@@ -109,10 +110,13 @@ def generate_caption_for_post(
 
     if use_ai_caption:
         try:
-            ai = HuggingFaceAI()
-            caption = ai.invoke_ai(
-                instruction=f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details."
+            cerebras_ai_client = CerebrasAI()
+            caption = cerebras_ai_client.generate_text(
+                prompt=f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details."
+                + "\n\n"
+                "Output ONLY the caption. No bullet points, no quotes, no examples.\n"
             )
+
             caption = caption.replace('"', "")
 
             if not caption.endswith("."):
@@ -120,7 +124,6 @@ def generate_caption_for_post(
             caption += f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
 
         except Exception as e:
-            print(f"Error generating caption: {e}")
             caption = f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
 
         return caption
@@ -277,7 +280,7 @@ def post_instagram_reel():
 
         property_to_post_instagram_reel = (
             Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False
             )
             .exclude(url__in=instagram_reels_urls)
             .order_by("price")
@@ -303,6 +306,7 @@ def post_instagram_reel():
         shutil.move("property_video.mp4", target_path)
 
         video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
+
         caption = generate_caption_for_post(
             property_to_post_instagram_reel.location,
             property_to_post_instagram_reel.get_public_url,
