@@ -19,7 +19,7 @@ ALLOWED_HOSTS = [
     "www.akiyainjapan.com",
     "akiyainjapan.com",
     "myhouseinjapan.simplifiedbites.com",
-    "www.myhouseinjapan.simplifiedbites.com"
+    "www.myhouseinjapan.simplifiedbites.com",
 ]
 
 
@@ -45,8 +45,8 @@ INSTALLED_APPS = [
 ]
 
 AUTHENTICATION_BACKENDS = [
-    'django.contrib.auth.backends.ModelBackend',
-    'allauth.account.auth_backends.AuthenticationBackend',
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend",
 ]
 
 MIDDLEWARE = [
@@ -99,9 +99,15 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
-    {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",},
-    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",},
-    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",},
+    {
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
+    },
+    {
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
+    },
 ]
 
 # EMAIL SETTINGS
@@ -126,20 +132,14 @@ USE_TZ = True
 
 # Django All Auth
 SOCIALACCOUNT_PROVIDERS = {
-    'google': {
-        'APP': {
-            'client_id': '',
-            'secret': '',
-            'key': ''
-        }
-    }
+    "google": {"APP": {"client_id": "", "secret": "", "key": ""}}
 }
 
 SOCIALACCOUNT_ADAPTER = "membership.adapter.SocialAccountAdapter"
-ACCOUNT_LOGOUT_REDIRECT_URL = '/'
+ACCOUNT_LOGOUT_REDIRECT_URL = "/"
 ACCOUNT_EMAIL_REQUIRED = True
-ACCOUNT_AUTHENTICATION_METHOD = 'email'
-ACCOUNT_EMAIL_VERIFICATION = 'optional'
+ACCOUNT_AUTHENTICATION_METHOD = "email"
+ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_UNIQUE_EMAIL = True
 ACCOUNT_USERNAME_REQUIRED = False
 ACCOUNT_USER_MODEL_USERNAME_FIELD = None
@@ -148,7 +148,7 @@ ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_STORE_TOKENS = False
 LOGIN_REDIRECT_URL = "/"
 
-LOGIN_URL= "/accounts/login/"
+LOGIN_URL = "/accounts/login/"
 
 
 # Static files (CSS, JavaScript, Images)
@@ -163,13 +163,13 @@ STATIC_ROOT = BASE_DIR / "my_house_in_japan/static"
 
 COMPRESS_ROOT = STATIC_ROOT
 STATICFILES_FINDERS = [
-    'django.contrib.staticfiles.finders.FileSystemFinder',
-    'django.contrib.staticfiles.finders.AppDirectoriesFinder',
-    'compressor.finders.CompressorFinder'
+    "django.contrib.staticfiles.finders.FileSystemFinder",
+    "django.contrib.staticfiles.finders.AppDirectoriesFinder",
+    "compressor.finders.CompressorFinder",
 ]
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'myhouseinjapan/media')
-MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, "myhouseinjapan/media")
+MEDIA_URL = "/media/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
@@ -181,3 +181,5 @@ PROPERTIES_TO_DISPLAY = 300
 
 HUGGING_FACE_AI_ENDPOINT_URL = ""
 HUGGING_FACE_AI_TOKEN = ""
+
+CEREBRAS_API_KEY = os.getenv("CEREBRAS_API_KEY")
