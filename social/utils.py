@@ -119,7 +119,7 @@ def generate_caption_for_post(
 
             caption = caption.replace('"', "")
 
-            if not caption.endswith("."):
+            if not caption.rstrip().endswith((".", "!", "?", "...")):
                 caption = caption[: caption.rfind(".") + 1]
             caption += f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
 
