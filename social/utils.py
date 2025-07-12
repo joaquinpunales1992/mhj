@@ -116,7 +116,7 @@ def generate_caption_for_post(
                 + "\n\n"
                 "Output ONLY the caption. No bullet points, no quotes, no examples.\n"
             )
-
+            import pdb;pdb.set_trace
             caption = caption.replace('"', "")
 
             if not caption.rstrip().endswith((".", "!", "?", "...")):
