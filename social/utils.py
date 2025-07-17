@@ -104,6 +104,7 @@ def generate_caption_for_post(
     property_price: float,
     property_building_area: str,
     property_land_area: str,
+    last_caption_generated: str,
     use_ai_caption: bool,
 ):
     caption = f"Location: {property_location} - Price: {property_price} "
@@ -114,9 +115,13 @@ def generate_caption_for_post(
         try:
             cerebras_ai_client = CerebrasAI()
             caption = cerebras_ai_client.generate_text(
-                prompt=f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details."
-                + "\n\n"
-                "Output ONLY the caption. No bullet points, no quotes, no examples.\n"
+                prompt=(
+                    f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. "
+                    "The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details.\n\n"
+                    "Output ONLY the caption. No bullet points, no quotes, no examples.\n"
+                    f"Note that the last caption generated was: {last_caption_generated}\n"
+                    "So do not repeat it the same way."
+                )                    
             )
             caption = caption.replace('"', "")
 
@@ -131,15 +136,16 @@ def generate_caption_for_post(
         return f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
 
 
-def post_to_instagram(property: Property, use_ai_caption: bool):
+def post_to_instagram(property: Property, last_caption_generated: str, use_ai_caption: bool):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
-
+    
     caption = generate_caption_for_post(
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
         property_building_area=property.building_area,
         property_land_area=property.land_area,
+        last_caption_generated=last_caption_generated,
         use_ai_caption=use_ai_caption,
     )
 
@@ -208,7 +214,7 @@ def post_to_instagram(property: Property, use_ai_caption: bool):
         logger.warning("No images were uploaded; skipping Instagram post.")
 
 
-def post_to_facebook(property: Property, use_ai_caption: bool):
+def post_to_facebook(property: Property, last_caption_generated: str, use_ai_caption: bool):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
 
     caption = generate_caption_for_post(
@@ -217,6 +223,7 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
         property_price=property.get_price_for_front,
         property_building_area=property.building_area,
         property_land_area=property.land_area,
+        last_caption_generated=last_caption_generated,
         use_ai_caption=use_ai_caption,
     )
 
@@ -280,6 +287,8 @@ def post_instagram_reel():
         )
         instagram_reels_urls = instagram_reels.values_list("property_url", flat=True)
 
+        last_caption_generated = instagram_reels.order_by("-datetime").first().caption if instagram_reels else None
+
         SocialPost.objects.filter
 
         property_to_post_instagram_reel = (
@@ -317,6 +326,7 @@ def post_instagram_reel():
             property_to_post_instagram_reel.get_price_for_front,
             property_to_post_instagram_reel.building_area,
             property_to_post_instagram_reel.land_area,
+            last_caption_generated=last_caption_generated,
             use_ai_caption=USE_AI_CAPTION,
         )
 
@@ -395,6 +405,7 @@ def post_facebook_reel():
                 else None
             )
         facebook_reels_urls = facebook_reels.values_list("property_url", flat=True)
+        last_caption_generated = facebook_reels.order_by("-datetime").first().caption if facebook_reels else None
 
         # Pick a new property to post
         property_to_post_facebook_reel = (
@@ -433,6 +444,7 @@ def post_facebook_reel():
             property_to_post_facebook_reel.get_price_for_front,
             property_to_post_facebook_reel.building_area,
             property_to_post_facebook_reel.land_area,
+            last_caption_generated=last_caption_generated,
             use_ai_caption=USE_AI_CAPTION,
         )
 
