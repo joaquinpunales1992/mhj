@@ -114,18 +114,18 @@ def generate_caption_for_post(
     if use_ai_caption:
         try:
             cerebras_ai_client = CerebrasAI()
-            caption = cerebras_ai_client.generate_text(
+            ai_caption = cerebras_ai_client.generate_text(
                 prompt=(
                     f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. "
                     "The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details.\n\n"
-                    "Output ONLY the caption. No bullet points, no quotes, no examples.\n"
                     f"Note that the last caption generated was: {last_caption_generated}\n"
-                    "So do not repeat it the same way."
+                    "So do not repeat it the same way.\n"
+                    "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
                 )                    
             )
-            caption = caption.replace('"', "")
+            ai_caption = caption.replace('"', "")
 
-            caption += f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
+            caption = ai_caption + f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
             logger.info(f"Caption generated via AI: {caption}")
         except Exception as e:
             caption = f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
