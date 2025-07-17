@@ -43,9 +43,9 @@ def refresh_access_token():
     if response.status_code == 200:
         new_token = response.json().get("data")[0].get("access_token")
         save_token(new_token)
-        print("✅ Access token refreshed successfully.")
+        logger.info("Access token refreshed successfully.")
     else:
-        print(f"❌ Failed to refresh access token: {response.json()}")
+        logger.error(f"Failed to refresh access token: {response.json()}")
         return None
 
 
@@ -151,7 +151,7 @@ def post_to_instagram(property: Property, use_ai_caption: bool):
         try:
             image_url = prepare_image_url_for_facebook(raw_url)
         except Exception as e:
-            print(f"Error preparing image URL: {e}")
+            logger.error(f"Error preparing image URL: {e}")
             continue
 
         upload_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
@@ -164,10 +164,10 @@ def post_to_instagram(property: Property, use_ai_caption: bool):
         result = response.json()
 
         if "id" in result:
-            print(f"✅ Uploaded image for carousel: {image_url}")
+            logger.info(f"Uploaded image for carousel: {image_url}")
             media_ids.append(result["id"])
         else:
-            print(f"❌ Failed to upload image: {result}")
+            logger.error(f"Failed to upload image: {result}")
 
     # Create carousel container with the uploaded media IDs
     if media_ids:
@@ -193,16 +193,20 @@ def post_to_instagram(property: Property, use_ai_caption: bool):
             }
             publish_response = requests.post(publish_url, data=publish_payload)
             if publish_response.status_code == 200:
-                print("✅✅✅ Successfully posted carousel to Instagram.")
+                logger.info("Successfully posted carousel to Instagram.")
                 SocialPost.objects.create(
                     caption=caption, property_url=property.url, social_media="instagram"
                 )
             else:
-                print(f"❌ Failed to publish carousel: {publish_response.json()}")
+                logger.error(
+                    f"Failed to publish carousel: {publish_response.json()}"
+                )
         else:
-            print(f"❌ Failed to create carousel container: {result}")
+            logger.error(
+                f"Failed to create carousel container: {carousel_response.json()}"
+            )
     else:
-        print("❌ No media uploaded; skipping Instagram post.")
+        logger.warning("No images were uploaded; skipping Instagram post.")
 
 
 def post_to_facebook(property: Property, use_ai_caption: bool):
@@ -223,7 +227,7 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
         try:
             image_url = prepare_image_url_for_facebook(raw_url)
         except Exception as e:
-            print(f"Error preparing image URL: {e}")
+            logger.error(f"Error preparing image URL: {e}")
             continue
 
         upload_url = f"https://graph.facebook.com/v19.0/{PAGE_ID}/photos"
@@ -236,10 +240,10 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
         result = response.json()
 
         if response.status_code == 200 and "id" in result:
-            print(f"✅ Uploaded image: {image_url}")
+            logger.info(f"Uploaded image: {image_url}")
             media_fbids.append(result["id"])
         else:
-            print(f"❌ Failed to upload image: {result}")
+            logger.error(f"Failed to upload image: {result}")
 
     # Create the post with all attached media
     if media_fbids:
@@ -255,14 +259,14 @@ def post_to_facebook(property: Property, use_ai_caption: bool):
         result = response.json()
 
         if response.status_code == 200:
-            print("✅✅✅ Successfully posted to Facebook with multiple images.")
+            logger.info("Successfully posted to Facebook with multiple images.")
             SocialPost.objects.create(
                 caption=caption, property_url=property.url, social_media="facebook"
             )
         else:
-            print(f"❌ Failed to create post: {result}")
+            logger.error(f"Failed to create post: {result}")
     else:
-        print("❌ No images were uploaded; skipping post.")
+        logger.warning("No images were uploaded; skipping Facebook post.")
 
 
 def post_instagram_reel():
@@ -290,7 +294,7 @@ def post_instagram_reel():
         )
 
         if not property_to_post_instagram_reel:
-            print("⚠️ No suitable property found to post on Instagram Reels.")
+            logger.warning("No suitable property found to post on Instagram Reels.")
             return
 
         audio_path = _get_random_mp3_full_path(exclude=last_reel_posted_sound_track)
@@ -327,7 +331,7 @@ def post_instagram_reel():
             "access_token": get_fresh_token(),
         }
         media_response = requests.post(media_url, data=media_payload)
-        print("📥 Media upload response:", media_response.text)
+        logger.info("Media upload response: " + media_response.text)
 
         time.sleep(180)
         if "id" in media_response.json():
@@ -342,11 +346,11 @@ def post_instagram_reel():
                 "access_token": get_fresh_token(),
             }
             publish_response = requests.post(publish_url, data=publish_payload)
-            print("🚀 Publish response:", publish_response.text)
+            logger.info("Publish response: " + publish_response.text)
 
             if publish_response.status_code == 200:
                 media_id = publish_response.json().get("id")
-                print("✅ Successfully posted to Instagram Reels!")
+                logger.info("✅ Successfully posted to Instagram Reels!")
 
                 # Step 3: Add comment to the published Reel
                 if media_id:
@@ -358,7 +362,7 @@ def post_instagram_reel():
                         f"https://graph.facebook.com/v19.0/{media_id}/comments"
                     )
                     comment_response = requests.post(comment_url, data=comment_payload)
-                    print("💬 Comment response:", comment_response.text)
+                    logger.info("Comment response: " + comment_response.text)
 
                 # Log the post
                 SocialPost.objects.create(
@@ -369,12 +373,103 @@ def post_instagram_reel():
                     sound_track=audio_path,
                 )
             else:
-                print("❌ Failed to publish Reel.")
+                logger.error("Failed to publish Reel: " + publish_response.text)
         else:
-            print("❌ Failed to create media container.")
+            logger.error("Failed to create media container: " + media_response.text)
     except Exception as e:
-        print(f"❌ Error posting Instagram Reel: {e}")
+        logger.error(f"Error posting Instagram Reel: {e}")
         notify_social_token_expired(message=f"Error posting Instagram Reel: {e}")
+
+
+def post_facebook_reel():
+    try:
+        # Get previously posted properties
+        facebook_reels = SocialPost.objects.filter(
+            social_media="facebook", content_type="reel"
+        )
+
+        last_reel_posted_sound_track = ""
+        if facebook_reels:
+            last_reel_posted_sound_track = (
+                facebook_reels.order_by("-datetime").first().sound_track
+                if facebook_reels
+                else None
+            )
+        facebook_reels_urls = facebook_reels.values_list("property_url", flat=True)
+
+        # Pick a new property to post
+        property_to_post_facebook_reel = (
+            Property.objects.filter(
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False
+            )
+            .exclude(url__in=facebook_reels_urls)
+            .order_by("price")
+            .distinct()
+            .first()
+        )
+
+        if not property_to_post_facebook_reel:
+            logger.warning("No suitable property found to post on Facebook Reels.")
+            return
+
+        # Create video
+        audio_path = _get_random_mp3_full_path(exclude=last_reel_posted_sound_track)
+        create_property_video(
+            property_to_post_facebook_reel.pk,
+            output_path="property_video.mp4",
+            audio_path=audio_path,
+            duration_per_image=3,
+        )
+
+        media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
+        os.makedirs(media_dir, exist_ok=True)
+        target_path = os.path.join(media_dir, "property_video.mp4")
+        shutil.move("property_video.mp4", target_path)
+
+        video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
+
+        caption = generate_caption_for_post(
+            property_to_post_facebook_reel.location,
+            property_to_post_facebook_reel.get_public_url,
+            property_to_post_facebook_reel.get_price_for_front,
+            property_to_post_facebook_reel.building_area,
+            property_to_post_facebook_reel.land_area,
+            use_ai_caption=USE_AI_CAPTION,
+        )
+
+        # Step: Upload video to Facebook Page
+        page_id = PAGE_ID
+        access_token = get_fresh_token()
+
+        upload_url = f"https://graph.facebook.com/v19.0/{page_id}/videos"
+        payload = {
+            "file_url": video_url,
+            "description": caption,
+            "published": "true",
+            "access_token": access_token,
+        }
+
+        response = requests.post(upload_url, data=payload)
+        logger.info("Facebook video upload response: " + response.text)
+
+        if response.status_code == 200 and "id" in response.json():
+            logger.info("Successfully posted to Facebook Reels!")
+
+            # Log the post
+            SocialPost.objects.create(
+                caption=caption,
+                property_url=property_to_post_facebook_reel.url,
+                social_media="facebook",
+                content_type="reel",
+                sound_track=audio_path,
+            )
+        else:
+            logger.error("Failed to post Facebook Reel: " + response.text)
+
+    except Exception as e:
+        logger.error(f"Error posting Facebook Reel: {e}")
+        notify_social_token_expired(message=f"Error posting Facebook Reel: {e}")
+
 
 
 def create_property_video(
@@ -383,7 +478,7 @@ def create_property_video(
     images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:7]
     property = Property.objects.get(pk=property_id)
     if not images:
-        print("❌ No images found.")
+        logger.error("No images found for the property.")
         return
 
     clips = []
@@ -392,7 +487,7 @@ def create_property_video(
         img_url = prepare_image_url_for_facebook(
             img_obj.file.url
         )  # ← change if your field is different
-        print(f"Downloading: {img_url}")
+        logger.info(f"Preparing image URL: {img_url}")
         try:
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
@@ -402,10 +497,10 @@ def create_property_video(
 
             clips.append(clip)
         except Exception as e:
-            print(f"⚠️ Skipping image {img_url}: {e}")
+            logger.warning(f" Skipping image {img_url}: {e}")
 
     if not clips:
-        print("❌ No valid images to create video.")
+        logger.error("No valid images to create video.")
         return
 
     final_video = concatenate_videoclips(clips, method="compose")
@@ -467,5 +562,4 @@ def create_property_video(
 
     final_video = CompositeVideoClip([clip, text_clip, text_clip_top])
     final_video.write_videofile(output_path)
-
-    print(f"✅ IG-ready video saved at: {output_path}")
+    logger.info(f"Video created: {output_path}")
