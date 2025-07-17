@@ -100,8 +100,13 @@ def _get_random_mp3_full_path(exclude: str) -> str:
 
 def _sanity_check_ai_caption(ai_caption: str) -> str:
     ai_caption = ai_caption.replace('"', "")
-    match = re.search(r'(.+?[.!?])(\s|$)', ai_caption.strip())
-    return match.group(1) if match else ai_caption
+    
+    reversed_text = ai_caption[::-1]
+    match = re.search(r'[.!?]', reversed_text)
+    if match:
+        cut_index = len(ai_caption) - match.start()
+        return ai_caption[:cut_index]
+    return ai_caption.strip()
 
 
 def generate_caption_for_post(
