@@ -20,3 +20,14 @@ class SocialPost(models.Model):
 
     def __str__(self):
         return f"Posted {self.property_url} on {self.social_media} at {self.datetime}"
+
+
+class SocialComment(models.Model):
+    post = models.IntegerField()
+    comment_id = models.IntegerField(unique=True)
+    comment = models.CharField(max_length=200)
+    replied = models.BooleanField(default=False)
+    datetime = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Comment # {self.comment_id} - {self.post} at {self.datetime}"

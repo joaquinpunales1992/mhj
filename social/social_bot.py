@@ -1,8 +1,14 @@
 from social.constants import *
 from ai.hugging import HuggingFaceAI
-from social.models import SocialPost
+from social.models import SocialPost, SocialComment
 from inventory.models import Property
-from social.utils import post_to_facebook, post_to_instagram, post_instagram_reel
+from social.utils import (
+    post_to_facebook,
+    post_to_instagram,
+    post_instagram_reel,
+    get_fresh_token,
+)
+from social.constants import INSTAGRAM_USER_ID
 import requests
 
 
@@ -73,3 +79,72 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
             continue
+
+
+def reply_to_comment(comment_id: int, reply_message: str):
+    url = f"https://graph.facebook.com/v19.0/{comment_id}/replies"
+    payload = {
+        "message": reply_message,
+        "access_token": get_fresh_token(),
+    }
+    response = requests.post(url, data=payload)
+    if response.status_code == 200:
+        print("✅ Replied successfully!")
+        return response.json()
+    else:
+        print("❌ Error replying:", response.text)
+        return None
+
+
+def answer_comments_instagram():
+    def _get_reels():
+        url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
+        params = {
+            "fields": "id,caption,media_type",
+            "access_token": get_fresh_token(),
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        media = response.json()["data"]
+        # Filter Reels
+        return [item for item in media if item["media_type"] == "VIDEO"]
+
+    def _get_comments_per_reel(media_id):
+        url = f"https://graph.facebook.com/v19.0/{media_id}/comments"
+        params = {
+            "access_token": get_fresh_token(),
+        }
+        response = requests.get(url, params=params)
+        response.raise_for_status()
+        return response.json().get("data", [])
+
+    def get_all_comments():
+        reels = _get_reels()
+        for reel in reels:
+            comments = _get_comments_per_reel(reel["id"])
+            reel_id = reel["id"]
+            replied_social_comments_ids_per_reel = SocialComment.objects.filter(
+                post=reel_id, replied=True
+            ).values_list("comment_id", flat=True)
+
+            for comment in comments:
+                comment_id = comment["id"]
+
+                if int(comment_id) in replied_social_comments_ids_per_reel:
+                    continue
+
+                comment = comment["text"]
+
+                reply_message = reply_to_comment(
+                    comment_id,
+                    "Thank you for your comment! We appreciate your feedback.",
+                )
+
+                SocialComment.objects.create(
+                    post=reel_id,
+                    comment_id=comment_id,
+                    comment=reply_message,
+                    replied=True if reply_message else False,
+                )
+
+    get_all_comments()
