@@ -124,7 +124,7 @@ def generate_caption_for_post(
                     "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
                 )
             )
-            ai_caption = caption.replace('"', "")
+            ai_caption = ai_caption.replace('"', "")
 
             caption = (
                 ai_caption
