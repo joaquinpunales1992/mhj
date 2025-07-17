@@ -495,7 +495,7 @@ def create_property_video(
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
             
-            clip = clip.resized(width=TARGET_WIDTH, height=TARGET_HEIGHT) # if clip.h < clip.w else clip.resize(width=TARGET_WIDTH)
+            clip = clip.resized((TARGET_WIDTH, TARGET_HEIGHT)) # if clip.h < clip.w else clip.resize(width=TARGET_WIDTH)
 
             # if clip.w % 2 != 0 or clip.h % 2 != 0:
             #     clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
