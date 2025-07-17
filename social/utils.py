@@ -27,6 +27,7 @@ from moviepy import (
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from membership.utils import notify_social_token_expired
 import logging
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
@@ -86,9 +87,7 @@ def _download_image_to_tempfile(url):
 
 
 def _get_random_mp3_full_path(exclude: str) -> str:
-    folder_path = os.path.join(
-        "/home/planlxry/myhouseinjapan/static/", "audios_for_social_posts"
-    )
+    folder_path = os.path.join(settings.STATIC_ROOT, "audios_for_social_posts")
 
     mp3_files = [
         f for f in os.listdir(folder_path) if f.endswith(".mp3") and f != exclude
@@ -400,7 +399,7 @@ def post_facebook_reel():
         # Pick a new property to post
         property_to_post_facebook_reel = (
             Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
             )
             .exclude(url__in=facebook_reels_urls)
             .order_by("price")
@@ -482,6 +481,10 @@ def create_property_video(
         return
 
     clips = []
+
+    TARGET_WIDTH = 1080
+    TARGET_HEIGHT = 1920
+
     for img_obj in images:
         # Use the correct field name for your image URL here:
         img_url = prepare_image_url_for_facebook(
@@ -491,9 +494,11 @@ def create_property_video(
         try:
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
+            
+            clip = clip.resize(height=TARGET_HEIGHT) if clip.h < clip.w else clip.resize(width=TARGET_WIDTH)
 
-            if clip.w % 2 != 0 or clip.h % 2 != 0:
-                clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
+            # if clip.w % 2 != 0 or clip.h % 2 != 0:
+            #     clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
 
             clips.append(clip)
         except Exception as e:
@@ -540,7 +545,7 @@ def create_property_video(
 
     text_clip = (
         TextClip(
-            font="/home/planlxry/myhouseinjapan/static/fonts/Montserrat-Bold.ttf",
+            font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf"),
             text=video_text,
             font_size=30,
             color="white",
@@ -551,7 +556,7 @@ def create_property_video(
 
     text_clip_top = (
         TextClip(
-            font="/home/planlxry/myhouseinjapan/static/fonts/Montserrat-Light.ttf",
+            font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf"),
             text="Link in Bio \n ",
             font_size=30,
             color="white",
