@@ -1,5 +1,6 @@
 import requests
 import json
+import re
 import random
 import shutil
 import os
@@ -97,6 +98,11 @@ def _get_random_mp3_full_path(exclude: str) -> str:
 
     return os.path.join(folder_path, random.choice(mp3_files))
 
+def _sanity_check_ai_caption(ai_caption: str) -> str:
+    ai_caption = ai_caption.replace('"', "")
+    match = re.search(r'(.+?[.!?])(\s|$)', ai_caption.strip())
+    return match.group(1) if match else ai_caption
+
 
 def generate_caption_for_post(
     property_location: str,
@@ -124,7 +130,8 @@ def generate_caption_for_post(
                     "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
                 )
             )
-            ai_caption = ai_caption.replace('"', "")
+
+            ai_caption = _sanity_check_ai_caption(ai_caption)
 
             caption = (
                 ai_caption
