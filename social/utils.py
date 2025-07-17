@@ -482,9 +482,6 @@ def create_property_video(
 
     clips = []
 
-    TARGET_WIDTH = 1080
-    TARGET_HEIGHT = 1920
-
     for img_obj in images:
         # Use the correct field name for your image URL here:
         img_url = prepare_image_url_for_facebook(
@@ -495,10 +492,8 @@ def create_property_video(
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
             
-            clip = clip.resized((TARGET_WIDTH, TARGET_HEIGHT)) # if clip.h < clip.w else clip.resize(width=TARGET_WIDTH)
-
-            # if clip.w % 2 != 0 or clip.h % 2 != 0:
-            #     clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
+            if clip.w % 2 != 0 or clip.h % 2 != 0:
+                clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
 
             clips.append(clip)
         except Exception as e:
