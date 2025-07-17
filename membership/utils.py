@@ -18,7 +18,6 @@ def notify_social_token_expired(message=None):
 
 
 def notify_user_registered_via_email(new_user_email):
-
     email = EmailMessage(
         subject="Your Akiya in Japan - NEW USER REGISTERD VIA EMAIL",
         body=f"New User Registered via Emial: {new_user_email}",
