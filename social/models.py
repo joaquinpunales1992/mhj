@@ -6,6 +6,7 @@ class SocialPost(models.Model):
     A model representing a social media post.
     """
 
+    ai_caption = models.TextField()
     caption = models.TextField()
     datetime = models.DateTimeField(auto_now_add=True)
     property_url = models.URLField(max_length=255, blank=True)

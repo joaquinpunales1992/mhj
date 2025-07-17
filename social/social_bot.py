@@ -11,10 +11,8 @@ def post_instagram_reel():
 
 
 def post_on_facebook_batch(price_limit: int, batch_size: int):
-    facebook_posts = SocialPost.objects.filter(
-        social_media="facebook"
-    )
-    
+    facebook_posts = SocialPost.objects.filter(social_media="facebook")
+
     facebook_posts_urls = facebook_posts.values_list("property_url", flat=True)
 
     properties_to_post_facebook = (
@@ -27,8 +25,16 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
     )
     for property in properties_to_post_facebook:
         try:
-            last_caption_generated = facebook_posts.order_by("-datetime").first().caption if facebook_posts else None
-            post_to_facebook(property=property, last_caption_generated=last_caption_generated, use_ai_caption=USE_AI_CAPTION)
+            last_caption_generated = (
+                facebook_posts.order_by("-datetime").first().caption
+                if facebook_posts
+                else None
+            )
+            post_to_facebook(
+                property=property,
+                last_caption_generated=last_caption_generated,
+                use_ai_caption=USE_AI_CAPTION,
+            )
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")
             continue
@@ -52,9 +58,17 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
 
     for property in properties_to_post_instagram:
         try:
-            last_caption_generated = instagram_posts.order_by("-datetime").first().caption if instagram_posts else None
+            last_caption_generated = (
+                instagram_posts.order_by("-datetime").first().caption
+                if instagram_posts
+                else None
+            )
 
-            post_to_instagram(property=property, last_caption_generated=last_caption_generated, use_ai_caption=USE_AI_CAPTION)
+            post_to_instagram(
+                property=property,
+                last_caption_generated=last_caption_generated,
+                use_ai_caption=USE_AI_CAPTION,
+            )
 
         except Exception as e:
             print(f"Error posting property {property.id}: {e}")

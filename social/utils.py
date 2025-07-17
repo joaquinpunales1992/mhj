@@ -111,6 +111,7 @@ def generate_caption_for_post(
 
     hashtags = "#akiya #japan #japanlife #cheaphouse #vacationhouse #affordablehouse #japanesehouse #myakiyainjapan"
 
+    ai_caption = ""
     if use_ai_caption:
         try:
             cerebras_ai_client = CerebrasAI()
@@ -121,25 +122,33 @@ def generate_caption_for_post(
                     f"Note that the last caption generated was: {last_caption_generated}\n"
                     "So do not repeat it the same way.\n"
                     "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
-                )                    
+                )
             )
             ai_caption = caption.replace('"', "")
 
-            caption = ai_caption + f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
+            caption = (
+                ai_caption
+                + f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
+            )
             logger.info(f"Caption generated via AI: {caption}")
         except Exception as e:
             caption = f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
             logger.error(f"AI caption generation failed: {e}")
-        return caption
+        return ai_caption, caption
     else:
         logger.info("AI caption generation is disabled, using default caption format.")
-        return f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
+        return (
+            ai_caption,
+            f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}",
+        )
 
 
-def post_to_instagram(property: Property, last_caption_generated: str, use_ai_caption: bool):
+def post_to_instagram(
+    property: Property, last_caption_generated: str, use_ai_caption: bool
+):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
-    
-    caption = generate_caption_for_post(
+    import pdb;pdb.set_trace()
+    ai_caption, caption = generate_caption_for_post(
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
@@ -200,12 +209,13 @@ def post_to_instagram(property: Property, last_caption_generated: str, use_ai_ca
             if publish_response.status_code == 200:
                 logger.info("Successfully posted carousel to Instagram.")
                 SocialPost.objects.create(
-                    caption=caption, property_url=property.url, social_media="instagram"
+                    ai_caption=ai_caption,
+                    caption=caption,
+                    property_url=property.url,
+                    social_media="instagram",
                 )
             else:
-                logger.error(
-                    f"Failed to publish carousel: {publish_response.json()}"
-                )
+                logger.error(f"Failed to publish carousel: {publish_response.json()}")
         else:
             logger.error(
                 f"Failed to create carousel container: {carousel_response.json()}"
@@ -214,10 +224,12 @@ def post_to_instagram(property: Property, last_caption_generated: str, use_ai_ca
         logger.warning("No images were uploaded; skipping Instagram post.")
 
 
-def post_to_facebook(property: Property, last_caption_generated: str, use_ai_caption: bool):
+def post_to_facebook(
+    property: Property, last_caption_generated: str, use_ai_caption: bool
+):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
 
-    caption = generate_caption_for_post(
+    ai_caption, caption = generate_caption_for_post(
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
@@ -267,7 +279,10 @@ def post_to_facebook(property: Property, last_caption_generated: str, use_ai_cap
         if response.status_code == 200:
             logger.info("Successfully posted to Facebook with multiple images.")
             SocialPost.objects.create(
-                caption=caption, property_url=property.url, social_media="facebook"
+                ai_caption=ai_caption,
+                caption=caption,
+                property_url=property.url,
+                social_media="facebook",
             )
         else:
             logger.error(f"Failed to create post: {result}")
@@ -287,7 +302,11 @@ def post_instagram_reel():
         )
         instagram_reels_urls = instagram_reels.values_list("property_url", flat=True)
 
-        last_caption_generated = instagram_reels.order_by("-datetime").first().caption if instagram_reels else None
+        last_caption_generated = (
+            instagram_reels.order_by("-datetime").first().caption
+            if instagram_reels
+            else None
+        )
 
         SocialPost.objects.filter
 
@@ -320,7 +339,7 @@ def post_instagram_reel():
 
         video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
 
-        caption = generate_caption_for_post(
+        ai_caption, caption = generate_caption_for_post(
             property_to_post_instagram_reel.location,
             property_to_post_instagram_reel.get_public_url,
             property_to_post_instagram_reel.get_price_for_front,
@@ -375,6 +394,7 @@ def post_instagram_reel():
 
                 # Log the post
                 SocialPost.objects.create(
+                    ai_caption=ai_caption,
                     caption=caption,
                     property_url=property_to_post_instagram_reel.url,
                     social_media="instagram",
@@ -405,7 +425,11 @@ def post_facebook_reel():
                 else None
             )
         facebook_reels_urls = facebook_reels.values_list("property_url", flat=True)
-        last_caption_generated = facebook_reels.order_by("-datetime").first().caption if facebook_reels else None
+        last_caption_generated = (
+            facebook_reels.order_by("-datetime").first().caption
+            if facebook_reels
+            else None
+        )
 
         # Pick a new property to post
         property_to_post_facebook_reel = (
@@ -438,7 +462,7 @@ def post_facebook_reel():
 
         video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
 
-        caption = generate_caption_for_post(
+        ai_caption, caption = generate_caption_for_post(
             property_to_post_facebook_reel.location,
             property_to_post_facebook_reel.get_public_url,
             property_to_post_facebook_reel.get_price_for_front,
@@ -468,6 +492,7 @@ def post_facebook_reel():
 
             # Log the post
             SocialPost.objects.create(
+                ai_caption=ai_caption,
                 caption=caption,
                 property_url=property_to_post_facebook_reel.url,
                 social_media="facebook",
@@ -480,7 +505,6 @@ def post_facebook_reel():
     except Exception as e:
         logger.error(f"Error posting Facebook Reel: {e}")
         notify_social_token_expired(message=f"Error posting Facebook Reel: {e}")
-
 
 
 def create_property_video(
@@ -503,7 +527,7 @@ def create_property_video(
         try:
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
-            
+
             if clip.w % 2 != 0 or clip.h % 2 != 0:
                 clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
 
