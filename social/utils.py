@@ -308,8 +308,6 @@ def post_instagram_reel():
             else None
         )
 
-        SocialPost.objects.filter
-
         property_to_post_instagram_reel = (
             Property.objects.filter(
                 images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
