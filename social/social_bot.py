@@ -26,7 +26,7 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
     for property in properties_to_post_facebook:
         try:
             last_caption_generated = (
-                facebook_posts.order_by("-datetime").first().caption
+                facebook_posts.order_by("-datetime").first().ai_caption
                 if facebook_posts
                 else None
             )
@@ -59,7 +59,7 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
     for property in properties_to_post_instagram:
         try:
             last_caption_generated = (
-                instagram_posts.order_by("-datetime").first().caption
+                instagram_posts.order_by("-datetime").first().ai_caption
                 if instagram_posts
                 else None
             )

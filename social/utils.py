@@ -147,7 +147,7 @@ def post_to_instagram(
     property: Property, last_caption_generated: str, use_ai_caption: bool
 ):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
-    import pdb;pdb.set_trace()
+
     ai_caption, caption = generate_caption_for_post(
         property_location=property.location,
         property_url=property.get_public_url,
@@ -303,7 +303,7 @@ def post_instagram_reel():
         instagram_reels_urls = instagram_reels.values_list("property_url", flat=True)
 
         last_caption_generated = (
-            instagram_reels.order_by("-datetime").first().caption
+            instagram_reels.order_by("-datetime").first().ai_caption
             if instagram_reels
             else None
         )
@@ -424,7 +424,7 @@ def post_facebook_reel():
             )
         facebook_reels_urls = facebook_reels.values_list("property_url", flat=True)
         last_caption_generated = (
-            facebook_reels.order_by("-datetime").first().caption
+            facebook_reels.order_by("-datetime").first().ai_caption
             if facebook_reels
             else None
         )
