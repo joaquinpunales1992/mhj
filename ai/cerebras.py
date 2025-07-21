@@ -6,6 +6,7 @@ from cerebras.cloud.sdk import Cerebras
 
 logger = logging.getLogger(__name__)
 
+
 class CerebrasAI:
     def __init__(self):
         self.cerebras = Cerebras(

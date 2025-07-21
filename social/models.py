@@ -28,6 +28,7 @@ class SocialComment(models.Model):
     comment = models.CharField(max_length=200)
     replied = models.BooleanField(default=False)
     datetime = models.DateTimeField(auto_now_add=True)
+    self_comment = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Comment # {self.comment_id} - {self.post} at {self.datetime}"

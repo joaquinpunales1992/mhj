@@ -9,7 +9,7 @@ import urllib.parse
 from social.constants import *
 from ai.hugging import HuggingFaceAI
 from ai.cerebras import CerebrasAI
-from social.models import SocialPost
+from social.models import SocialPost, SocialComment
 from inventory.models import Property, PropertyImage
 import time
 from django.conf import settings
@@ -394,7 +394,7 @@ def post_instagram_reel():
                 # Step 3: Add comment to the published Reel
                 if media_id:
                     comment_payload = {
-                        "message": "Find out More at www.akiyainjapan.com",
+                        "message": DEFAULT_COMMENT,
                         "access_token": get_fresh_token(),
                     }
                     comment_url = (

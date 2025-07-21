@@ -22,3 +22,6 @@ PRICE_LIMIT_INSTAGRAM = 1400
 BATCH_SIZE_INSTAGRAM = 2
 
 USE_AI_CAPTION = True
+
+
+DEFAULT_COMMENT = 'Find out More at www.akiyainjapan.com'

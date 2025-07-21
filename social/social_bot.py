@@ -1,5 +1,7 @@
 from social.constants import *
+import logging
 from ai.hugging import HuggingFaceAI
+from ai.cerebras import CerebrasAI
 from social.models import SocialPost, SocialComment
 from inventory.models import Property
 from social.utils import (
@@ -11,6 +13,7 @@ from social.utils import (
 from social.constants import INSTAGRAM_USER_ID
 import requests
 
+logger = logging.getLogger(__name__)
 
 def post_instagram_reel():
     post_instagram_reel()
@@ -81,7 +84,7 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
             continue
 
 
-def reply_to_comment(comment_id: int, reply_message: str):
+def _reply_comment(comment_id: int, reply_message: str):
     url = f"https://graph.facebook.com/v19.0/{comment_id}/replies"
     payload = {
         "message": reply_message,
@@ -89,62 +92,78 @@ def reply_to_comment(comment_id: int, reply_message: str):
     }
     response = requests.post(url, data=payload)
     if response.status_code == 200:
-        print("✅ Replied successfully!")
+        logger.info("Replied successfully!")
         return response.json()
     else:
-        print("❌ Error replying:", response.text)
+        logger.error("Error replying:", response.text)
         return None
+    
+def _get_reels():
+    import pdb;pdb.set_trace()
+    url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
+    params = {
+        "fields": "id,caption,media_type",
+        "access_token": get_fresh_token(),
+    }
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    media = response.json()["data"]
+    # Filter Reels
+    return [item for item in media if item["media_type"] == "VIDEO"]
+
+def _get_comments_per_reel(media_id):
+    url = f"https://graph.facebook.com/v19.0/{media_id}/comments"
+    params = {
+        "access_token": get_fresh_token(),
+    }
+    response = requests.get(url, params=params)
+    response.raise_for_status()
+    return response.json().get("data", [])
 
 
-def answer_comments_instagram():
-    def _get_reels():
-        url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
-        params = {
-            "fields": "id,caption,media_type",
-            "access_token": get_fresh_token(),
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        media = response.json()["data"]
-        # Filter Reels
-        return [item for item in media if item["media_type"] == "VIDEO"]
+def _reply_comments_instagram_post():
+    pass
 
-    def _get_comments_per_reel(media_id):
-        url = f"https://graph.facebook.com/v19.0/{media_id}/comments"
-        params = {
-            "access_token": get_fresh_token(),
-        }
-        response = requests.get(url, params=params)
-        response.raise_for_status()
-        return response.json().get("data", [])
+def _reply_comments_instagram_reels():
+    from django.db.models import Q
+    reels = _get_reels()
+    for reel in reels:
+        comments = _get_comments_per_reel(reel["id"])
+        reel_id = reel["id"]
+        replied_social_comments_ids_per_reel = SocialComment.objects.filter(Q(
+            post=reel_id, replied=True) | Q(self_comment=True)
+        ).values_list("comment_id", flat=True)
 
-    def get_all_comments():
-        reels = _get_reels()
-        for reel in reels:
-            comments = _get_comments_per_reel(reel["id"])
-            reel_id = reel["id"]
-            replied_social_comments_ids_per_reel = SocialComment.objects.filter(
-                post=reel_id, replied=True
-            ).values_list("comment_id", flat=True)
+        for comment in comments:
+            comment_id = comment["id"]
+            comment = comment["text"]
 
-            for comment in comments:
-                comment_id = comment["id"]
+            if int(comment_id) in replied_social_comments_ids_per_reel or comment == DEFAULT_COMMENT:
+                continue
 
-                if int(comment_id) in replied_social_comments_ids_per_reel:
-                    continue
-
-                comment = comment["text"]
-
-                reply_message = reply_to_comment(
-                    comment_id,
-                    "Thank you for your comment! We appreciate your feedback.",
+            cerebras_ai_client = CerebrasAI()
+            ai_comment = cerebras_ai_client.generate_text(
+                prompt=(
+                    f"Generate a friendly response for a social media comment. Encourage the person to check the link in our bio.\n\n"
+                    "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
                 )
+            )
 
-                SocialComment.objects.create(
-                    post=reel_id,
-                    comment_id=comment_id,
-                    comment=reply_message,
-                    replied=True if reply_message else False,
-                )
+            reply_message = _reply_comment(
+                comment_id,
+                ai_comment,
+            )
 
-    get_all_comments()
+            SocialComment.objects.create(
+                post=reel_id,
+                comment_id=comment_id,
+                comment=reply_message,
+                replied=True if reply_message else False,
+                self_comment=False
+            )
+
+
+def reply_comments_instagram():
+    _reply_comments_instagram_reels()
+    _reply_comments_instagram_post
+
