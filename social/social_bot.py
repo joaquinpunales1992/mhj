@@ -99,7 +99,6 @@ def _reply_comment(comment_id: int, reply_message: str):
         return None
     
 def _get_reels():
-    import pdb;pdb.set_trace()
     url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
     params = {
         "fields": "id,caption,media_type",
