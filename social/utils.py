@@ -521,7 +521,7 @@ def post_facebook_reel():
 def create_property_video(
     property_id: int, output_path: str, audio_path: str, duration_per_image: int = 3
 ):
-    images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:7]
+    images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
     property = Property.objects.get(pk=property_id)
     if not images:
         logger.error("No images found for the property.")
@@ -582,8 +582,6 @@ def create_property_video(
     video_text = (
         f"{property.get_price_for_front}\n{property.get_location_for_front()} \n "
     )
-
-    # logo = (ImageClip("static/images/logo_maj.png", duration=images.count() * duration_per_image)).with_position(('left', 'top'), relative=True)
 
     text_clip = (
         TextClip(
