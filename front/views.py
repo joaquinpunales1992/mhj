@@ -1,4 +1,5 @@
 import json
+import random
 from django.db.models import Q, F
 from django.conf import settings
 from django.shortcuts import render, redirect
@@ -11,9 +12,23 @@ from django.template.loader import render_to_string
 
 
 def display_home(request):
-    properties = Property.objects.filter(
-        show_in_front=True, price__lte=1500, price__gt=0
-    ).order_by("-featured", "price")[: settings.PROPERTIES_TO_DISPLAY]
+    featured = list(
+        Property.objects.filter(
+            show_in_front=True, price__lte=1500, price__gt=0, featured=True
+        )
+    )
+
+    non_featured = list(
+        Property.objects.filter(
+            show_in_front=True, price__lte=1500, price__gt=0, featured=False
+        )
+    )
+
+    random.shuffle(featured)
+    random.shuffle(non_featured)
+
+    properties = featured + non_featured
+    properties = properties[: settings.PROPERTIES_TO_DISPLAY]
     return render(
         request, "home.html", context={"properties": properties, "nav": "home"}
     )
@@ -133,7 +148,6 @@ def legacy_contact_seller_optional_redirect(request, pk, user_just_registered):
 
 
 def filter_properties(request, category):
-
     city_categories = {
         "Tokyo": ["beach", "onsen"],
         "Osaka": ["onsen"],
