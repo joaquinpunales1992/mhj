@@ -15,6 +15,7 @@ import requests
 
 logger = logging.getLogger(__name__)
 
+
 def post_instagram_reel():
     post_instagram_reel()
 
@@ -97,7 +98,8 @@ def _reply_comment(comment_id: int, reply_message: str):
     else:
         logger.error("Error replying:", response.text)
         return None
-    
+
+
 def _get_reels():
     url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
     params = {
@@ -109,6 +111,7 @@ def _get_reels():
     media = response.json()["data"]
     # Filter Reels
     return [item for item in media if item["media_type"] == "VIDEO"]
+
 
 def _get_comments_per_reel(media_id):
     url = f"https://graph.facebook.com/v19.0/{media_id}/comments"
@@ -123,21 +126,26 @@ def _get_comments_per_reel(media_id):
 def _reply_comments_instagram_post():
     pass
 
+
 def _reply_comments_instagram_reels():
     from django.db.models import Q
+
     reels = _get_reels()
     for reel in reels:
         comments = _get_comments_per_reel(reel["id"])
         reel_id = reel["id"]
-        replied_social_comments_ids_per_reel = SocialComment.objects.filter(Q(
-            post=reel_id, replied=True) | Q(self_comment=True)
+        replied_social_comments_ids_per_reel = SocialComment.objects.filter(
+            Q(post=reel_id, replied=True) | Q(self_comment=True)
         ).values_list("comment_id", flat=True)
 
         for comment in comments:
             comment_id = comment["id"]
             comment = comment["text"]
 
-            if int(comment_id) in replied_social_comments_ids_per_reel or comment == DEFAULT_COMMENT:
+            if (
+                int(comment_id) in replied_social_comments_ids_per_reel
+                or comment == DEFAULT_COMMENT
+            ):
                 continue
 
             cerebras_ai_client = CerebrasAI()
@@ -158,11 +166,10 @@ def _reply_comments_instagram_reels():
                 comment_id=comment_id,
                 comment=reply_message,
                 replied=True if reply_message else False,
-                self_comment=False
+                self_comment=False,
             )
 
 
 def reply_comments_instagram():
     _reply_comments_instagram_reels()
     _reply_comments_instagram_post
-

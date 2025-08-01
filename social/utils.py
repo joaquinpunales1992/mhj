@@ -110,6 +110,18 @@ def _sanity_check_ai_caption(ai_caption: str) -> str:
     return ai_caption.strip()
 
 
+def random_hashtags(hashtags):
+    """
+    Pick a random number k between 1 and len(hashtags),
+    then return k random hashtags joined as a string.
+    """
+    if not hashtags:
+        return ""
+    k = random.randint(1, len(hashtags))
+    chosen = random.sample(hashtags, k)
+    return " ".join(chosen)
+
+
 def generate_caption_for_post(
     property_location: str,
     property_url: str,
@@ -121,7 +133,7 @@ def generate_caption_for_post(
 ):
     caption = f"Location: {property_location} - Price: {property_price} "
 
-    hashtags = "#akiya #japan #japanlife #cheaphouse #vacationhouse #affordablehouse #japanesehouse #myakiyainjapan"
+    hashtags = random_hashtags(HASHTAGS_LIST)
 
     ai_caption = ""
     if use_ai_caption:
@@ -584,14 +596,10 @@ def create_property_video(
         f"{property.get_price_for_front}\n{property.get_location_for_front()} \n "
     )
 
-    video_text = cerebras_ai_client.generate_text(
-        prompt=f"generate a short and engaging text 15 chararacters max, to use in a Property Listing. You know this about the property: Price: {property.get_price_for_front} - Location: {property.get_location_for_front()}. Be creative. This was your last text created, avoid using the same."
-    )
-
     text_clip = (
         TextClip(
             font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf"),
-            text=video_text if video_text else video_text_default,
+            text=video_text_default,
             font_size=30,
             color="white",
         )

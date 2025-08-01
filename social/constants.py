@@ -24,4 +24,6 @@ BATCH_SIZE_INSTAGRAM = 2
 USE_AI_CAPTION = True
 
 
-DEFAULT_COMMENT = 'Find out More at www.akiyainjapan.com'
+DEFAULT_COMMENT = "Find out More at www.akiyainjapan.com"
+
+HASHTAGS_LIST = ["#akiya", "#japan", "#japanlife", "#cheaphouse", "#vacationhouse", "#affordablehouse", "#japanesehouse", "#myakiyainjapan", "#explorejpn", "#livingabroad", "#japanrealestate", "#cheaphousesjapan", "#japanesearchitecture", "#saga", "#aribnb", "#buyingahome", "#homesforsale", "#japanproperty", "#japaneselifestyle"]
