@@ -521,6 +521,7 @@ def post_facebook_reel():
 def create_property_video(
     property_id: int, output_path: str, audio_path: str, duration_per_image: int = 3
 ):
+    cerebras_ai_client = CerebrasAI()
     images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
     property = Property.objects.get(pk=property_id)
     if not images:
@@ -599,7 +600,7 @@ def create_property_video(
     )
 
     video_top_text_default = "Link in Bio \n "
-    cerebras_ai_client = CerebrasAI()
+    
     video_top_text = cerebras_ai_client.generate_text(
         prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing." \
         " Do not include attributes of the property that you do not know. Be really creative."
