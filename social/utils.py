@@ -579,14 +579,18 @@ def create_property_video(
         0, images.count() * duration_per_image
     )
 
-    video_text = (
+    video_text_default = (
         f"{property.get_price_for_front}\n{property.get_location_for_front()} \n "
+    )
+
+    video_text = cerebras_ai_client.generate_text(
+        prompt=f"generate a short and engaging text 15 chararacters max, to use in a Property Listing. You know this about the property: Price: {property.get_price_for_front} - Location: {property.get_location_for_front()}. Be creative. This was your last text created, avoid using the same."
     )
 
     text_clip = (
         TextClip(
             font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf"),
-            text=video_text,
+            text=video_text if video_text else video_text_default,
             font_size=30,
             color="white",
         )
@@ -594,10 +598,17 @@ def create_property_video(
         .with_position((0.1, 0.7), relative=True)
     )
 
+    video_top_text_default = "Link in Bio \n "
+    cerebras_ai_client = CerebrasAI()
+    video_top_text = cerebras_ai_client.generate_text(
+        prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing." \
+        " Do not include attributes of the property that you do not know. Be really creative."
+    )
+
     text_clip_top = (
         TextClip(
             font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf"),
-            text="Link in Bio \n ",
+            text=video_top_text if video_top_text else video_top_text_default,
             font_size=30,
             color="white",
         )
