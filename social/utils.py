@@ -617,7 +617,7 @@ def create_property_video(
     text_clip_top = (
         TextClip(
             font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf"),
-            text=video_top_text if video_top_text else video_top_text_default,
+            text=f"{video_top_text} \n " if video_top_text else video_top_text_default,
             font_size=30,
             color="white",
         )
