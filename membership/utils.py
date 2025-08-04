@@ -25,5 +25,5 @@ def notify_user_registered_via_email(new_user_email):
     return notification_email(subject="Your Akiya in Japan - NEW USER REGISTERD VIA EMAIL", body=f"New User Registered via Emial: {new_user_email}")
     
 
-async def notify_user_expressed_interest(email: str):
+def notify_user_expressed_interest(email: str):
     return notification_email(subject="USER EXPRESSED INTERESTS", body=f"USER EXPRESSED INTEREST: {email}")
