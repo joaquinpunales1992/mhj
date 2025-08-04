@@ -26,4 +26,4 @@ def notify_user_registered_via_email(new_user_email):
     
 
 async def notify_user_expressed_interest(email: str):
-    notification_email(subject="USER EXPRESSED INTERESTS", body=f"USER EXPRESSED INTEREST: {email}")
+    return notification_email(subject="USER EXPRESSED INTERESTS", body=f"USER EXPRESSED INTEREST: {email}")
