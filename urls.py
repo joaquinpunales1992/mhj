@@ -1,5 +1,6 @@
 from django.contrib import admin
 from front import views as front_views
+from membership.utils import notify_user_expressed_interest
 from membership import views as membership_views
 from django.urls import path, include
 from front import sitemap
@@ -72,4 +73,7 @@ urlpatterns = [
         front_views.legacy_contact_seller_redirect,
         name="legacy_contact_seller_redirect ",
     ),
+    path("notify-user-expressed-interest/",
+         notify_user_expressed_interest,
+         name="notify_user_expressed_interest")
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
