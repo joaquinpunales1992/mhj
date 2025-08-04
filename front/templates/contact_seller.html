@@ -1180,8 +1180,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
 
         <br>
-
-        
         <div class="step-container">
             <!-- <div id="success-confirmation" class="mt-8 hidden py-10 mb-12">
                 <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
@@ -1202,10 +1200,9 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>   -->
 
             <div class="step" data-step="1">
-              <h3>Interested in buying?</h3>
-              <p style="font-size: 1.55rem;">
-                Get personalized guidance on buying a home in Japan.
-                Our <b style="color: black;">English-speaking team</b> will walk you through property types, locations, taxes, and every step of the process. 
+              
+              <h3>1 - Interested in buying? </h3>
+              <p>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.
               </p>
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
@@ -1213,40 +1210,42 @@ document.addEventListener('DOMContentLoaded', () => {
                       Start Buying in Japan
                     </button>
                 </div>
-            {% else %}
+              {% else %}
                 <div>
                     <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="handleCalendlyClick('', '{{ property.pk }}')">
                         Start Buying in Japan
                     </button>
                 </div>
             {% endif %}
-            </div>
-        
-            <!-- <div class="step" data-step="2">
-              <h4>Sign & pay the MyAkiyaInJapan service fee and choose up to 3 properties</h4>
+          </div>
+          
+          
+            <div class="step" data-step="2">
+              <h4>2 - Sign & pay the MyAkiyaInJapan service fee and choose up to 3 properties</h4>
               <small>We will support you throughout the entire purchase process, ensuring a smooth and confident experience</small>
             </div>
         
             <div class="step" data-step="3">
-              <h4>Request a Virtual Inspection</h4>
+              <h4>3 - Request a Virtual Inspection</h4>
               <small>We’ll coordinate a virtual or in-person inspection of your selected properties, providing a detailed condition report</small>
             </div>
     
             <div class="step" data-step="4">
-              <h4>Submit your offer for the property you’ve chosen</h4>
+              <h4>4 - Submit your offer for the property you’ve chosen</h4>
               <small>We’ll formally submit your offer to the property owner and help with the negotiation process</small>
             </div>
         
             <div class="step" data-step="5">
-              <h4>Finalize the details, costs, and documentation</h4>
+              <h4>5 - Finalize the details, costs, and documentation</h4>
               <small>Complete all necessary paperwork, tax payments, and contract signings to finalize your purchase</small>
             </div>
 
             <div class="step" data-step="6">
-              <h4>Receive the keys to your new home in Japan</h4>
+              <h4>6 - Receive the keys to your new home in Japan</h4>
               <small>Congratulations! Your new home is ready for you!</small>
-            </div> -->
             </div>
+            </div>
+
             <hr style="border: 0; height: 2px; background: #3498db; margin: 2.5rem 0; border-radius: 2px; box-shadow: 0 2px 8px rgba(52,152,219,0.15);">
             <div class="related-properties-container">
             <h2 class="related-properties-heading">Discover other traditional Japanese houses:</h2>
