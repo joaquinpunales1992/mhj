@@ -51,6 +51,46 @@
 				r.appendChild(e);
 			})(window, document, 'https://static.hj.contentsquare.net/c/csq-', '.js', 6396007);
 		</script>
+
+<script>
+  function handleCalendlyClick(userEmail = "", propertyId) {
+    fetch("/notify-user-expressed-interest/", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "X-CSRFToken": getCookie("csrftoken")  // Include this if CSRF protection is enabled
+      },
+      body: new URLSearchParams({
+        email: userEmail,
+        property_id: propertyId
+      })
+    });
+
+
+    // Show Calendly popup
+    Calendly.initPopupWidget({
+      url: `https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&email=${userEmail}&a1=Property%20Identifier%20${propertyId}&primary_color=34a58e`
+    });
+
+    return false;
+  }
+
+  // Get CSRF token if needed
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+</script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS"></script>
 <script>
@@ -1169,13 +1209,13 @@ document.addEventListener('DOMContentLoaded', () => {
               </p>
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
-                    <button id="book-button" class="w-full primary text-white py-6 font-medium text-sm md:text-base lg:text-lg" onclick="Calendly.initPopupWidget({url: 'https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&email={{ user_email }}&a1=Property%20Identifier%20{{ property.pk }}&primary_color=34a58e'});return false;">
+                    <button id="book-button" class="w-full primary text-white py-6 font-medium text-sm md:text-base lg:text-lg" onclick="handleCalendlyClick('{{ user_email }}', '{{ property.pk }}')">
                       Start Buying in Japan
                     </button>
                 </div>
             {% else %}
                 <div>
-                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="Calendly.initPopupWidget({url: 'https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&a1=Property%20Identifier%20{{ property.pk }}&primary_color=34a58e'});return false;">
+                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="handleCalendlyClick('', '{{ property.pk }}')">
                         Start Buying in Japan
                     </button>
                 </div>
