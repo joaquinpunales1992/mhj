@@ -9,6 +9,7 @@ class SocialPostAdmin(admin.ModelAdmin):
         "datetime",
         "property_url",
         "social_media",
+        "content_type",
     ]
     search_fields = ["caption", "property_url", "social_media"]
     list_filter = ["social_media"]
