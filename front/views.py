@@ -1,10 +1,11 @@
 import json
 import random
+from django.db import models
 from django.db.models import Q, F
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.views import View
-from inventory.models import Property
+from inventory.models import Property, PropertyImage
 from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -12,23 +13,32 @@ from django.template.loader import render_to_string
 
 
 def display_home(request):
-    featured = list(
-        Property.objects.filter(
-            show_in_front=True, price__lte=1500, price__gt=0, featured=True
+    # Base queryset with optimizations
+    base_queryset = Property.objects.select_related(
+        # Add any ForeignKey fields here if needed
+    ).prefetch_related(
+        'images'
+    ).annotate(
+        has_any_image=models.Exists(
+            # Assuming your related model is called PropertyImage or similar
+            # Replace 'PropertyImage' with your actual image model name
+            PropertyImage.objects.filter(property=models.OuterRef('pk'))
         )
+    ).filter(
+        show_in_front=True, 
+        price__lte=1500, 
+        price__gt=0
     )
-
-    non_featured = list(
-        Property.objects.filter(
-            show_in_front=True, price__lte=1500, price__gt=0, featured=False
-        )
-    )
+    
+    featured = list(base_queryset.filter(featured=True))
+    non_featured = list(base_queryset.filter(featured=False))
 
     random.shuffle(featured)
     random.shuffle(non_featured)
 
     properties = featured + non_featured
-    properties = properties[: settings.PROPERTIES_TO_DISPLAY]
+    properties = properties[:settings.PROPERTIES_TO_DISPLAY]
+    
     return render(
         request, "home.html", context={"properties": properties, "nav": "home"}
     )

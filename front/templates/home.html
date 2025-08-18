@@ -191,7 +191,7 @@
 				<!-- Main -->
 					<div id="main">
 						{% for property in properties %}
-							{% if property.property_has_any_image %}
+							{% if property.has_any_image %}
 								<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
 									
 									{% with property.get_ordered_images.first as first_image %}
