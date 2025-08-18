@@ -1,4 +1,5 @@
 from django import template
+import random
 from inventory.models import Property
 from inventory.constants import MAX_RELATED_PROPERTIES
 from django.db.models import QuerySet
@@ -20,3 +21,10 @@ def find_related_properties(property_pk: int) -> QuerySet:
         .order_by("price")
         .distinct()[:MAX_RELATED_PROPERTIES]
     )
+
+
+@register.filter
+def random_choice(value):
+    """Returns a random choice from a comma-separated string"""
+    choices = [choice.strip() for choice in value.split(',')]
+    return random.choice(choices)
