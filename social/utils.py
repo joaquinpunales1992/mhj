@@ -335,13 +335,18 @@ def post_instagram_reel():
 
         property_to_post_instagram_reel = (
             Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=False
             )
             .exclude(url__in=instagram_reels_urls)
             .order_by("price")
             .distinct()
             .first()
         )
+
+        if not property_to_post_instagram_reel:
+            property_to_post_instagram_reel = Property.objects.filter(
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
+            ).order_by('price').distinct().first()
 
         if not property_to_post_instagram_reel:
             logger.warning("No suitable property found to post on Instagram Reels.")
@@ -464,6 +469,11 @@ def post_facebook_reel():
             .distinct()
             .first()
         )
+
+        if not property_to_post_facebook_reel:
+            property_to_post_facebook_reel = Property.objects.filter(
+                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
+            ).order_by('price').distinct().first()
 
         if not property_to_post_facebook_reel:
             logger.warning("No suitable property found to post on Facebook Reels.")
@@ -604,7 +614,7 @@ def create_property_video(
             color="white",
         )
         .with_duration(images.count() * duration_per_image)
-        .with_position((0.1, 0.7), relative=True)
+        .with_position((0.1, 0.7), relative=False)
     )
 
     video_top_text_default = "Link in Bio \n "
