@@ -1203,9 +1203,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <div class="step" data-step="1">
               
-              <h3>1 - Interested in buying? </h3>
-              <p>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.
-              </p>
+              <h3>Interested in buying? </h3>
+              <h5>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.
+              </5>
               {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
                     <button id="book-button" class="w-full primary text-white py-6 font-medium text-sm md:text-base lg:text-lg" onclick="handleCalendlyClick('{{ user_email }}', '{{ property.pk }}')">
