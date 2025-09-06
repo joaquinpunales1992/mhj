@@ -1051,13 +1051,31 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
 
-
-
-
+            
           </div>
+          
           <br>
           <hr style="border: 0; height: 2px; background: #3498db; margin: 2.5rem 0; border-radius: 2px; box-shadow: 0 2px 8px rgba(52,152,219,0.15);">
-      </nav>
+          <center>
+          <div class="flex flex-row flex-5 gap-6 w-full">
+              <div class="flex-1">
+                <h3>Subscribe to our Newsletter</h3>
+                <p class="text-xll" style="color: black;">Get exclusive access to 20 new properties each week, unavailable to other accounts.</p>
+                {% if user.is_authenticated or request.COOKIES.email %}
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "upgrade_premium" %}'">
+                      <span class="icon solid fa-lock" style="color: #34a58e;"></span><span style="color: #34a58e;"> SUBSCRIBE</span>
+                  </button>
+                {% else %}
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+                    <span class="icon solid fa-lock" style="color: #34a58e;"></span> <span style="color: #34a58e;"> SUBSCRIBE</span>
+                  </button>
+                {% endif %}
+                <hr>
+              </div>
+            </div>
+            </center>
+        </nav>
+      
       
     </aside>
     
