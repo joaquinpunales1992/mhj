@@ -1074,11 +1074,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>Subscribe to our Newsletter</h3>
                 <p class="text-xll" style="color: black;">Get exclusive access to 20 new properties each week, unavailable to other accounts.</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "upgrade_premium" %}'">
+                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "upgrade_premium" %}'">
                       <span class="icon solid fa-lock" style="color: #34a58e;"></span><span style="color: #34a58e;"> SUBSCRIBE</span>
                   </button>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
                     <span class="icon solid fa-lock" style="color: #34a58e;"></span> <span style="color: #34a58e;"> SUBSCRIBE</span>
                   </button>
                 {% endif %}
