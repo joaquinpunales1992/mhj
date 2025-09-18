@@ -614,7 +614,7 @@ def create_property_video(
             color="white",
         )
         .with_duration(images.count() * duration_per_image)
-        .with_position((0.1, 0.7), relative=False)
+        .with_position((0.1, 0.7), relative=True)
     )
 
     video_top_text_default = "Link in Bio \n "
