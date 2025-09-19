@@ -1097,9 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <!-- Header -->
         <header class="mb-12">
           <div class="flex items-center justify-between mb-6">
-            {% with titles="Akiya in,Japanese House in" %}
-              <h1 class="text-4xl text-primary">{{ titles|random_choice }} {{ property.get_location_for_front }}</h1>
-            {% endwith %}
+              <h1 class="text-4xl text-primary">{{ property_title}} {{ property.get_location_for_front }}</h1>
             <div class="flex items-center space-x-2">
 
         

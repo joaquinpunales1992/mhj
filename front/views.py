@@ -32,7 +32,6 @@ def display_home(request):
     
     featured = list(base_queryset.filter(featured=True))
     non_featured = list(base_queryset.filter(featured=False))
-
     random.shuffle(featured)
     random.shuffle(non_featured)
 
@@ -138,6 +137,7 @@ def property_detail(request, pk, user_just_registered=0):
         "contact_seller.html",
         context={
             "property": property,
+            "property_title": "Akiya in" if pk % 2 == 0 else "Japanese House in",
             "user_email": user_email,
             "user_just_registered": user_just_registered,
         },
