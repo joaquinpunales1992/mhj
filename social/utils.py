@@ -139,13 +139,38 @@ def generate_caption_for_post(
     if use_ai_caption:
         try:
             cerebras_ai_client = CerebrasAI()
+
+            # Define different caption styles/tones
+            caption_styles = [
+                "casual and friendly",
+                "professional and informative", 
+                "excited and enthusiastic",
+                "luxurious and sophisticated",
+                "warm and welcoming",
+                "trendy and modern"
+            ]
+
+            # Define different call-to-action variations
+            cta_options = [
+                "Check out our website for more details!",
+                "DM us for a private showing!",
+                "Don't let this one slip away!",
+                "Ready to make this home? Contact us!",
+                "Virtual tour available - just ask!"
+            ]
+
+            selected_style = random.choice(caption_styles)
+            selected_cta = random.choice(cta_options)
+
             ai_caption = cerebras_ai_client.generate_text(
                 prompt=(
-                    f"Generate a catchy Instagram caption for a property in {property_location} priced at {property_price}. "
-                    "The caption should be engaging, highlight the unique features of the property, and encourage users to visit the website for more details.\n\n"
-                    f"Note that the last caption generated was: {last_caption_generated}\n"
-                    "So do not repeat it the same way.\n"
-                    "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
+                    f"Generate a catchy social media caption for a property in {property_location} priced at {property_price}. "
+                    f"Use a {selected_style} tone. "
+                    "The caption should be engaging, highlight unique features, and feel authentic and human-written.\n\n"
+                    f"Previous caption to avoid repeating: {last_caption_generated}\n\n"
+                    f"End with this call-to-action: {selected_cta}\n\n"
+                    "Make it conversational, use natural language, and vary the structure. "
+                    "Output ONLY the caption text."
                 )
             )
 
