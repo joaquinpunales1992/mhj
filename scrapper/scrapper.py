@@ -43,7 +43,7 @@ def pull_properties(listing_url: str, page_from: int = 1, page_to: int = 50):
             # Find the listings
             listings = soup.find_all(
                 "div",
-                class_="mod-mergeBuilding--sale cKodate ui-frame ui-frame-cacao-bar",
+                class_="mod-mergeBuilding--sale cKodate ui-frame ui-frame-cacao-bar abtest-31S046-bc",
             )
             if not listings:
                 print("No more listings found.")
