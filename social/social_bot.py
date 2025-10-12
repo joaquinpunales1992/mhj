@@ -34,9 +34,13 @@ def post_on_facebook_batch(price_limit: int, batch_size: int):
         .distinct()[:batch_size]
     )
     if not properties_to_post_facebook:
-        properties_to_post_facebook = Property.objects.filter(
-            images__isnull=False, price__lte=price_limit, featured=True
-        ).order_by('price').distinct()[:batch_size]
+        properties_to_post_facebook = (
+            Property.objects.filter(
+                images__isnull=False, price__lte=price_limit, featured=True
+            )
+            .order_by("price")
+            .distinct()[:batch_size]
+        )
 
     for property in properties_to_post_facebook:
         try:
@@ -72,9 +76,13 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
     )
 
     if not properties_to_post_instagram:
-        properties_to_post_instagram = Property.objects.filter(
-            images__isnull=False, price__lte=price_limit, featured=True
-        ).order_by('price').distinct()[:batch_size]
+        properties_to_post_instagram = (
+            Property.objects.filter(
+                images__isnull=False, price__lte=price_limit, featured=True
+            )
+            .order_by("price")
+            .distinct()[:batch_size]
+        )
 
     for property in properties_to_post_instagram:
         try:

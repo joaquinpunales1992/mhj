@@ -5,7 +5,8 @@ from membership.utils import notify_social_token_expired
 from social.constants import PRICE_LIMIT_INSTAGRAM, BATCH_SIZE_INSTAGRAM
 from dotenv import load_dotenv
 
-load_dotenv('/home/planlxry/myhouseinjapan/.env')
+load_dotenv("/home/planlxry/myhouseinjapan/.env")
+
 
 class Command(BaseCommand):
     help = "Post on Instagram Reel"

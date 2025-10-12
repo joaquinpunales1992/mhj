@@ -143,11 +143,11 @@ def generate_caption_for_post(
             # Define different caption styles/tones
             caption_styles = [
                 "casual and friendly",
-                "professional and informative", 
+                "professional and informative",
                 "excited and enthusiastic",
                 "luxurious and sophisticated",
                 "warm and welcoming",
-                "trendy and modern"
+                "trendy and modern",
             ]
 
             # Define different call-to-action variations
@@ -156,7 +156,7 @@ def generate_caption_for_post(
                 "DM us for a private showing!",
                 "Don't let this one slip away!",
                 "Ready to make this home? Contact us!",
-                "Virtual tour available - just ask!"
+                "Virtual tour available - just ask!",
             ]
 
             selected_style = random.choice(caption_styles)
@@ -369,9 +369,15 @@ def post_instagram_reel():
         )
 
         if not property_to_post_instagram_reel:
-            property_to_post_instagram_reel = Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
-            ).order_by('price').distinct().first()
+            property_to_post_instagram_reel = random.choice(
+                Property.objects.filter(
+                    images__isnull=False,
+                    price__lte=PRICE_LIMIT_INSTAGRAM,
+                    featured=True,
+                )
+                .order_by("price")
+                .distinct()
+            )
 
         if not property_to_post_instagram_reel:
             logger.warning("No suitable property found to post on Instagram Reels.")
@@ -496,9 +502,15 @@ def post_facebook_reel():
         )
 
         if not property_to_post_facebook_reel:
-            property_to_post_facebook_reel = Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
-            ).order_by('price').distinct().first()
+            property_to_post_facebook_reel = random.choice(
+                Property.objects.filter(
+                    images__isnull=False,
+                    price__lte=PRICE_LIMIT_INSTAGRAM,
+                    featured=True,
+                )
+                .order_by("price")
+                .distinct()
+            )
 
         if not property_to_post_facebook_reel:
             logger.warning("No suitable property found to post on Facebook Reels.")
@@ -643,9 +655,9 @@ def create_property_video(
     )
 
     video_top_text_default = "Link in Bio \n "
-    
+
     video_top_text = cerebras_ai_client.generate_text(
-        prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing." \
+        prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing."
         " Do not include attributes of the property that you do not know. Be really creative."
     )
 
