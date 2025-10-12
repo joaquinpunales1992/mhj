@@ -9,35 +9,36 @@ from inventory.models import Property, PropertyImage
 from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import cache_page
 from django.template.loader import render_to_string
 
 
+@cache_page(60 * 60)
 def display_home(request):
     # Base queryset with optimizations
-    base_queryset = Property.objects.select_related(
-        # Add any ForeignKey fields here if needed
-    ).prefetch_related(
-        'images'
-    ).annotate(
-        has_any_image=models.Exists(
-            # Assuming your related model is called PropertyImage or similar
-            # Replace 'PropertyImage' with your actual image model name
-            PropertyImage.objects.filter(property=models.OuterRef('pk'))
+    base_queryset = (
+        Property.objects.select_related(
+            # Add any ForeignKey fields here if needed
         )
-    ).filter(
-        show_in_front=True, 
-        price__lte=1500, 
-        price__gt=0
+        .prefetch_related("images")
+        .annotate(
+            has_any_image=models.Exists(
+                # Assuming your related model is called PropertyImage or similar
+                # Replace 'PropertyImage' with your actual image model name
+                PropertyImage.objects.filter(property=models.OuterRef("pk"))
+            )
+        )
+        .filter(show_in_front=True, price__lte=1500, price__gt=0)
     )
-    
+
     featured = list(base_queryset.filter(featured=True))
     non_featured = list(base_queryset.filter(featured=False))
     random.shuffle(featured)
     random.shuffle(non_featured)
 
     properties = featured + non_featured
-    properties = properties[:settings.PROPERTIES_TO_DISPLAY]
-    
+    properties = properties[: settings.PROPERTIES_TO_DISPLAY]
+
     return render(
         request, "home.html", context={"properties": properties, "nav": "home"}
     )
