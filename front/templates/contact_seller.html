@@ -64,20 +64,20 @@
     fetch("/notify-user-expressed-interest/", {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "X-CSRFToken": getCookie("csrftoken")  // Include this if CSRF protection is enabled
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
       },
-      body: new URLSearchParams({
+      body: JSON.stringify({
         email: userEmail,
+        section: "book meeting",
         property_id: propertyId
       })
-    });
-
-
-    // Show Calendly popup
-    Calendly.initPopupWidget({
-      url: `https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&email=${userEmail}&a1=Property%20Identifier%20${propertyId}&primary_color=34a58e`
-    });
+      }).then(response => {
+          // Show Calendly popup
+          Calendly.initPopupWidget({
+            url: `https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&email=${userEmail}&a1=Property%20Identifier%20${propertyId}&primary_color=34a58e`
+          });
+    })
 
     return false;
   }
@@ -97,6 +97,159 @@
     }
     return cookieValue;
   }
+
+
+function subscribeToNewsletter(userEmail = "", propertyId) {
+    fetch('{% url "notify_user_expressed_interest" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: userEmail,
+            section: 'subscribe newsletter',
+            property_id: propertyId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        // Redirect regardless of response
+        window.location.href = '{% url "upgrade_premium" %}';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Still redirect even if notification fails
+        window.location.href = '{% url "upgrade_premium" %}';
+    });
+}
+
+
+function subscribeToNewsletterAuthenticated(userEmail = "", propertyId) {
+    fetch('{% url "notify_user_expressed_interest" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: userEmail,
+            section: 'subscribe newsletter',
+            property_id: propertyId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        // Redirect regardless of response
+        window.location.href = '{% url "authenticate" 1 1 %}';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Still redirect even if notification fails
+        window.location.href = '{% url "authenticate" 1 1 %}';
+    });
+}
+
+function landRightsInterest(userEmail = "", propertyId) {
+    fetch('{% url "notify_user_expressed_interest" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: userEmail,
+            section: 'land rights',
+            property_id: propertyId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        // Redirect regardless of response
+        window.location.href = '{% url "upgrade_premium" %}';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Still redirect even if notification fails
+        window.location.href = '{% url "upgrade_premium" %}';
+    });
+}
+
+function landRightsInterestAuthenticated(userEmail = "", propertyId) {
+    fetch('{% url "notify_user_expressed_interest" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: userEmail,
+            section: 'land rights',
+            property_id: propertyId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        // Redirect regardless of response
+        window.location.href = '{% url "authenticate" 1 1 %}';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Still redirect even if notification fails
+        window.location.href = '{% url "authenticate" 1 1 %}';
+    });
+}
+
+
+function riskInformationInterest(userEmail = "", propertyId) {
+    fetch('{% url "notify_user_expressed_interest" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: userEmail,
+            section: 'risk information',
+            property_id: propertyId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        // Redirect regardless of response
+        window.location.href = '{% url "upgrade_premium" %}';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Still redirect even if notification fails
+        window.location.href = '{% url "upgrade_premium" %}';
+    });
+}
+
+function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
+    fetch('{% url "notify_user_expressed_interest" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            email: userEmail,
+            section: 'risk information',
+            property_id: propertyId
+        }),
+        credentials: 'same-origin'
+    })
+    .then(response => {
+        // Redirect regardless of response
+        window.location.href = '{% url "authenticate" 1 1 %}';
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Still redirect even if notification fails
+        window.location.href = '{% url "authenticate" 1 1 %}';
+    });
+}
 </script>
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS"></script>
@@ -1039,11 +1192,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Rights</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "upgrade_premium" %}'">
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="landRightsInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #34a58e;"></span><span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="landRightsInterest('{{ user_email }}', '{{ property.pk }}')">
                     <span class="icon solid fa-lock" style="color: #34a58e;"></span> <span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% endif %}
@@ -1052,11 +1205,11 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Risk Information</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "upgrade_premium" %}'">
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="riskInformationInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #34a58e;"> </span><span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;"  onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="riskInformationInterest('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #34a58e;"> </span><span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% endif %}
@@ -1074,11 +1227,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <h3>Subscribe to our Newsletter</h3>
                 <p class="text-xll" style="color: black;">Get exclusive access to 20 new properties each week, unavailable to other accounts.</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "upgrade_premium" %}'">
+                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="subscribeToNewsletterAuthenticated('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #34a58e;"></span><span style="color: #34a58e;"> SUBSCRIBE</span>
                   </button>
                 {% else %}
-                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="subscribeToNewsletter('{{ user_email }}', '{{ property.pk }}')">
                     <span class="icon solid fa-lock" style="color: #34a58e;"></span> <span style="color: #34a58e;"> SUBSCRIBE</span>
                   </button>
                 {% endif %}
@@ -1302,13 +1455,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>       
         
         </div>
-
-
-        
-                
       </div>
-
-      
     </main>
   </div>
 </body>
