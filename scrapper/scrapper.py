@@ -1,300 +1,192 @@
-# Detached houses in Tokyo for Sale (second-hand)
-# https://www.homes.co.jp/kodate/chuko/tokyo/list/
+from __future__ import annotations
 
-import requests
-from bs4 import BeautifulSoup
-import os
-import sys
+import re
+import time
+
 import chardet
+import requests
 from deep_translator import GoogleTranslator
-from scrapper.constants import MAX_PRICE_TO_PULL
+
 from inventory.models import Property, PropertyImage
+from scrapper.constants import MAX_PRICE_TO_PULL
 
 
 REQUEST_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/5374"
+    "User-Agent": (
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+        "AppleWebKit/605.1.15 (KHTML, like Gecko) "
+        "Version/17.4 Safari/605.1.15"
+    ),
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "ja,en;q=0.9",
 }
 
-
-def pull_specific_property(url: str):
-    headers = REQUEST_HEADERS
-
-    persist_property(property_data=get_listing_data(url=url))
+MAX_TRANSLATE_CHARS = 5000
 
 
-def pull_properties(listing_url: str, page_from: int = 1, page_to: int = 50):
-    headers = REQUEST_HEADERS
-
-    keep_looking = True
-    listings_url_list = []
-    current_number = page_from
-    while keep_looking:
-        try:
-            url = f"{listing_url}?page={current_number}"
-            response = requests.get(url, headers=headers)
-
-            if response.status_code != 200:
-                print(f"Failed to retrieve data: {response.status_code}")
-
-            if current_number == page_to:
-                keep_looking = False
-
-            soup = BeautifulSoup(response.text, "html.parser")
-            # Find the listings
-            listings = soup.find_all(
-                "div",
-                class_="mod-mergeBuilding--sale cKodate ui-frame ui-frame-cacao-bar abtest-31S046-bc",
-            )
-            if not listings:
-                print("No more listings found.")
-            else:
-                # extract the url of the listing
-                listing_urls = [
-                    listing.find("div", class_="moduleInner")
-                    .find("div", class_="moduleBody")
-                    .find("a")
-                    .get("href")
-                    for listing in listings
-                ]
-
-                for url in listing_urls:
-                    persist_property(property_data=get_listing_data(url=url))
-        except Exception as e:
-            print(f"Error occurred: {e}")
-        finally:
-            current_number += 1
-
-    return listings_url_list
+# Signatures for common anti-bot challenge pages (AWS WAF, Imperva/Reese,
+# Cloudflare, Akamai). These return 200 (or 202) with a tiny JS-challenge body.
+_BOT_CHALLENGE_SIGNATURES = (
+    "x-amzn-waf-action",          # AWS WAF (LIFULL)
+    "reeseSkipExpirationCheck",   # Imperva/Reese (At Home)
+    "onProtectionInitialized",    # Imperva
+    "Just a moment...",           # Cloudflare
+    "challenge-platform",         # Cloudflare
+    "認証中",                      # 'authenticating' interstitial
+)
 
 
-def get_listing_data(url):
-    headers = REQUEST_HEADERS
+def _looks_like_bot_challenge(response: requests.Response) -> bool:
+    if response.headers.get("x-amzn-waf-action"):
+        return True
+    if response.status_code == 202:
+        return True
+    body = response.text
+    if len(body) < 20000:
+        for marker in _BOT_CHALLENGE_SIGNATURES:
+            if marker in body:
+                return True
+    return False
 
-    MAX_CHAR_LENGTH = 5000
 
-    response = requests.get(url, headers=headers)
-
-    encoding = chardet.detect(response.content)["encoding"]
-    response.encoding = encoding
-
-    google_translator = GoogleTranslator(source="auto", target="en")
-    if response.status_code != 200:
-        print(f"Failed to retrieve data: {response.status_code}")
+def fetch(url: str, *, headers: dict | None = None, timeout: int = 20) -> requests.Response | None:
+    """GET a URL with sensible defaults. Returns None on non-200, transport error, or bot challenge."""
+    try:
+        response = requests.get(url, headers=headers or REQUEST_HEADERS, timeout=timeout)
+    except requests.RequestException as exc:
+        print(f"Request error for {url}: {exc}")
         return None
 
-    soup = BeautifulSoup(response.text, "html.parser")
+    if response.status_code != 200:
+        print(f"Failed to retrieve {url}: status {response.status_code}")
+        return None
 
-    # Extract title, classification, type and price
-    article_header = soup.find("div", {"data-component": "ArticleHeader"})
-    h1_tag_article = article_header.find("h1")
-    property_title = h1_tag_article.find_all("span")[3].get_text(strip=True)
-    property_price = (
-        soup.find("p", {"data-component": "price"}).find("span").get_text(strip=True)
-    )
+    if _looks_like_bot_challenge(response):
+        print(f"Bot challenge / WAF block detected for {url}")
+        return None
 
-    table = soup.find("table", {"class": "w-full table-fixed"})
-
-    table_data = {
-        "価格": None,
-        "間取り": None,
-        "建物面積": None,
-        "土地面積": None,
-        "駐車場": None,
-        "築年月": None,
-        "所在地": None,
-        "交通": None,
-        "建物構造": None,
-        "接道状況": None,
-        "セットバック": None,
-        "都市計画": None,
-        "用途地域": None,
-        "地目": None,
-        "建ぺい率": None,
-        "容積率": None,
-        "現況": None,
-        "引渡し": None,
-        "設備": None,
-        "取引態様": None,
-        "備考": None,
-        "土地権利": None,
-    }
-    for row in table.find_all("tr"):
-        header = row.find("th").get_text(strip=True)
-        if header in table_data:
-            table_data[header] = row.find("td").get_text(strip=True)
-
-    # Extract images
-    image_urls = []
-
-    ul_element = soup.find("ul", {"data-target": "photo-slider.slider"})
-
-    if ul_element:
-        # Find all <img> tags within the <ul> element
-        img_tags = ul_element.find_all("img")
-        for img in img_tags:
-            img_url = img.get("src")
-            if img_url.startswith("https://image") and "homes.jp/smallimg" in img_url:
-                image_urls.append(img_url)
-
-    # Add more fields as needed
-    listing_data = {
-        "property_url": url,
-        "property_title": google_translator.translate(property_title),
-        "property_price": google_translator.translate(property_price),
-        "floor_plan": (
-            google_translator.translate(table_data["間取り"][:MAX_CHAR_LENGTH])
-            if table_data["間取り"]
-            else ""
-        ),
-        "building_area": (
-            google_translator.translate(table_data["建物面積"][:MAX_CHAR_LENGTH])
-            if table_data["建物面積"]
-            else ""
-        ),
-        "land_area": (
-            google_translator.translate(table_data["土地面積"][:MAX_CHAR_LENGTH])
-            if table_data["土地面積"]
-            else ""
-        ),
-        "parking": (
-            google_translator.translate(table_data["駐車場"][:MAX_CHAR_LENGTH])
-            if table_data["駐車場"]
-            else ""
-        ),
-        "building_age": (
-            google_translator.translate(table_data["築年月"][:MAX_CHAR_LENGTH])
-            if table_data["築年月"]
-            else ""
-        ),
-        "location": (
-            google_translator.translate(table_data["所在地"][:MAX_CHAR_LENGTH])
-            if table_data["所在地"]
-            else ""
-        ),
-        "traffic": (
-            google_translator.translate(table_data["交通"][:MAX_CHAR_LENGTH])
-            if table_data["交通"]
-            else ""
-        ),
-        "building_structure": (
-            google_translator.translate(table_data["建物構造"][:MAX_CHAR_LENGTH])
-            if table_data["建物構造"]
-            else ""
-        ),
-        "road_condition": (
-            google_translator.translate(table_data["接道状況"][:MAX_CHAR_LENGTH])
-            if table_data["接道状況"]
-            else ""
-        ),
-        "setback": (
-            google_translator.translate(table_data["セットバック"][:MAX_CHAR_LENGTH])
-            if table_data["セットバック"]
-            else ""
-        ),
-        "city_planning": (
-            google_translator.translate(table_data["都市計画"][:MAX_CHAR_LENGTH])
-            if table_data["都市計画"]
-            else ""
-        ),
-        "zoning": (
-            google_translator.translate(table_data["用途地域"][:MAX_CHAR_LENGTH])
-            if table_data["用途地域"]
-            else ""
-        ),
-        "land_category": (
-            google_translator.translate(table_data["地目"][:MAX_CHAR_LENGTH])
-            if table_data["備考"]
-            else ""
-        ),
-        "building_coverage_ratio": (
-            google_translator.translate(table_data["建ぺい率"][:MAX_CHAR_LENGTH])
-            if table_data["建ぺい率"]
-            else ""
-        ),
-        "floor_area_ratio": (
-            google_translator.translate(table_data["容積率"][:MAX_CHAR_LENGTH])
-            if table_data["容積率"]
-            else ""
-        ),
-        "current_status": (
-            google_translator.translate(table_data["現況"][:MAX_CHAR_LENGTH])
-            if table_data["現況"]
-            else ""
-        ),
-        "handover": (
-            google_translator.translate(table_data["引渡し"][:MAX_CHAR_LENGTH])
-            if table_data["引渡し"]
-            else ""
-        ),
-        "equipment": (
-            google_translator.translate(table_data["設備"][:MAX_CHAR_LENGTH])
-            if table_data["設備"]
-            else ""
-        ),
-        "transaction_type": (
-            google_translator.translate(table_data["取引態様"][:MAX_CHAR_LENGTH])
-            if table_data["取引態様"]
-            else ""
-        ),
-        "remarks": (
-            google_translator.translate(table_data["備考"][:MAX_CHAR_LENGTH])
-            if table_data["備考"]
-            else ""
-        ),
-        "land_rights": (
-            google_translator.translate(table_data["土地権利"][:MAX_CHAR_LENGTH])
-            if table_data["土地権利"]
-            else ""
-        ),
-        "image_urls": image_urls,
-    }
-
-    return listing_data
+    encoding = chardet.detect(response.content)["encoding"]
+    if encoding:
+        response.encoding = encoding
+    return response
 
 
-def persist_property(property_data: dict):
+def safe_translate(value: str | None, translator: GoogleTranslator | None = None) -> str:
+    if not value:
+        return ""
+    translator = translator or GoogleTranslator(source="auto", target="en")
     try:
-        property_price = int(property_data["property_price"].replace(",", ""))
-        if property_price > MAX_PRICE_TO_PULL:
-            print(f"Property {property_data['property_title']} exceed price limit.")
+        return translator.translate(value[:MAX_TRANSLATE_CHARS]) or ""
+    except Exception as exc:
+        print(f"Translation error: {exc}")
+        return value[:MAX_TRANSLATE_CHARS]
+
+
+def run_source(
+    source: str,
+    region: str,
+    page_from: int = 1,
+    page_to: int = 50,
+    dry_run: bool = False,
+) -> None:
+    """Drive a scrape: walk listing pages, parse each detail URL, persist."""
+    from scrapper.sources import SOURCES
+
+    if source not in SOURCES:
+        raise ValueError(f"Unknown source {source!r}. Available: {sorted(SOURCES)}")
+    module = SOURCES[source]
+
+    for page in range(page_from, page_to + 1):
+        try:
+            urls = module.iter_listing_urls(region=region, page=page)
+        except Exception as exc:
+            print(f"[{source}] Error listing page {page}: {exc}")
+            continue
+
+        if not urls:
+            print(f"[{source}] No listings on page {page}, stopping.")
             return
-        property, created = Property.objects.get_or_create(
+
+        print(f"[{source}] page {page}: {len(urls)} listings")
+        for url in urls:
+            try:
+                data = module.parse_listing(url=url)
+            except Exception as exc:
+                print(f"[{source}] Error parsing {url}: {exc}")
+                continue
+            if not data:
+                continue
+            if dry_run:
+                print(
+                    f"[dry-run] {data.get('property_title','')!r} "
+                    f"price={data.get('property_price','')!r} "
+                    f"images={len(data.get('image_urls', []))}"
+                )
+            else:
+                persist_property(property_data=data)
+            time.sleep(1)
+
+
+def persist_property(property_data: dict) -> None:
+    """Save property data to the database."""
+    try:
+        price_str = property_data.get("property_price", "") or ""
+        price_match = re.search(r"([\d,]+)", price_str)
+        if not price_match:
+            print(f"Could not parse price: {price_str!r}")
+            return
+
+        price_value = int(price_match.group(1).replace(",", ""))
+        if "万" in price_str or "man" in price_str.lower():
+            property_price = price_value * 10000
+        else:
+            property_price = price_value
+
+        if property_price > MAX_PRICE_TO_PULL * 10000:
+            print(
+                f"Property {property_data.get('property_title')!r} "
+                f"exceeds price limit ({property_price})."
+            )
+            return
+
+        property_obj, created = Property.objects.get_or_create(
             url=property_data["property_url"]
         )
-        if created:
-            property.url = property_data["property_url"]
-            property.title = property_data["property_title"]
-            property.traffic = property_data["traffic"]
-            property.location = property_data["location"]
-            property.description = property_data["remarks"]
-            property.construction_date = property_data["building_age"]
-            property.building_structure = property_data["building_structure"]
-            property.road_condition = property_data["road_condition"]
-            property.setback = property_data["setback"]
-            property.city_planning = property_data["city_planning"]
-            property.zoning = property_data["zoning"]
-            property.land_category = property_data["land_category"]
-            property.building_coverage_ratio = property_data["building_coverage_ratio"]
-            property.floor_area_ratio = property_data["floor_area_ratio"]
-            property.current_status = property_data["current_status"]
-            property.handover = property_data["handover"]
-            property.equipment = property_data["equipment"]
-            property.transaction_type = property_data["transaction_type"]
-            property.price = property_price
-            property.floor_plan = property_data["floor_plan"]
-            property.building_area = property_data["building_area"]
-            property.land_area = property_data["land_area"]
-            property.parking = property_data["parking"]
-            property.construction = property_data["building_age"]
-            property.land_rights = property_data["land_rights"]
+        if not created:
+            print(f"Property {property_data['property_url']} already exists.")
+            return
 
-            property.save()
+        property_obj.url = property_data["property_url"]
+        property_obj.title = property_data.get("property_title", "")
+        property_obj.traffic = property_data.get("traffic", "")
+        property_obj.location = property_data.get("location", "")
+        property_obj.description = property_data.get("remarks", "")
+        property_obj.construction_date = property_data.get("building_age", "")
+        property_obj.building_structure = property_data.get("building_structure", "")
+        property_obj.road_condition = property_data.get("road_condition", "")
+        property_obj.setback = property_data.get("setback", "")
+        property_obj.city_planning = property_data.get("city_planning", "")
+        property_obj.zoning = property_data.get("zoning", "")
+        property_obj.land_category = property_data.get("land_category", "")
+        property_obj.building_coverage_ratio = property_data.get("building_coverage_ratio", "")
+        property_obj.floor_area_ratio = property_data.get("floor_area_ratio", "")
+        property_obj.current_status = property_data.get("current_status", "")
+        property_obj.handover = property_data.get("handover", "")
+        property_obj.equipment = property_data.get("equipment", "")
+        property_obj.transaction_type = property_data.get("transaction_type", "")
+        property_obj.price = property_price
+        property_obj.floor_plan = property_data.get("floor_plan", "")
+        property_obj.building_area = property_data.get("building_area", "")
+        property_obj.land_area = property_data.get("land_area", "")
+        property_obj.parking = property_data.get("parking", "")
+        property_obj.construction = property_data.get("building_age", "")
+        property_obj.land_rights = property_data.get("land_rights", "")
+        property_obj.save()
 
-            for image_url in property_data.get("image_urls", []):
-                PropertyImage.objects.create(property=property, file=image_url)
+        for image_url in property_data.get("image_urls", []):
+            PropertyImage.objects.create(property=property_obj, file=image_url)
 
-            property.save()
-            print(f"Property {property.title} saved successfully.")
+        print(f"Saved: {property_obj.title!r}")
 
-    except Exception as e:
-        print(f"Error saving property: {e}")
+    except Exception as exc:
+        print(f"Error saving property: {exc}")
