@@ -10,6 +10,7 @@ Django==4.2.20
 django-allauth==0.63.6
 django-appconf==1.1.0
 django-compressor==4.5.1
+django-environ==0.13.0
 django-social-share==2.3.0
 idna==3.10
 pycparser==2.22
