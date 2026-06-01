@@ -71,6 +71,28 @@ def fetch(url: str, *, headers: dict | None = None, timeout: int = 20) -> reques
     return response
 
 
+def parse_jpy_price(text: str) -> int | None:
+    """Parse a Japanese yen price string to an int (yen).
+
+    Handles '1980万円', '1,980万円', '2億9800万円', '1億円', '580 万円', and
+    plain-yen forms like '5800000円'. Must be called on the raw Japanese
+    string before translation — translators drop the 万/億 markers.
+    """
+    if not text:
+        return None
+    clean = text.replace(",", "").replace("，", "")
+    m = re.search(r"(?:(\d+)\s*億)?\s*(?:(\d+)\s*万)?\s*円", clean)
+    if not m:
+        return None
+    oku_str, man_str = m.group(1), m.group(2)
+    if not oku_str and not man_str:
+        plain = re.search(r"(\d+)\s*円", clean)
+        return int(plain.group(1)) if plain else None
+    oku = int(oku_str) if oku_str else 0
+    man = int(man_str) if man_str else 0
+    return oku * 100_000_000 + man * 10_000
+
+
 def safe_translate(value: str | None, translator: GoogleTranslator | None = None) -> str:
     if not value:
         return ""
@@ -120,6 +142,7 @@ def run_source(
                 print(
                     f"[dry-run] {data.get('property_title','')!r} "
                     f"price={data.get('property_price','')!r} "
+                    f"yen={data.get('property_price_yen')!r} "
                     f"images={len(data.get('image_urls', []))}"
                 )
             else:
@@ -128,24 +151,24 @@ def run_source(
 
 
 def persist_property(property_data: dict) -> None:
-    """Save property data to the database."""
+    """Save property data to the database.
+
+    Expects `property_price_yen` (int) in property_data — the source module
+    must extract it from the raw Japanese string before translation, since
+    translators drop the 万/億 markers needed to recover the magnitude.
+    Stored on Property.price in 万 units to match the existing schema.
+    """
     try:
-        price_str = property_data.get("property_price", "") or ""
-        price_match = re.search(r"([\d,]+)", price_str)
-        if not price_match:
-            print(f"Could not parse price: {price_str!r}")
+        property_price_yen = property_data.get("property_price_yen")
+        if not property_price_yen:
+            print(f"No parseable price for {property_data.get('property_url')!r}")
             return
 
-        price_value = int(price_match.group(1).replace(",", ""))
-        if "万" in price_str or "man" in price_str.lower():
-            property_price = price_value * 10000
-        else:
-            property_price = price_value
-
-        if property_price > MAX_PRICE_TO_PULL * 10000:
+        property_price_man = property_price_yen // 10_000
+        if property_price_man > MAX_PRICE_TO_PULL:
             print(
                 f"Property {property_data.get('property_title')!r} "
-                f"exceeds price limit ({property_price})."
+                f"exceeds price limit ({property_price_man}万)."
             )
             return
 
@@ -174,7 +197,7 @@ def persist_property(property_data: dict) -> None:
         property_obj.handover = property_data.get("handover", "")
         property_obj.equipment = property_data.get("equipment", "")
         property_obj.transaction_type = property_data.get("transaction_type", "")
-        property_obj.price = property_price
+        property_obj.price = property_price_man
         property_obj.floor_plan = property_data.get("floor_plan", "")
         property_obj.building_area = property_data.get("building_area", "")
         property_obj.land_area = property_data.get("land_area", "")

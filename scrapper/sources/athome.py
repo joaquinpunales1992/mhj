@@ -6,7 +6,7 @@ import re
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
-from scrapper.scrapper import fetch, safe_translate
+from scrapper.scrapper import fetch, parse_jpy_price, safe_translate
 
 BASE_URL = "https://www.athome.co.jp"
 _LIST_TEMPLATE = BASE_URL + "/kodate/chuko/{region}/list/?page={page}"
@@ -67,10 +67,12 @@ def parse_listing(url: str) -> dict | None:
     def t(value: str | None) -> str:
         return safe_translate(value, translator=translator)
 
+    raw_price = table.get("価格", "")
     return {
         "property_url": url,
         "property_title": t(title),
-        "property_price": t(table.get("価格", "")),
+        "property_price": t(raw_price),
+        "property_price_yen": parse_jpy_price(raw_price),
         "floor_plan": t(table.get("間取り", "")),
         "building_area": t(table.get("建物面積", "")),
         "land_area": t(table.get("土地面積", "")),
