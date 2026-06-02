@@ -340,23 +340,63 @@ def post_to_facebook(
         logger.warning("No images were uploaded; skipping Facebook post.")
 
 
+_UPLOAD_UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+
+
 def _upload_to_catbox(filepath: str):
-    """Temporary public host for the video so Instagram's Graph API can fetch it."""
-    try:
-        with open(filepath, "rb") as f:
-            r = requests.post(
-                "https://catbox.moe/user/api.php",
-                data={"reqtype": "fileupload"},
-                files={"fileToUpload": f},
-                timeout=120,
-            )
-        if r.status_code == 200 and r.text.startswith("https://"):
-            return r.text.strip()
-        logger.error(f"catbox upload returned {r.status_code}: {r.text[:200]}")
-        return None
-    except Exception as exc:
-        logger.error(f"catbox upload failed: {exc}")
-        return None
+    with open(filepath, "rb") as f:
+        r = requests.post(
+            "https://catbox.moe/user/api.php",
+            data={"reqtype": "fileupload"},
+            files={"fileToUpload": f},
+            headers={"User-Agent": _UPLOAD_UA},
+            timeout=120,
+        )
+    if r.status_code == 200 and r.text.startswith("https://"):
+        return r.text.strip()
+    raise RuntimeError(f"catbox: {r.status_code} {r.text[:120]}")
+
+
+def _upload_to_0x0(filepath: str):
+    with open(filepath, "rb") as f:
+        r = requests.post(
+            "https://0x0.st",
+            files={"file": f},
+            headers={"User-Agent": _UPLOAD_UA},
+            timeout=120,
+        )
+    if r.status_code == 200 and r.text.startswith("https://"):
+        return r.text.strip()
+    raise RuntimeError(f"0x0.st: {r.status_code} {r.text[:120]}")
+
+
+def _upload_to_transfersh(filepath: str):
+    name = os.path.basename(filepath)
+    with open(filepath, "rb") as f:
+        r = requests.put(
+            f"https://transfer.sh/{name}",
+            data=f,
+            headers={"User-Agent": _UPLOAD_UA, "Max-Days": "3"},
+            timeout=120,
+        )
+    if r.status_code == 200 and r.text.startswith("https://"):
+        return r.text.strip()
+    raise RuntimeError(f"transfer.sh: {r.status_code} {r.text[:120]}")
+
+
+def _upload_video(filepath: str):
+    """Try a few free public file hosts in order. Datacenter IPs get rejected
+    by some of them (catbox returns 412 'Invalid uploader'), so we have a
+    fallback chain.
+    """
+    for uploader in (_upload_to_catbox, _upload_to_0x0, _upload_to_transfersh):
+        try:
+            url = uploader(filepath)
+            logger.info(f"Uploaded video via {uploader.__name__}: {url}")
+            return url
+        except Exception as exc:
+            logger.warning(f"{uploader.__name__} failed: {exc}")
+    return None
 
 
 def post_instagram_reel():
@@ -415,11 +455,10 @@ def post_instagram_reel():
         target_path = os.path.join(media_dir, "property_video.mp4")
         shutil.move("property_video.mp4", target_path)
 
-        video_url = _upload_to_catbox(target_path)
+        video_url = _upload_video(target_path)
         if not video_url:
-            logger.error("Failed to upload video to catbox; aborting reel post.")
+            logger.error("All video upload hosts failed; aborting reel post.")
             return
-        logger.info(f"Video uploaded for Instagram fetch: {video_url}")
 
         ai_caption, caption = generate_caption_for_post(
             property_to_post_instagram_reel.location,
