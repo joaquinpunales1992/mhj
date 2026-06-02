@@ -1,12 +1,24 @@
 from django.conf import settings
-from langchain_huggingface import ChatHuggingFace
-from langchain_huggingface import HuggingFaceEndpoint
+
+# langchain-huggingface pulls in transformers (~300 MB). Import lazily so that
+# importing this module doesn't require the dependency on hosts that don't use
+# HuggingFaceAI (e.g. the cron-driven Instagram bot uses Cerebras instead).
+try:
+    from langchain_huggingface import ChatHuggingFace, HuggingFaceEndpoint
+except ImportError:
+    ChatHuggingFace = None
+    HuggingFaceEndpoint = None
 
 
 class HuggingFaceAI:
     def __init__(
         self, max_new_tokens: int = 512, top_p: float = 0.95, temperature: float = 0.5
     ) -> None:
+        if ChatHuggingFace is None:
+            raise ImportError(
+                "langchain-huggingface is not installed. "
+                "Add `langchain-huggingface` to requirements to use HuggingFaceAI."
+            )
         self.endpoint_url = settings.HUGGING_FACE_AI_ENDPOINT_URL
         self.max_new_tokens = max_new_tokens
         self.top_p = top_p
