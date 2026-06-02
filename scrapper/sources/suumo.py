@@ -11,18 +11,46 @@ from scrapper.scrapper import fetch, parse_jpy_price, safe_translate
 
 BASE_URL = "https://suumo.jp"
 
-# bs=021 selects 中古一戸建て (used detached houses); ar=030 is the Kanto-anchored
-# inventory ID, but the ta= prefecture code is what actually filters the region.
-_LIST_TEMPLATE = BASE_URL + "/jj/bukken/ichiran/JJ010FJ001/?ar=030&bs=021&ta={code}&page={page}"
+# SUUMO scopes by macro-region first (ar=...) and then filters by prefecture
+# (ta=...). Querying a prefecture with the wrong ar returns 0 listings, so we
+# need the prefecture → macro-region mapping. bs=021 selects 中古一戸建て.
+_PREFECTURE_AR = {
+    # 010 Hokkaido
+    "hokkaido": "010",
+    # 020 Tohoku
+    "aomori": "020", "iwate": "020", "miyagi": "020", "akita": "020",
+    "yamagata": "020", "fukushima": "020",
+    # 030 Kanto
+    "ibaraki": "030", "tochigi": "030", "gunma": "030", "saitama": "030",
+    "chiba": "030", "tokyo": "030", "kanagawa": "030",
+    # 040 Chubu/Tokai
+    "niigata": "040", "toyama": "040", "ishikawa": "040", "fukui": "040",
+    "yamanashi": "040", "nagano": "040", "gifu": "040", "shizuoka": "040",
+    "aichi": "040", "mie": "040",
+    # 050 Kinki
+    "shiga": "050", "kyoto": "050", "osaka": "050", "hyogo": "050",
+    "nara": "050", "wakayama": "050",
+    # 060 Chugoku
+    "tottori": "060", "shimane": "060", "okayama": "060", "hiroshima": "060",
+    "yamaguchi": "060",
+    # 070 Shikoku
+    "tokushima": "070", "kagawa": "070", "ehime": "070", "kochi": "070",
+    # 080 Kyushu/Okinawa
+    "fukuoka": "080", "saga": "080", "nagasaki": "080", "kumamoto": "080",
+    "oita": "080", "miyazaki": "080", "kagoshima": "080", "okinawa": "080",
+}
+
+_LIST_TEMPLATE = BASE_URL + "/jj/bukken/ichiran/JJ010FJ001/?ar={ar}&bs=021&ta={code}&page={page}"
 
 _DETAIL_HREF_RE = re.compile(r"/chukoikkodate/[a-z]+/sc_[a-z0-9]+/nc_\d+/")
 
 
 def iter_listing_urls(region: str, page: int) -> list[str]:
     code = PREFECTURE_JIS_CODE.get(region)
-    if not code:
+    ar = _PREFECTURE_AR.get(region)
+    if not code or not ar:
         raise ValueError(f"Unknown region {region!r}")
-    url = _LIST_TEMPLATE.format(code=code, page=page)
+    url = _LIST_TEMPLATE.format(ar=ar, code=code, page=page)
     response = fetch(url)
     if not response:
         return []
