@@ -340,6 +340,25 @@ def post_to_facebook(
         logger.warning("No images were uploaded; skipping Facebook post.")
 
 
+def _upload_to_catbox(filepath: str):
+    """Temporary public host for the video so Instagram's Graph API can fetch it."""
+    try:
+        with open(filepath, "rb") as f:
+            r = requests.post(
+                "https://catbox.moe/user/api.php",
+                data={"reqtype": "fileupload"},
+                files={"fileToUpload": f},
+                timeout=120,
+            )
+        if r.status_code == 200 and r.text.startswith("https://"):
+            return r.text.strip()
+        logger.error(f"catbox upload returned {r.status_code}: {r.text[:200]}")
+        return None
+    except Exception as exc:
+        logger.error(f"catbox upload failed: {exc}")
+        return None
+
+
 def post_instagram_reel():
     try:
         instagram_reels = SocialPost.objects.filter(
@@ -396,7 +415,11 @@ def post_instagram_reel():
         target_path = os.path.join(media_dir, "property_video.mp4")
         shutil.move("property_video.mp4", target_path)
 
-        video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
+        video_url = _upload_to_catbox(target_path)
+        if not video_url:
+            logger.error("Failed to upload video to catbox; aborting reel post.")
+            return
+        logger.info(f"Video uploaded for Instagram fetch: {video_url}")
 
         ai_caption, caption = generate_caption_for_post(
             property_to_post_instagram_reel.location,
@@ -656,10 +679,14 @@ def create_property_video(
 
     video_top_text_default = "Link in Bio \n "
 
-    video_top_text = cerebras_ai_client.generate_text(
-        prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing."
-        " Do not include attributes of the property that you do not know. Be really creative."
-    )
+    try:
+        video_top_text = cerebras_ai_client.generate_text(
+            prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing."
+            " Do not include attributes of the property that you do not know. Be really creative."
+        )
+    except Exception as exc:
+        logger.warning(f"Cerebras failed for video overlay text, using default: {exc}")
+        video_top_text = None
 
     text_clip_top = (
         TextClip(
