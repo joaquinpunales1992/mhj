@@ -54,6 +54,10 @@ AUTHENTICATION_BACKENDS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # whitenoise must come right after SecurityMiddleware so it can serve
+    # collected static files (STATIC_ROOT) directly via WSGI on shared
+    # hosting where the web server can't be configured to alias /static/.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
