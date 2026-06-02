@@ -1,4 +1,4 @@
-MAX_PRICE_TO_PULL = 1200
+MAX_PRICE_TO_PULL = 5000
 
 PREFECTURE_SLUGS = [
     "hokkaido", "aomori", "iwate", "miyagi", "akita", "yamagata", "fukushima",

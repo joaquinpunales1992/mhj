@@ -15,10 +15,10 @@ DOMAIN_CONTEXT = (
     "- Do not invent or assume features—stick strictly to the given inputs"
 )
 
-PRICE_LIMIT_FACEBOOK = 1400
+PRICE_LIMIT_FACEBOOK = 5000
 BATCH_SIZE_FACEBOOK = 2
 
-PRICE_LIMIT_INSTAGRAM = 1400
+PRICE_LIMIT_INSTAGRAM = 5000
 BATCH_SIZE_INSTAGRAM = 2
 
 USE_AI_CAPTION = True
@@ -26,4 +26,24 @@ USE_AI_CAPTION = True
 
 DEFAULT_COMMENT = "Find out More at www.akiyainjapan.com"
 
-HASHTAGS_LIST = ["#akiya", "#japan", "#japanlife", "#cheaphouse", "#vacationhouse", "#affordablehouse", "#japanesehouse", "#myakiyainjapan", "#explorejpn", "#livingabroad", "#japanrealestate", "#cheaphousesjapan", "#japanesearchitecture", "#saga", "#aribnb", "#buyingahome", "#homesforsale", "#japanproperty", "#japaneselifestyle"]
+HASHTAGS_LIST = [
+    "#akiya",
+    "#japan",
+    "#japanlife",
+    "#cheaphouse",
+    "#vacationhouse",
+    "#affordablehouse",
+    "#japanesehouse",
+    "#myakiyainjapan",
+    "#explorejpn",
+    "#livingabroad",
+    "#japanrealestate",
+    "#cheaphousesjapan",
+    "#japanesearchitecture",
+    "#saga",
+    "#aribnb",
+    "#buyingahome",
+    "#homesforsale",
+    "#japanproperty",
+    "#japaneselifestyle",
+]
