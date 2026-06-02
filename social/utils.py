@@ -456,20 +456,12 @@ def post_instagram_reel():
         shutil.move("property_video.mp4", target_path)
 
         # Serve the video directly from the site (file was just written to
-        # MEDIA_ROOT/generated_videos/). Falls back to public file hosts if
-        # the site URL isn't reachable for some reason.
+        # MEDIA_ROOT/generated_videos/). We don't probe from the same host —
+        # shared hosting loopback-routes akiyainjapan.com to the local
+        # LiteSpeed (which still has the old shared cert) and trips a false
+        # cert-mismatch. Instagram fetches from outside through Cloudflare
+        # where the cert is valid, so just trust the URL.
         video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
-        try:
-            head = requests.head(video_url, timeout=10, allow_redirects=True)
-            if head.status_code != 200:
-                logger.warning(f"Site media URL returned {head.status_code}, falling back to public hosts.")
-                video_url = _upload_video(target_path)
-        except Exception as exc:
-            logger.warning(f"Site media URL probe failed ({exc}), falling back to public hosts.")
-            video_url = _upload_video(target_path)
-        if not video_url:
-            logger.error("Could not produce a fetchable video URL; aborting reel post.")
-            return
         logger.info(f"Video URL for Instagram fetch: {video_url}")
 
         ai_caption, caption = generate_caption_for_post(
