@@ -111,14 +111,16 @@ def parse_listing(url: str) -> dict | None:
     construction = table.get("完成時期（築年月）") or table.get("完成時期(築年月)", "")
     location = table.get("住所") or table.get("所在地", "")
 
-    # SUUMO frequently embeds listing photos inside inline JSON/JS data
-    # rather than <img> tags, so scan the raw response text. We grab the
-    # direct CDN URLs (suumo.jp/front/gazo/bukken/...) since they're
-    # cleaner than the resizeImage variants for downstream use.
+    # SUUMO embeds listing photos inside inline JSON/JS data on most detail
+    # pages, so scan the raw response text. Only capture the direct CDN URLs
+    # (suumo.jp/front/gazo/bukken/...) — they return the full-size original
+    # and need no query params. The img01.suumo.com/jj/resizeImage variants
+    # require &w=&h= params which are easy to lose during extraction and
+    # render the URL 400-broken without them.
     image_urls: list[str] = []
     seen: set[str] = set()
     for match in re.findall(
-        r"https?://(?:suumo\.jp/front/gazo/bukken/[^\"'\s]+|img\d*\.suumo\.com/jj/resizeImage\?src=gazo%2Fbukken[^\"'\s&]+)\.(?:jpg|jpeg|png)",
+        r"https?://suumo\.jp/front/gazo/bukken/[^\"'\s]+\.(?:jpg|jpeg|png)",
         response.text,
     ):
         if match not in seen:
