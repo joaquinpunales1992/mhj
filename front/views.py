@@ -50,8 +50,15 @@ def submit_premium_request(request):
         return JsonResponse({"error": "Invalid request"}, status=400)
 
     data = json.loads(request.body)
-    user_email = data.get("user_email")
+    user_email = (data.get("user_email") or "").strip()
     property_url = data.get("url")
+
+    if not user_email:
+        # The frontend renders the button regardless of whether we have a
+        # captured email, so anonymous clicks send empty submissions. Reject
+        # so we stop persisting rows we can't act on. The JS can surface a
+        # "log in or register first" prompt.
+        return JsonResponse({"error": "user_email required"}, status=400)
 
     # Persist so the requests are reviewable in /admin/ even if email fails.
     from membership.models import PremiumRequest
