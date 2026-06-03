@@ -30,6 +30,10 @@
       const bookButton = document.getElementById('book-button');
       const successConfirmation = document.getElementById('success-confirmation'); // Assuming you have this element
 
+      // Button is not rendered for anonymous visitors (they see a login CTA
+      // instead). Bail before wiring the listener so JS doesn't crash.
+      if (!bookButton) return;
+
       bookButton.addEventListener('click', function(event) {
           // Show loading state
           const originalText = bookButton.textContent;
@@ -143,11 +147,19 @@
             
             <!-- Book Button -->
             <div class="p-6">
-              <button
-                id="book-button"
-                class="w-full primary text-white font-medium hover:bg-primary/90 transition-colors"
-              >Go Premium
-              </button>
+              {% if user_email %}
+                <button
+                  id="book-button"
+                  class="w-full primary text-white font-medium hover:bg-primary/90 transition-colors"
+                >Go Premium
+                </button>
+              {% else %}
+                <a href="{% url 'account_login' %}?next={% url 'upgrade_premium' %}"
+                   class="w-full primary text-white font-medium hover:bg-primary/90 transition-colors inline-block text-center p-3"
+                   style="text-decoration:none;">
+                  Log in or register to request Premium
+                </a>
+              {% endif %}
             </div>
 
 
