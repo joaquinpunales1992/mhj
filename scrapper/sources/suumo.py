@@ -111,17 +111,19 @@ def parse_listing(url: str) -> dict | None:
     construction = table.get("完成時期（築年月）") or table.get("完成時期(築年月)", "")
     location = table.get("住所") or table.get("所在地", "")
 
-    image_urls = []
-    for img in soup.find_all("img"):
-        src = img.get("src") or img.get("data-src") or ""
-        if not src:
-            continue
-        # Listing photos appear at suumo.jp/front/gazo/bukken/... (direct) and
-        # img01.suumo.com/jj/resizeImage?...gazo%2Fbukken%2F... (resized).
-        if "/bukken/" in src or "%2Fbukken%2F" in src:
-            full = src if src.startswith("http") else "https:" + src if src.startswith("//") else BASE_URL + src
-            if full not in image_urls:
-                image_urls.append(full)
+    # SUUMO frequently embeds listing photos inside inline JSON/JS data
+    # rather than <img> tags, so scan the raw response text. We grab the
+    # direct CDN URLs (suumo.jp/front/gazo/bukken/...) since they're
+    # cleaner than the resizeImage variants for downstream use.
+    image_urls: list[str] = []
+    seen: set[str] = set()
+    for match in re.findall(
+        r"https?://(?:suumo\.jp/front/gazo/bukken/[^\"'\s]+|img\d*\.suumo\.com/jj/resizeImage\?src=gazo%2Fbukken[^\"'\s&]+)\.(?:jpg|jpeg|png)",
+        response.text,
+    ):
+        if match not in seen:
+            seen.add(match)
+            image_urls.append(match)
 
     translator = GoogleTranslator(source="auto", target="en")
 
