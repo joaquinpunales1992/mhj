@@ -64,7 +64,12 @@ class Property(TimestampMixin):
         return self.images.exists()
 
     def get_ordered_images(self):
-        return self.images.order_by("first_image", "-id")
+        # -first_image so an image explicitly marked first comes first (True > False).
+        # id ascending so when nothing is marked, we get the first photo the scraper
+        # inserted — which is the lowest-numbered SUUMO photo, conventionally the
+        # main exterior shot. (The old "-id" ordering surfaced the *last* inserted
+        # photo, often a marketing flyer at the end of the listing.)
+        return self.images.order_by("-first_image", "id")
 
     def get_location_for_front(self):
         return infer_location(self.location)
