@@ -201,7 +201,7 @@
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
 										{% else %}
 											{% if first_image.show_in_front %}
-												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}"/></a>
+												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}" loading="lazy" decoding="async"/></a>
 											{% endif %}
 											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
