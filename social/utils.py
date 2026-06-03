@@ -742,28 +742,29 @@ def create_property_video(
         .with_position(("center", 0.03), relative=True)
     )
 
-    final_video = CompositeVideoClip([clip, text_clip, text_clip_top])
-    # libx264 can refuse to open the encoder with the auto-derived defaults
-    # (especially under tight memory budgets and with odd dimensions on
-    # composited clips). Mirror the explicit settings from the first
-    # write_videofile call above.
-    if final_video.w % 2 != 0 or final_video.h % 2 != 0:
-        final_video = final_video.resized(
-            (final_video.w + (final_video.w % 2), final_video.h + (final_video.h % 2))
+    # Composited clip with TextClip overlays — libx264 has been failing to
+    # open the encoder for this on Namecheap (likely a TextClip pixel-format
+    # quirk or resource limit), even with explicit params that work for the
+    # first non-composited write. Try ultrafast preset first; on any failure
+    # fall back to the already-written no-label video so the bot still posts.
+    try:
+        final_video = CompositeVideoClip([clip, text_clip, text_clip_top])
+        if final_video.w % 2 != 0 or final_video.h % 2 != 0:
+            final_video = final_video.resized(
+                (final_video.w + (final_video.w % 2), final_video.h + (final_video.h % 2))
+            )
+        final_video.write_videofile(
+            output_path,
+            fps=30,
+            codec="libx264",
+            audio_codec="aac",
+            preset="ultrafast",
+            ffmpeg_params=["-pix_fmt", "yuv420p", "-movflags", "+faststart"],
         )
-    final_video.write_videofile(
-        output_path,
-        fps=30,
-        codec="libx264",
-        bitrate="3500k",
-        preset="medium",
-        ffmpeg_params=[
-            "-profile:v", "high",
-            "-level", "4.1",
-            "-pix_fmt", "yuv420p",
-            "-movflags", "+faststart",
-            "-g", "60",
-            "-sc_threshold", "0",
-        ],
-    )
-    logger.info(f"Video created: {output_path}")
+        logger.info(f"Video created with overlays: {output_path}")
+    except Exception as exc:
+        logger.warning(
+            f"Text-overlay composite failed ({exc}); falling back to no-label video."
+        )
+        shutil.copy("property_video_without_label.mp4", output_path)
+        logger.info(f"Video created (no overlays): {output_path}")
