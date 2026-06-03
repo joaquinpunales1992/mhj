@@ -60,10 +60,10 @@ def submit_premium_request(request):
         email = EmailMessage(
             subject="Your Akiya in Japan - Premium Account Request",
             body=html_message,
-            from_email="hello@myakiyainjapan.com",
+            from_email="hello@akiyainjapan.com",
             to=[user_email],
             bcc=["joaquinpunales@gmail.com"],
-            reply_to=["hello@myakiyainjapan.com"],
+            reply_to=["hello@akiyainjapan.com"],
         )
 
         email.content_subtype = "html"
@@ -92,10 +92,10 @@ def send_booking_confirmation(request):
         email = EmailMessage(
             subject="Your Akiya in Japan - Booking Confirmation",
             body=html_message,
-            from_email="hello@myakiyainjapan.com",
+            from_email="hello@akiyainjapan.com",
             to=[user_email],
             bcc=["joaquinpunales@gmail.com"],
-            reply_to=["hello@myakiyainjapan.com"],
+            reply_to=["hello@akiyainjapan.com"],
         )
 
         email.content_subtype = "html"

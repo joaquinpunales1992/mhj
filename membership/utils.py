@@ -5,9 +5,9 @@ def notification_email(subject: str, body: str):
     email = EmailMessage(
         subject=subject,
         body=body,
-        from_email="hello@myakiyainjapan.com",
+        from_email="hello@akiyainjapan.com",
         to=["joaquinpunales@gmail.com"],
-        reply_to=["hello@myakiyainjapan.com"],
+        reply_to=["hello@akiyainjapan.com"],
     )
 
     email.content_subtype = "html"
