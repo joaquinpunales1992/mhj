@@ -46,34 +46,53 @@ def display_home(request):
 
 @csrf_exempt
 def submit_premium_request(request):
-    if request.method == "POST":
-        data = json.loads(request.body)
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
 
-        user_email = data.get("user_email")
-        property_url = data.get("url")
+    data = json.loads(request.body)
+    user_email = data.get("user_email")
+    property_url = data.get("url")
 
-        # Render the email template
-        html_message = render_to_string(
-            "emails/premium_request.html", {"property_url": property_url}
-        )
+    # Persist so the requests are reviewable in /admin/ even if email fails.
+    from membership.models import PremiumRequest
+    from membership.utils import notification_email
 
-        email = EmailMessage(
-            subject="Your Akiya in Japan - Premium Account Request",
-            body=html_message,
-            from_email="hello@akiyainjapan.com",
-            to=[user_email],
-            bcc=["joaquinpunales@gmail.com"],
-            reply_to=["hello@akiyainjapan.com"],
-        )
+    PremiumRequest.objects.create(
+        user_email=user_email or "",
+        property_url=property_url or "",
+    )
 
-        email.content_subtype = "html"
-        try:
-            email.send()
-        except Exception as e:
-            print(f"Error sending email: {e}")
+    # Confirmation email to the requester.
+    html_message = render_to_string(
+        "emails/premium_request.html", {"property_url": property_url}
+    )
+    confirmation = EmailMessage(
+        subject="Your Akiya in Japan - Premium Account Request",
+        body=html_message,
+        from_email="hello@akiyainjapan.com",
+        to=[user_email],
+        reply_to=["hello@akiyainjapan.com"],
+    )
+    confirmation.content_subtype = "html"
+    try:
+        confirmation.send()
+    except Exception as e:
+        print(f"Error sending confirmation email: {e}")
 
-        return JsonResponse({"message": "Email sent"})
-    return JsonResponse({"error": "Invalid request"}, status=400)
+    # Clear admin-facing notification so you can act on it.
+    notification_email(
+        subject=f"PREMIUM REQUEST - {user_email}",
+        body=(
+            f"<p>New premium account request.</p>"
+            f"<p><b>Email:</b> {user_email}</p>"
+            f"<p><b>Property:</b> {property_url or '(not provided)'}</p>"
+            f"<p>Review and mark as contacted in "
+            f"<a href='https://akiyainjapan.com/admin/membership/premiumrequest/'>"
+            f"the admin panel</a>.</p>"
+        ),
+    )
+
+    return JsonResponse({"message": "Email sent"})
 
 
 @csrf_exempt
