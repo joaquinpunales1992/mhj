@@ -743,5 +743,27 @@ def create_property_video(
     )
 
     final_video = CompositeVideoClip([clip, text_clip, text_clip_top])
-    final_video.write_videofile(output_path)
+    # libx264 can refuse to open the encoder with the auto-derived defaults
+    # (especially under tight memory budgets and with odd dimensions on
+    # composited clips). Mirror the explicit settings from the first
+    # write_videofile call above.
+    if final_video.w % 2 != 0 or final_video.h % 2 != 0:
+        final_video = final_video.resized(
+            (final_video.w + (final_video.w % 2), final_video.h + (final_video.h % 2))
+        )
+    final_video.write_videofile(
+        output_path,
+        fps=30,
+        codec="libx264",
+        bitrate="3500k",
+        preset="medium",
+        ffmpeg_params=[
+            "-profile:v", "high",
+            "-level", "4.1",
+            "-pix_fmt", "yuv420p",
+            "-movflags", "+faststart",
+            "-g", "60",
+            "-sc_threshold", "0",
+        ],
+    )
     logger.info(f"Video created: {output_path}")
