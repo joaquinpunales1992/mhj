@@ -23,7 +23,7 @@ def display_home(request):
                 PropertyImage.objects.filter(property=models.OuterRef("pk"))
             )
         )
-        .filter(show_in_front=True, price__lte=1500, price__gt=0)
+        .filter(show_in_front=True, price__lte=5000, price__gt=0)
     )
 
     featured = list(base_queryset.filter(featured=True))
@@ -239,7 +239,7 @@ def filter_properties(request, category):
         city_filters |= Q(location__icontains=city)
 
     properties = (
-        Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0)
+        Property.objects.filter(show_in_front=True, price__lte=5000, price__gt=0)
         .filter(city_filters)
         .order_by("-featured", "price")
     )
@@ -254,6 +254,6 @@ def filter_properties(request, category):
 
 def redirect_404_view(request, exception=None):
     properties = Property.objects.filter(
-        show_in_front=True, price__lte=1500, price__gt=0
+        show_in_front=True, price__lte=5000, price__gt=0
     ).order_by("-featured", "price")[: settings.PROPERTIES_TO_DISPLAY]
     return render(request, "home.html", context={"properties": properties})
