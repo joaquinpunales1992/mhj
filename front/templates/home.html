@@ -264,7 +264,8 @@
 							{% endif %}
 						{% endfor %}
 
-						<!-- FINAL PROPERTY CARD -->
+						{% if not page or not page.has_next %}
+						<!-- FINAL PROPERTY CARD (shown only on last page) -->
 						<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
 							<a href="{% static 'images/access_full_listing.png' %}" class="image"><img src="{% static 'images/access_full_listing.png' %}" alt="Upgrade to Access Full Listing"/></a>							
 							<div class="details-box" style="
@@ -301,6 +302,19 @@
 								</div>
 							</div>
 						</article>
+						{% endif %}
+
+						{% if page and page.paginator.num_pages > 1 %}
+							<nav style="display:flex; gap:1rem; justify-content:center; align-items:center; padding:2rem 0; flex-wrap:wrap;">
+								{% if page.has_previous %}
+									<a class="primary" href="?page={{ page.previous_page_number }}" style="padding:0.5rem 1rem;">&laquo; Previous</a>
+								{% endif %}
+								<span style="opacity:0.8;">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+								{% if page.has_next %}
+									<a class="primary" href="?page={{ page.next_page_number }}" style="padding:0.5rem 1rem;">Next &raquo;</a>
+								{% endif %}
+							</nav>
+						{% endif %}
 					</div>
 
 				<!-- Footer -->

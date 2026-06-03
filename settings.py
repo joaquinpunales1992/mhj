@@ -185,7 +185,8 @@ MEDIA_URL = "/media/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
-PROPERTIES_TO_DISPLAY = 60
+PROPERTIES_TO_DISPLAY = 60          # legacy — kept for filter_properties/404 view
+PROPERTIES_PER_PAGE = 24            # new — per-page count for the paginated home grid
 
 HUGGING_FACE_AI_ENDPOINT_URL = ""
 HUGGING_FACE_AI_TOKEN = ""

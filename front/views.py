@@ -11,20 +11,15 @@ from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
 from django.template.loader import render_to_string
+from django.core.paginator import Paginator
 
 
 @cache_page(60 * 60)
 def display_home(request):
-    # Base queryset with optimizations
     base_queryset = (
-        Property.objects.select_related(
-            # Add any ForeignKey fields here if needed
-        )
-        .prefetch_related("images")
+        Property.objects.prefetch_related("images")
         .annotate(
             has_any_image=models.Exists(
-                # Assuming your related model is called PropertyImage or similar
-                # Replace 'PropertyImage' with your actual image model name
                 PropertyImage.objects.filter(property=models.OuterRef("pk"))
             )
         )
@@ -35,12 +30,15 @@ def display_home(request):
     non_featured = list(base_queryset.filter(featured=False))
     random.shuffle(featured)
     random.shuffle(non_featured)
-
     properties = featured + non_featured
-    properties = properties[: settings.PROPERTIES_TO_DISPLAY]
+
+    paginator = Paginator(properties, settings.PROPERTIES_PER_PAGE)
+    page = paginator.get_page(request.GET.get("page"))
 
     return render(
-        request, "home.html", context={"properties": properties, "nav": "home"}
+        request,
+        "home.html",
+        context={"properties": page.object_list, "page": page, "nav": "home"},
     )
 
 
@@ -243,10 +241,14 @@ def filter_properties(request, category):
     properties = (
         Property.objects.filter(show_in_front=True, price__lte=1500, price__gt=0)
         .filter(city_filters)
-        .order_by("-featured", "price")[: settings.PROPERTIES_TO_DISPLAY]
+        .order_by("-featured", "price")
     )
+    paginator = Paginator(properties, settings.PROPERTIES_PER_PAGE)
+    page = paginator.get_page(request.GET.get("page"))
     return render(
-        request, "home.html", context={"properties": properties, "nav": category}
+        request,
+        "home.html",
+        context={"properties": page.object_list, "page": page, "nav": category},
     )
 
 
