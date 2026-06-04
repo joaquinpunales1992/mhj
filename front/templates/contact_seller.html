@@ -1470,8 +1470,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="modal-body" style="padding:0;">
           <iframe
             id="mapIframe"
-            data-src="https://www.google.com/maps?q={{ property.location|urlencode }}&output=embed"
-            src=""
+            src="https://www.google.com/maps?q={{ property.get_location_for_map|urlencode }}&output=embed"
             width="100%"
             height="500"
             frameborder="0"

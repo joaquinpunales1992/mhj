@@ -57,8 +57,15 @@ class Property(TimestampMixin):
     def get_price_for_front(self):
         return convert_yen_to_usd(convert_price_string(self.price))
 
+    def get_location_for_map(self):
+        # Scraped locations sometimes have trailing UI junk like
+        # "[ ■ Surrounding environment]" (SUUMO) that Google Maps refuses
+        # to geocode. Strip everything from the first '[' onward.
+        loc = (self.location or "").split("[", 1)[0].strip(" ,")
+        return loc
+
     def get_location_url(self):
-        return f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(self.location, safe='')}"
+        return f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(self.get_location_for_map(), safe='')}"
 
     def property_has_any_image(self):
         return self.images.exists()
