@@ -1172,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Location</p>
-                <p class="text-xll">{{ property.location }} | <a href="{{ property.get_location_url }}" target="_blank" class="text-blue-500 hover:underline">View on Map</a></p>
+                <p class="text-xll">{{ property.location }} | <a href="#" data-toggle="modal" data-target="#mapModal" class="text-blue-500 hover:underline">View on Map</a></p>
                 <hr>
               </div>
               </div>
@@ -1458,5 +1458,42 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </main>
   </div>
+
+  <!-- Map modal: lazy-loads Google Maps embed when opened -->
+  <div class="modal fade" id="mapModal" tabindex="-1" role="dialog" aria-labelledby="mapModalLabel">
+    <div class="modal-dialog modal-lg" role="document" style="max-width: 900px;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+          <h4 class="modal-title" id="mapModalLabel">{{ property.location }}</h4>
+        </div>
+        <div class="modal-body" style="padding:0;">
+          <iframe
+            id="mapIframe"
+            data-src="https://www.google.com/maps?q={{ property.location|urlencode }}&output=embed"
+            src=""
+            width="100%"
+            height="500"
+            frameborder="0"
+            style="border:0; display:block;"
+            allowfullscreen
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Defer the Google Maps iframe load until the user actually opens the modal.
+    document.addEventListener('DOMContentLoaded', function() {
+      var modal = document.getElementById('mapModal');
+      if (!modal) return;
+      $(modal).on('shown.bs.modal', function() {
+        var iframe = document.getElementById('mapIframe');
+        if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
+      });
+    });
+  </script>
 </body>
 </html>
