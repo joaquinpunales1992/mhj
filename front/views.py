@@ -241,6 +241,11 @@ def filter_properties(request, category):
     properties = (
         Property.objects.filter(show_in_front=True, price__lte=5000, price__gt=0)
         .filter(city_filters)
+        .annotate(
+            has_any_image=models.Exists(
+                PropertyImage.objects.filter(property=models.OuterRef("pk"))
+            )
+        )
         .order_by("-featured", "price")
     )
     paginator = Paginator(properties, settings.PROPERTIES_PER_PAGE)
@@ -253,7 +258,13 @@ def filter_properties(request, category):
 
 
 def redirect_404_view(request, exception=None):
-    properties = Property.objects.filter(
-        show_in_front=True, price__lte=5000, price__gt=0
-    ).order_by("-featured", "price")[: settings.PROPERTIES_TO_DISPLAY]
+    properties = (
+        Property.objects.filter(show_in_front=True, price__lte=5000, price__gt=0)
+        .annotate(
+            has_any_image=models.Exists(
+                PropertyImage.objects.filter(property=models.OuterRef("pk"))
+            )
+        )
+        .order_by("-featured", "price")[: settings.PROPERTIES_TO_DISPLAY]
+    )
     return render(request, "home.html", context={"properties": properties})
