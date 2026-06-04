@@ -52,7 +52,7 @@
             <p class="text-secondary max-w-xl">
               {% if property.price %} {{ property.price }} | {% endif %} {% if property.building_area %} Building Area: {{ property.building_area }} | {% endif %} {% if property.land_area %} Land Area: {{ property.land_area }} | {% endif %} {% if property.location %} {{ property.location }} | {% endif %} {% if property.parking %} {{ property.parking }} | {% endif %} {% if property.construction %} {{ property.construction }} {% endif %}
             </p>
-              <div id="myCarousel" class="carousel slide" style="width: 60%;"  data-ride="carousel">
+              <div id="myCarousel" class="carousel slide" style="width: 100%; max-width: 1100px; margin: 0 auto;"  data-ride="carousel">
                 <!-- Indicators -->
                 <ol class="carousel-indicators">
                   {% for image in property.images.all %}
@@ -65,7 +65,7 @@
   
                   {% for image in property.images.all %}
                       <div class="item {% if forloop.first %}active{% endif %}">
-                          <img src="{{ image.file }}" alt="Los Angeles" style="width:100%;">
+                          <img src="{{ image.file }}" alt="{{ property.title }}" loading="lazy" decoding="async" style="width:100%; max-height:600px; object-fit:cover; display:block;">
                           <div class="carousel-caption">
                           </div>
                       </div>
