@@ -26,24 +26,62 @@ USE_AI_CAPTION = True
 
 DEFAULT_COMMENT = "Find out More at www.akiyainjapan.com"
 
-HASHTAGS_LIST = [
+# Hashtags are built as: CORE (always on, brand identity) + location-aware tags
+# (derived from the property's prefecture/city) + a sampled handful of ROTATING
+# tags for variety. This keeps a consistent, relevant count instead of the old
+# "random 1..19 tags" behaviour, and drops the #aribnb typo / stray #saga.
+CORE_HASHTAGS = [
     "#akiya",
+    "#akiyainjapan",
+    "#cheaphousesjapan",
+    "#myakiyainjapan",
     "#japan",
+]
+
+ROTATING_HASHTAGS = [
     "#japanlife",
-    "#cheaphouse",
     "#vacationhouse",
     "#affordablehouse",
     "#japanesehouse",
-    "#myakiyainjapan",
     "#explorejpn",
     "#livingabroad",
     "#japanrealestate",
-    "#cheaphousesjapan",
     "#japanesearchitecture",
-    "#saga",
-    "#aribnb",
-    "#buyingahome",
+    "#airbnb",
     "#homesforsale",
     "#japanproperty",
     "#japaneselifestyle",
+    "#movetojapan",
+    "#countrylife",
+    "#renovationproject",
 ]
+
+# How many rotating tags to sample per post (on top of core + location tags).
+NUM_ROTATING_HASHTAGS = 6
+
+# Romaji names of Japan's 47 prefectures, used to add a location-aware hashtag
+# (e.g. a property in "Akita Prefecture" gets #akita).
+JAPAN_PREFECTURES = [
+    "Hokkaido", "Aomori", "Iwate", "Miyagi", "Akita", "Yamagata", "Fukushima",
+    "Ibaraki", "Tochigi", "Gunma", "Saitama", "Chiba", "Tokyo", "Kanagawa",
+    "Niigata", "Toyama", "Ishikawa", "Fukui", "Yamanashi", "Nagano", "Gifu",
+    "Shizuoka", "Aichi", "Mie", "Shiga", "Kyoto", "Osaka", "Hyogo", "Nara",
+    "Wakayama", "Tottori", "Shimane", "Okayama", "Hiroshima", "Yamaguchi",
+    "Tokushima", "Kagawa", "Ehime", "Kochi", "Fukuoka", "Saga", "Nagasaki",
+    "Kumamoto", "Oita", "Miyazaki", "Kagoshima", "Okinawa",
+]
+
+# Kept as an alias for backwards compatibility with any external references.
+HASHTAGS_LIST = CORE_HASHTAGS + ROTATING_HASHTAGS
+
+# --- Reel video style (tunable) -------------------------------------------
+# Reels are vertical 9:16. If ffmpeg is OOM-killed on the server again, the
+# cheapest lever is to drop these to 720x1280 (≈40% fewer pixels per frame),
+# then to set REEL_ENABLE_KEN_BURNS = False.
+REEL_WIDTH = 1080
+REEL_HEIGHT = 1920
+REEL_BG_COLOR = (17, 17, 17)          # dark backdrop behind the photo
+REEL_ENABLE_KEN_BURNS = False         # slow zoom on each photo (CPU-heavy; enable once the VPS proves it can keep up)
+REEL_KEN_BURNS_ZOOM = 0.08            # 8% zoom over each slide
+REEL_CROSSFADE = 0.4                  # seconds of crossfade between slides
+REEL_BRAND_TEXT = "akiyainjapan.com"  # persistent watermark

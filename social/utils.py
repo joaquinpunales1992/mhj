@@ -24,6 +24,8 @@ from moviepy import (
     TextClip,
     CompositeVideoClip,
     VideoFileClip,
+    ColorClip,
+    vfx,
 )
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 from membership.utils import notify_social_token_expired
@@ -105,25 +107,72 @@ def _get_random_mp3_full_path(exclude: str) -> str:
 
 
 def _sanity_check_ai_caption(ai_caption: str) -> str:
-    ai_caption = ai_caption.replace('"', "")
-
-    reversed_text = ai_caption[::-1]
-    match = re.search(r"[.!?]", reversed_text)
-    if match:
-        cut_index = len(ai_caption) - match.start()
-        return ai_caption[:cut_index]
+    # Strip wrapping quotes and tidy whitespace. We intentionally do NOT trim
+    # everything after the last '.!?' anymore: CTAs often end in an emoji (no
+    # terminal punctuation), and the old behaviour silently deleted them.
+    ai_caption = ai_caption.replace('"', "").strip()
+    # Collapse 3+ blank lines down to a single blank line.
+    ai_caption = re.sub(r"\n{3,}", "\n\n", ai_caption)
     return ai_caption.strip()
 
 
-def random_hashtags(hashtags):
+def _clean_location(location: str) -> str:
+    """Tidy a scraped location string for display.
+
+    Strips trailing scraper artefacts like '[ ■ Surrounding environment ]'
+    and bracketed notes, collapses whitespace.
     """
-    Pick a random number k between 1 and len(hashtags),
-    then return k random hashtags joined as a string.
-    """
-    if not hashtags:
+    if not location:
         return ""
-    k = random.randint(1, len(hashtags))
-    chosen = random.sample(hashtags, k)
+    # Drop anything from a '[' onward (scraper section markers) and any
+    # leftover '■'/'●' bullet glyphs.
+    location = re.split(r"[\[■●]", location)[0]
+    return re.sub(r"\s+", " ", location).strip(" ,-")
+
+
+def _clean_area(area: str) -> str:
+    """Normalise a scraped area string like '198.73m 2 （60.11坪）（登記）'.
+
+    -> '198.73 m² (60.11 tsubo)'. Drops registration notes like （登記）.
+    """
+    if not area:
+        return ""
+    area = str(area)
+    area = re.sub(r"（\s*登記\s*）|\(\s*登記\s*\)", "", area)  # drop registration note
+    area = re.sub(r"m\s*2|㎡", "m²", area)                      # 'm 2' / '㎡' -> 'm²'
+    # （60.11坪） -> (60.11 tsubo)
+    area = re.sub(r"[（(]\s*([\d.]+)\s*坪\s*[）)]", r"(\1 tsubo)", area)
+    return re.sub(r"\s+", " ", area).strip()
+
+
+def _location_hashtags(location: str) -> list:
+    """Derive location-aware hashtags (prefecture + city) from a location."""
+    tags = []
+    if not location:
+        return tags
+    for pref in JAPAN_PREFECTURES:
+        if re.search(rf"\b{pref}\b", location, re.IGNORECASE):
+            tags.append(f"#{pref.lower()}")
+            break
+    city = re.search(r"([A-Za-z][A-Za-z]+)\s+City", location)
+    if city:
+        tags.append(f"#{city.group(1).lower()}")
+    return tags
+
+
+def build_hashtags(location: str = "") -> str:
+    """Core tags + location-aware tags + a sampled set of rotating tags.
+
+    Consistent, relevant count (no more random 1..19), deduped, order-stable.
+    """
+    chosen = list(CORE_HASHTAGS)
+    for tag in _location_hashtags(location):
+        if tag not in chosen:
+            chosen.append(tag)
+
+    pool = [t for t in ROTATING_HASHTAGS if t not in chosen]
+    k = min(NUM_ROTATING_HASHTAGS, len(pool))
+    chosen += random.sample(pool, k) if k else []
     return " ".join(chosen)
 
 
@@ -136,66 +185,79 @@ def generate_caption_for_post(
     last_caption_generated: str,
     use_ai_caption: bool,
 ):
-    caption = f"Location: {property_location} - Price: {property_price} "
+    # Tidy the scraped fields before they go anywhere near the caption.
+    location = _clean_location(property_location)
+    building_area = _clean_area(property_building_area)
+    land_area = _clean_area(property_land_area)
+    hashtags = build_hashtags(location)
 
-    hashtags = random_hashtags(HASHTAGS_LIST)
+    def _details_block():
+        lines = [f"💰 {property_price}", f"📍 {location}"]
+        if building_area:
+            lines.append(f"🏡 Building: {building_area}")
+        if land_area:
+            lines.append(f"🌳 Land: {land_area}")
+        lines.append(f"\n🔗 www.akiyainjapan.com{property_url}")
+        return "\n".join(lines) + f"\n\n{hashtags}"
 
     ai_caption = ""
     if use_ai_caption:
         try:
             cerebras_ai_client = CerebrasAI()
 
-            # Define different caption styles/tones
-            caption_styles = [
-                "casual and friendly",
-                "professional and informative",
-                "excited and enthusiastic",
-                "luxurious and sophisticated",
-                "warm and welcoming",
-                "trendy and modern",
+            # Vary the angle so a feed of posts doesn't read identically.
+            caption_angles = [
+                "lead with the lifestyle this location offers",
+                "lead with the value/affordability for the price",
+                "lead with the dream of owning a home in rural Japan",
+                "lead with what makes this area or region special",
+                "lead with the renovation/creative potential",
+                "lead with a vivid sense of place and the seasons",
             ]
-
-            # Define different call-to-action variations
             cta_options = [
-                "Check out our website for more details!",
-                "DM us for a private showing!",
-                "Don't let this one slip away!",
-                "Ready to make this home? Contact us!",
-                "Virtual tour available - just ask!",
+                "Full details and more photos on our website 👇",
+                "DM us if you'd like to know more 💬",
+                "Save this one and check the link in our bio ✨",
+                "More photos and the full listing on our site 🏠",
+                "Thinking about it? Let's chat — drop us a message 📩",
             ]
-
-            selected_style = random.choice(caption_styles)
+            selected_angle = random.choice(caption_angles)
             selected_cta = random.choice(cta_options)
 
             ai_caption = cerebras_ai_client.generate_text(
                 prompt=(
-                    f"Generate a catchy social media caption for a property in {property_location} priced at {property_price}. "
-                    f"Use a {selected_style} tone. "
-                    "The caption should be engaging, highlight unique features, and feel authentic and human-written.\n\n"
-                    f"Previous caption to avoid repeating: {last_caption_generated}\n\n"
-                    f"End with this call-to-action: {selected_cta}\n\n"
-                    "Make it conversational, use natural language, and vary the structure. "
+                    "You write Instagram/Facebook captions for a brand that sells "
+                    "affordable houses (akiya) in Japan to an international audience.\n\n"
+                    f"Property location: {location}\n"
+                    f"Price: {property_price}\n\n"
+                    "Write ONE caption with this structure:\n"
+                    "1. A short, scroll-stopping hook (one line).\n"
+                    "2. Two or three short, warm sentences that paint the lifestyle "
+                    "and sense of place. Reference the actual location/region.\n"
+                    f"3. End with this exact call-to-action: {selected_cta}\n\n"
+                    f"Creative direction: {selected_angle}.\n"
+                    "Rules:\n"
+                    "- Use line breaks between the hook, the body, and the CTA.\n"
+                    "- Sound human and specific; avoid clichés like 'nestled', "
+                    "'hidden gem', 'hustle and bustle', 'boasts', 'slip away'.\n"
+                    "- At most 1-2 tasteful emojis in the body.\n"
+                    "- Do NOT invent features (bedrooms, condition, views) you weren't given.\n"
+                    "- Do NOT include hashtags, the price, or the address (added separately).\n"
+                    f"- Do NOT repeat this previous caption: {last_caption_generated}\n"
                     "Output ONLY the caption text."
                 )
             )
 
             ai_caption = _sanity_check_ai_caption(ai_caption)
-
-            caption = (
-                ai_caption
-                + f"\n\n💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
-            )
+            caption = f"{ai_caption}\n\n{_details_block()}"
             logger.info(f"Caption generated via AI: {caption}")
         except Exception as e:
-            caption = f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}"
+            caption = _details_block()
             logger.error(f"AI caption generation failed: {e}")
         return ai_caption, caption
     else:
         logger.info("AI caption generation is disabled, using default caption format.")
-        return (
-            ai_caption,
-            f"💰 Price: {property_price}\n📍 Location: {property_location}\n🏡 Building Area:  {property_building_area}\n🌳 Land Area: {property_land_area}\n\n🔗 www.akiyainjapan.com{property_url}\n\n{hashtags}",
-        )
+        return ai_caption, _details_block()
 
 
 def post_to_instagram(
@@ -687,10 +749,9 @@ def post_facebook_reel():
 def create_property_video(
     property_id: int, output_path: str, audio_path: str, duration_per_image: int = 3
 ):
-    # Reel target width. Suumo source photos are often 1200px+ wide; encoding
-    # at native resolution is what exhausted memory on the VPS and got ffmpeg
-    # OOM-killed. Downscaling to this width is the biggest memory saving.
-    MAX_VIDEO_WIDTH = 1080
+    W, H = REEL_WIDTH, REEL_HEIGHT
+    bold_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf")
+    light_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf")
 
     cerebras_ai_client = CerebrasAI()
     images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
@@ -699,40 +760,49 @@ def create_property_video(
         logger.error("No images found for the property.")
         return None
 
-    clips = []
+    def _make_slide(local_path):
+        """Vertical 9:16 slide: photo scaled to cover the frame, gentle zoom."""
+        img = ImageClip(local_path, duration=duration_per_image)
+        # Scale to COVER the vertical canvas (fill, cropping overflow).
+        img = img.resized(max(W / img.w, H / img.h))
+        if REEL_ENABLE_KEN_BURNS:
+            zoom = REEL_KEN_BURNS_ZOOM
+            img = img.resized(lambda t: 1 + zoom * (t / duration_per_image))
+        img = img.with_position("center")
+        bg = ColorClip((W, H), color=REEL_BG_COLOR, duration=duration_per_image)
+        return CompositeVideoClip([bg, img], size=(W, H))
 
+    slides = []
     for img_obj in images:
-        # Use the correct field name for your image URL here:
-        img_url = prepare_image_url_for_facebook(
-            img_obj.file.url
-        )  # ← change if your field is different
+        img_url = prepare_image_url_for_facebook(img_obj.file.url)
         logger.info(f"Preparing image URL: {img_url}")
         try:
-            local_path = _download_image_to_tempfile(img_url)
-            clip = ImageClip(local_path, duration=duration_per_image)
-
-            # Downscale large images to the reel target width first.
-            if clip.w > MAX_VIDEO_WIDTH:
-                clip = clip.resized(MAX_VIDEO_WIDTH / clip.w)
-
-            if clip.w % 2 != 0 or clip.h % 2 != 0:
-                clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
-
-            clips.append(clip)
+            slides.append(_make_slide(_download_image_to_tempfile(img_url)))
         except Exception as e:
             logger.warning(f" Skipping image {img_url}: {e}")
 
-    if not clips:
+    if not slides:
         logger.error("No valid images to create video.")
         return None
 
-    final_video = concatenate_videoclips(clips, method="compose")
+    # Concatenate with crossfades; fall back to hard cuts if the transition
+    # API misbehaves so we never lose the whole video over a transition.
+    try:
+        faded = [
+            s.with_effects([vfx.CrossFadeIn(REEL_CROSSFADE)]) if i else s
+            for i, s in enumerate(slides)
+        ]
+        base = concatenate_videoclips(faded, method="compose", padding=-REEL_CROSSFADE)
+    except Exception as exc:
+        logger.warning(f"Crossfade concat failed ({exc}); using hard cuts.")
+        base = concatenate_videoclips(slides, method="compose")
+    base = base.with_effects([vfx.FadeOut(0.5)])
 
     # Write the base (no-label) video. Lighter preset/bitrate + capped threads
     # keep peak memory low so ffmpeg isn't OOM-killed. On failure, return None
     # so the caller can try another property instead of crashing the whole run.
     try:
-        final_video.write_videofile(
+        base.write_videofile(
             "property_video_without_label.mp4",
             fps=30,
             codec="libx264",
@@ -758,58 +828,78 @@ def create_property_video(
     except Exception as exc:
         logger.error(f"Base video encode failed for property {property_id}: {exc}")
         return None
-    clip = VideoFileClip("property_video_without_label.mp4").subclipped(
-        0, images.count() * duration_per_image
-    )
 
-    video_text_default = (
-        f"{property.get_price_for_front}\n{property.get_location_for_front()} \n "
-    )
+    # Trim to the visual duration: the audio track is a full song and would
+    # otherwise stretch the reel to the song's length with frozen frames.
+    target = base.duration
+    clip = VideoFileClip("property_video_without_label.mp4").subclipped(0, target)
+    dur = clip.duration
 
-    text_clip = (
-        TextClip(
-            font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf"),
-            text=video_text_default,
-            font_size=30,
-            color="white",
+    # --- Text overlays -----------------------------------------------------
+    def _band(y_frac, h_frac, opacity=0.45):
+        return (
+            ColorClip((W, int(H * h_frac)), color=(0, 0, 0), duration=dur)
+            .with_opacity(opacity)
+            .with_position((0, int(H * y_frac)))
         )
-        .with_duration(images.count() * duration_per_image)
-        .with_position((0.1, 0.7), relative=True)
-    )
 
-    video_top_text_default = "Link in Bio \n "
+    def _centered_text(text, y_frac, h_frac, font, font_size):
+        return (
+            TextClip(
+                font=font,
+                text=text,
+                font_size=font_size,
+                color="white",
+                stroke_color="black",
+                stroke_width=3,
+                method="caption",
+                text_align="center",
+                size=(W - 140, int(H * h_frac)),
+            )
+            .with_duration(dur)
+            .with_position(("center", int(H * y_frac)))
+        )
 
+    # Top: short AI hook, sanitised to ASCII (the model sometimes injects CJK).
     try:
-        video_top_text = cerebras_ai_client.generate_text(
-            prompt="generate a short and engaging text, 12 chararacters max, to use in a Property Listing."
-            " Do not include attributes of the property that you do not know. Be really creative."
+        raw_top = cerebras_ai_client.generate_text(
+            prompt="Generate a short, punchy 2-4 word overlay phrase in ENGLISH ONLY for a"
+            " Japan property reel (e.g. 'Your Quiet Escape'). No quotes, no emojis,"
+            " no non-English characters, title case."
         )
     except Exception as exc:
         logger.warning(f"Cerebras failed for video overlay text, using default: {exc}")
-        video_top_text = None
+        raw_top = None
+    top_clean = re.sub(r"[^A-Za-z0-9 &!'-]", "", raw_top or "").strip() if raw_top else ""
+    video_top_text = top_clean[:24].strip() or "Link in Bio"
 
-    text_clip_top = (
+    # Bottom info: price + cleaned location.
+    price = property.get_price_for_front
+    loc = _clean_location(property.get_location_for_front())
+
+    overlays = [
+        clip,
+        _band(0.05, 0.11),
+        _centered_text(video_top_text, 0.05, 0.11, light_font, 60),
+        _band(0.66, 0.17),
+        _centered_text(f"{price}\n{loc}", 0.66, 0.17, bold_font, 54),
+        # Persistent brand watermark.
         TextClip(
-            font=os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf"),
-            text=f"{video_top_text} \n " if video_top_text else video_top_text_default,
-            font_size=30,
+            font=bold_font,
+            text=REEL_BRAND_TEXT,
+            font_size=36,
             color="white",
+            stroke_color="black",
+            stroke_width=2,
         )
-        .with_duration(images.count() * duration_per_image)
-        .with_position(("center", 0.03), relative=True)
-    )
+        .with_duration(dur)
+        .with_position(("center", int(H * 0.91))),
+    ]
 
-    # Composited clip with TextClip overlays — libx264 has been failing to
-    # open the encoder for this on Namecheap (likely a TextClip pixel-format
-    # quirk or resource limit), even with explicit params that work for the
-    # first non-composited write. Try ultrafast preset first; on any failure
-    # fall back to the already-written no-label video so the bot still posts.
+    # Composite overlays onto the base video. On any failure, fall back to the
+    # already-written no-label video so the bot still posts something.
     try:
-        final_video = CompositeVideoClip([clip, text_clip, text_clip_top])
-        if final_video.w % 2 != 0 or final_video.h % 2 != 0:
-            final_video = final_video.resized(
-                (final_video.w + (final_video.w % 2), final_video.h + (final_video.h % 2))
-            )
+        final_video = CompositeVideoClip(overlays, size=(W, H))
         final_video.write_videofile(
             output_path,
             fps=30,
