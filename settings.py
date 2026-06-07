@@ -3,7 +3,11 @@ from pathlib import Path
 import environ
 
 env = environ.Env()
-environ.Env.read_env(".env")
+# Load .env by ABSOLUTE path (next to this settings file). A relative ".env"
+# only works when the process CWD is the project dir (e.g. manage.py / cron) —
+# under Passenger the web process has a different CWD, so .env silently wasn't
+# loaded and env-backed settings (Google OAuth, etc.) came up empty on the web.
+environ.Env.read_env(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
