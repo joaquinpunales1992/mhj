@@ -7,3 +7,6 @@ db.sqlite3
 media
 
 .vscode/
+# Secrets / runtime tokens (never commit these)
+.env
+social_access_token.json
