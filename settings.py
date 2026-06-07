@@ -139,8 +139,24 @@ USE_I18N = True
 USE_TZ = True
 
 # Django All Auth
+# Google OAuth credentials come from the environment (.env) so secrets stay out
+# of source control. Create them in Google Cloud Console (OAuth client ID, type
+# "Web application") and set GOOGLE_OAUTH_CLIENT_ID / GOOGLE_OAUTH_SECRET in the
+# server's .env. Authorized redirect URI must be:
+#   https://<your-domain>/accounts/google/login/callback/
+GOOGLE_OAUTH_CLIENT_ID = env("GOOGLE_OAUTH_CLIENT_ID", default="")
+GOOGLE_OAUTH_SECRET = env("GOOGLE_OAUTH_SECRET", default="")
+
 SOCIALACCOUNT_PROVIDERS = {
-    "google": {"APP": {"client_id": "", "secret": "", "key": ""}}
+    "google": {
+        "APP": {
+            "client_id": GOOGLE_OAUTH_CLIENT_ID,
+            "secret": GOOGLE_OAUTH_SECRET,
+            "key": "",
+        },
+        "SCOPE": ["profile", "email"],
+        "AUTH_PARAMS": {"access_type": "online"},
+    }
 }
 
 SOCIALACCOUNT_ADAPTER = "membership.adapter.SocialAccountAdapter"
