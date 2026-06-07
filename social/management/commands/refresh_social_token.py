@@ -1,5 +1,5 @@
 from django.core.management.base import BaseCommand
-from social.social_bot import refresh_access_token
+from social.utils import refresh_access_token
 
 
 class Command(BaseCommand):
