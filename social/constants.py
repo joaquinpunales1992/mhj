@@ -75,13 +75,15 @@ JAPAN_PREFECTURES = [
 HASHTAGS_LIST = CORE_HASHTAGS + ROTATING_HASHTAGS
 
 # --- Reel video style (tunable) -------------------------------------------
-# Reels are vertical 9:16. If ffmpeg is OOM-killed on the server again, the
-# cheapest lever is to drop these to 720x1280 (≈40% fewer pixels per frame),
-# then to set REEL_ENABLE_KEN_BURNS = False.
-REEL_WIDTH = 1080
-REEL_HEIGHT = 1920
+# Reels are vertical 9:16. The server has very little RAM (it OOM-killed at
+# 1080x1920), so we default to 720x1280 and FIT photos onto the canvas
+# (downscale only — never upscale, which is what blew up memory). If it still
+# gets Killed, drop to 540x960. Ken Burns is CPU-heavy; enable only once the
+# VPS proves it can keep up.
+REEL_WIDTH = 540
+REEL_HEIGHT = 960
 REEL_BG_COLOR = (17, 17, 17)          # dark backdrop behind the photo
-REEL_ENABLE_KEN_BURNS = False         # slow zoom on each photo (CPU-heavy; enable once the VPS proves it can keep up)
+REEL_ENABLE_KEN_BURNS = False         # slow zoom on each photo
 REEL_KEN_BURNS_ZOOM = 0.08            # 8% zoom over each slide
 REEL_CROSSFADE = 0.4                  # seconds of crossfade between slides
 REEL_BRAND_TEXT = "akiyainjapan.com"  # persistent watermark

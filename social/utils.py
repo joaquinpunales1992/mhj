@@ -28,6 +28,7 @@ from moviepy import (
     vfx,
 )
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+from PIL import Image
 from membership.utils import notify_social_token_expired
 import logging
 from django.conf import settings
@@ -761,14 +762,21 @@ def create_property_video(
         return None
 
     def _make_slide(local_path):
-        """Vertical 9:16 slide: photo scaled to cover the frame, gentle zoom."""
-        img = ImageClip(local_path, duration=duration_per_image)
-        # Scale to COVER the vertical canvas (fill, cropping overflow).
-        img = img.resized(max(W / img.w, H / img.h))
+        """Vertical 9:16 slide: photo fit onto a dark canvas (downscale only).
+
+        We pre-shrink with PIL so a large source image is never fully decoded
+        into a giant array — upscaling to 'cover' is what OOM-killed the VPS.
+        """
+        # Downscale to fit within the canvas, in place (Pillow only shrinks).
+        with Image.open(local_path) as im:
+            im = im.convert("RGB")
+            im.thumbnail((W, H), Image.LANCZOS)
+            im.save(local_path, "JPEG", quality=88)
+
+        img = ImageClip(local_path, duration=duration_per_image).with_position("center")
         if REEL_ENABLE_KEN_BURNS:
             zoom = REEL_KEN_BURNS_ZOOM
             img = img.resized(lambda t: 1 + zoom * (t / duration_per_image))
-        img = img.with_position("center")
         bg = ColorClip((W, H), color=REEL_BG_COLOR, duration=duration_per_image)
         return CompositeVideoClip([bg, img], size=(W, H))
 
@@ -836,6 +844,11 @@ def create_property_video(
     dur = clip.duration
 
     # --- Text overlays -----------------------------------------------------
+    # Font sizes are tuned for a 1920px-tall canvas and scaled to the actual
+    # height so the layout looks right at 540, 720 or 1080.
+    def fs(base):
+        return max(14, int(base * H / 1920))
+
     def _band(y_frac, h_frac, opacity=0.45):
         return (
             ColorClip((W, int(H * h_frac)), color=(0, 0, 0), duration=dur)
@@ -880,14 +893,14 @@ def create_property_video(
     overlays = [
         clip,
         _band(0.05, 0.11),
-        _centered_text(video_top_text, 0.05, 0.11, light_font, 60),
+        _centered_text(video_top_text, 0.05, 0.11, light_font, fs(60)),
         _band(0.66, 0.17),
-        _centered_text(f"{price}\n{loc}", 0.66, 0.17, bold_font, 54),
+        _centered_text(f"{price}\n{loc}", 0.66, 0.17, bold_font, fs(54)),
         # Persistent brand watermark.
         TextClip(
             font=bold_font,
             text=REEL_BRAND_TEXT,
-            font_size=36,
+            font_size=fs(36),
             color="white",
             stroke_color="black",
             stroke_width=2,
