@@ -122,14 +122,25 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# EMAIL SETTINGS
-EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = "smtp-relay.sendinblue.com"
-EMAIL_PORT = 587
-EMAIL_HOST_USER = "joaquinpunales@gmail.com"
+# EMAIL SETTINGS — Namecheap Private Email (hello@akiyainjapan.com)
+# All values are env-overridable; defaults target the Private Email mailbox.
+# Set EMAIL_HOST_PASSWORD (the mailbox password) in the server .env. If it's
+# missing, fall back to the console backend so a misconfiguration logs the
+# message instead of raising on every send.
+EMAIL_HOST = env("EMAIL_HOST", default="mail.privateemail.com")
+EMAIL_PORT = env.int("EMAIL_PORT", default=587)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="hello@akiyainjapan.com")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
-EMAIL_USE_TLS = True
-DEFAULT_FROM_EMAIL = "joaquinpunales@gmail.com"
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=True)
+DEFAULT_FROM_EMAIL = env(
+    "DEFAULT_FROM_EMAIL", default="My Akiya in Japan <hello@akiyainjapan.com>"
+)
+SERVER_EMAIL = DEFAULT_FROM_EMAIL
+
+if EMAIL_HOST_PASSWORD:
+    EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+else:
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
