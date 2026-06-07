@@ -11,6 +11,7 @@ from ai.hugging import HuggingFaceAI
 from ai.cerebras import CerebrasAI
 from social.models import SocialPost, SocialComment
 from inventory.models import Property, PropertyImage
+from django.db.models import Max
 import time
 from django.conf import settings
 import os
@@ -175,6 +176,38 @@ def build_hashtags(location: str = "") -> str:
     k = min(NUM_ROTATING_HASHTAGS, len(pool))
     chosen += random.sample(pool, k) if k else []
     return " ".join(chosen)
+
+
+def select_properties_to_post(posts_queryset, price_limit, limit=None):
+    """Featured properties under price_limit, ordered for fair rotation.
+
+    Never-posted properties come first (cheapest first), then the rest ordered
+    by least-recently-posted. This replaces the old "exclude posted, else just
+    grab the cheapest N" logic, which reposted the same cheapest properties
+    over and over once the eligible inventory was exhausted.
+
+    `posts_queryset` is the SocialPost rows for the relevant channel; matching
+    is by property_url == Property.url (same value written when a post is made).
+    """
+    rows = posts_queryset.values("property_url").annotate(last=Max("datetime"))
+    last_posted = {r["property_url"]: r["last"] for r in rows}
+
+    candidates = list(
+        Property.objects.filter(
+            images__isnull=False, price__lte=price_limit, featured=True
+        ).distinct()
+    )
+    # Sort key: (already-posted?, last-posted-time, price). The first element
+    # keeps never-posted ahead of posted; within never-posted we fall back to
+    # cheapest-first; within posted we surface the oldest post first.
+    candidates.sort(
+        key=lambda p: (
+            last_posted.get(p.url) is not None,
+            last_posted.get(p.url) or 0,
+            p.price or 0,
+        )
+    )
+    return candidates[:limit] if limit else candidates
 
 
 def generate_caption_for_post(
@@ -477,37 +510,15 @@ def post_instagram_reel():
             if instagram_reels
             else None
         )
-        instagram_reels_urls = instagram_reels.values_list("property_url", flat=True)
-
         last_caption_generated = (
             instagram_reels.order_by("-datetime").first().ai_caption
             if instagram_reels
             else None
         )
 
-        candidates = list(
-            Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
-            )
-            .exclude(url__in=instagram_reels_urls)
-            .order_by("price")
-            .distinct()
-        )
-
-        if not candidates:
-            # Everything eligible has been posted; fall back to reposting from
-            # the full featured set, shuffled so we don't always repeat the
-            # cheapest one.
-            candidates = list(
-                Property.objects.filter(
-                    images__isnull=False,
-                    price__lte=PRICE_LIMIT_INSTAGRAM,
-                    featured=True,
-                )
-                .order_by("price")
-                .distinct()
-            )
-            random.shuffle(candidates)
+        # Never-posted first, then least-recently-posted — avoids reposting the
+        # same reel over and over once the eligible inventory is exhausted.
+        candidates = select_properties_to_post(instagram_reels, PRICE_LIMIT_INSTAGRAM)
 
         if not candidates:
             logger.warning("No suitable property found to post on Instagram Reels.")
@@ -636,37 +647,15 @@ def post_facebook_reel():
                 if facebook_reels
                 else None
             )
-        facebook_reels_urls = facebook_reels.values_list("property_url", flat=True)
         last_caption_generated = (
             facebook_reels.order_by("-datetime").first().ai_caption
             if facebook_reels
             else None
         )
 
-        # Pick candidate properties to post
-        candidates = list(
-            Property.objects.filter(
-                images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
-            )
-            .exclude(url__in=facebook_reels_urls)
-            .order_by("price")
-            .distinct()
-        )
-
-        if not candidates:
-            # Everything eligible has been posted; fall back to reposting from
-            # the full featured set, shuffled so we don't always repeat the
-            # cheapest one.
-            candidates = list(
-                Property.objects.filter(
-                    images__isnull=False,
-                    price__lte=PRICE_LIMIT_INSTAGRAM,
-                    featured=True,
-                )
-                .order_by("price")
-                .distinct()
-            )
-            random.shuffle(candidates)
+        # Never-posted first, then least-recently-posted — avoids reposting the
+        # same reel over and over once the eligible inventory is exhausted.
+        candidates = select_properties_to_post(facebook_reels, PRICE_LIMIT_INSTAGRAM)
 
         if not candidates:
             logger.warning("No suitable property found to post on Facebook Reels.")

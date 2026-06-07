@@ -9,6 +9,7 @@ from social.utils import (
     post_to_instagram,
     post_instagram_reel,
     get_fresh_token,
+    select_properties_to_post,
 )
 from social.constants import INSTAGRAM_USER_ID
 import requests
@@ -23,24 +24,9 @@ def post_instagram_reel():
 def post_on_facebook_batch(price_limit: int, batch_size: int):
     facebook_posts = SocialPost.objects.filter(social_media="facebook")
 
-    facebook_posts_urls = facebook_posts.values_list("property_url", flat=True)
-
-    properties_to_post_facebook = (
-        Property.objects.filter(
-            images__isnull=False, price__lte=price_limit, featured=True
-        )
-        .exclude(url__in=facebook_posts_urls)
-        .order_by("price")
-        .distinct()[:batch_size]
+    properties_to_post_facebook = select_properties_to_post(
+        facebook_posts, price_limit, batch_size
     )
-    if not properties_to_post_facebook:
-        properties_to_post_facebook = (
-            Property.objects.filter(
-                images__isnull=False, price__lte=price_limit, featured=True
-            )
-            .order_by("price")
-            .distinct()[:batch_size]
-        )
 
     for property in properties_to_post_facebook:
         try:
@@ -64,25 +50,9 @@ def post_on_instagram_batch(price_limit: int, batch_size: int):
         social_media="instagram", content_type="post"
     )
 
-    instagram_posted_urls = instagram_posts.values_list("property_url", flat=True)
-
-    properties_to_post_instagram = (
-        Property.objects.filter(
-            images__isnull=False, price__lte=price_limit, featured=True
-        )
-        .exclude(url__in=instagram_posted_urls)
-        .order_by("price")
-        .distinct()[:batch_size]
+    properties_to_post_instagram = select_properties_to_post(
+        instagram_posts, price_limit, batch_size
     )
-
-    if not properties_to_post_instagram:
-        properties_to_post_instagram = (
-            Property.objects.filter(
-                images__isnull=False, price__lte=price_limit, featured=True
-            )
-            .order_by("price")
-            .distinct()[:batch_size]
-        )
 
     for property in properties_to_post_instagram:
         try:
