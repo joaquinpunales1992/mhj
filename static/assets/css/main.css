@@ -1453,9 +1453,9 @@ input, select, textarea {
 		-webkit-user-select: none;
 		background: #1f2224;
 		bottom: -1em;
-		height: 5em;
+		height: 6.25em;
 		left: 0;
-		line-height: 4em;
+		line-height: 5.25em;
 		padding: 0 1.5em;
 		position: fixed;
 		user-select: none;
@@ -1473,7 +1473,7 @@ input, select, textarea {
 		#header h1 {
 			color: #a0a0a1;
 			display: inline-block;
-			font-size: 1em;
+			font-size: 1.5em;
 			line-height: 1;
 			margin: 0;
 			vertical-align: middle;
@@ -1482,6 +1482,18 @@ input, select, textarea {
 			#header h1 a {
 				border: 0;
 				color: inherit;
+			}
+
+			/* Small descriptive tagline shown next to the brand. */
+			#header h1 .site-tagline {
+				color: #6f6f70;
+				font-size: 0.55em;
+				font-weight: 300;
+				letter-spacing: 0.05em;
+				margin-left: 0.6em;
+				text-transform: none;
+				vertical-align: middle;
+				white-space: nowrap;
 			}
 
 				#header h1 a:hover {
@@ -1513,6 +1525,7 @@ input, select, textarea {
 						border: 0;
 						color: #ffffff;
 						display: inline-block;
+						font-size: 1.1em;
 						letter-spacing: 0.1em;
 						padding: 0 1.65em;
 						text-transform: uppercase;
@@ -1544,7 +1557,8 @@ input, select, textarea {
 			-ms-transform: translateY(0);
 			transform: translateY(0);
 			bottom: auto;
-			height: 4em;
+			height: 4.25em;
+			line-height: 4.25em;
 			padding: 0 1em;
 			top: 0;
 		}
@@ -1557,11 +1571,16 @@ input, select, textarea {
 			}
 
 			#header h1 {
-				font-size: 0.9em;
+				font-size: 1.1em;
 			}
 
+				/* Tagline would crowd the narrow top bar — hide it on mobile. */
+				#header h1 .site-tagline {
+					display: none;
+				}
+
 			#header nav > ul > li a {
-				font-size: 0.9em;
+				font-size: 1em;
 				padding: 0 1.15em;
 			}
 
