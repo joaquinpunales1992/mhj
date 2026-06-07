@@ -32,6 +32,11 @@ from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
+# When a reel's video fails to encode (e.g. ffmpeg OOM-killed on the VPS), the
+# poster moves on to the next candidate property rather than aborting the run.
+# Cap the attempts so a bad batch doesn't churn through many heavy encodes.
+MAX_REEL_ATTEMPTS = 3
+
 
 def refresh_access_token():
     def save_token(token):
@@ -417,18 +422,20 @@ def post_instagram_reel():
             else None
         )
 
-        property_to_post_instagram_reel = (
+        candidates = list(
             Property.objects.filter(
                 images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
             )
             .exclude(url__in=instagram_reels_urls)
             .order_by("price")
             .distinct()
-            .first()
         )
 
-        if not property_to_post_instagram_reel:
-            property_to_post_instagram_reel = random.choice(
+        if not candidates:
+            # Everything eligible has been posted; fall back to reposting from
+            # the full featured set, shuffled so we don't always repeat the
+            # cheapest one.
+            candidates = list(
                 Property.objects.filter(
                     images__isnull=False,
                     price__lte=PRICE_LIMIT_INSTAGRAM,
@@ -437,18 +444,35 @@ def post_instagram_reel():
                 .order_by("price")
                 .distinct()
             )
+            random.shuffle(candidates)
 
-        if not property_to_post_instagram_reel:
+        if not candidates:
             logger.warning("No suitable property found to post on Instagram Reels.")
             return
 
         audio_path = _get_random_mp3_full_path(exclude=last_reel_posted_sound_track)
-        create_property_video(
-            property_to_post_instagram_reel.pk,
-            output_path="property_video.mp4",
-            audio_path=audio_path,
-            duration_per_image=3,
-        )
+
+        # Try candidates until one produces a video. A failed encode logs and
+        # moves on instead of aborting the whole run.
+        property_to_post_instagram_reel = None
+        for candidate in candidates[:MAX_REEL_ATTEMPTS]:
+            if create_property_video(
+                candidate.pk,
+                output_path="property_video.mp4",
+                audio_path=audio_path,
+                duration_per_image=3,
+            ):
+                property_to_post_instagram_reel = candidate
+                break
+            logger.warning(
+                f"Skipping property {candidate.url}: video creation failed, trying next."
+            )
+
+        if not property_to_post_instagram_reel:
+            logger.error(
+                "Could not create a video for any candidate property; nothing posted to Instagram Reels."
+            )
+            return
 
         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
         os.makedirs(media_dir, exist_ok=True)
@@ -556,19 +580,21 @@ def post_facebook_reel():
             else None
         )
 
-        # Pick a new property to post
-        property_to_post_facebook_reel = (
+        # Pick candidate properties to post
+        candidates = list(
             Property.objects.filter(
                 images__isnull=False, price__lte=PRICE_LIMIT_INSTAGRAM, featured=True
             )
             .exclude(url__in=facebook_reels_urls)
             .order_by("price")
             .distinct()
-            .first()
         )
 
-        if not property_to_post_facebook_reel:
-            property_to_post_facebook_reel = random.choice(
+        if not candidates:
+            # Everything eligible has been posted; fall back to reposting from
+            # the full featured set, shuffled so we don't always repeat the
+            # cheapest one.
+            candidates = list(
                 Property.objects.filter(
                     images__isnull=False,
                     price__lte=PRICE_LIMIT_INSTAGRAM,
@@ -577,19 +603,34 @@ def post_facebook_reel():
                 .order_by("price")
                 .distinct()
             )
+            random.shuffle(candidates)
 
-        if not property_to_post_facebook_reel:
+        if not candidates:
             logger.warning("No suitable property found to post on Facebook Reels.")
             return
 
-        # Create video
+        # Create video, trying candidates until one encodes successfully.
         audio_path = _get_random_mp3_full_path(exclude=last_reel_posted_sound_track)
-        create_property_video(
-            property_to_post_facebook_reel.pk,
-            output_path="property_video.mp4",
-            audio_path=audio_path,
-            duration_per_image=3,
-        )
+
+        property_to_post_facebook_reel = None
+        for candidate in candidates[:MAX_REEL_ATTEMPTS]:
+            if create_property_video(
+                candidate.pk,
+                output_path="property_video.mp4",
+                audio_path=audio_path,
+                duration_per_image=3,
+            ):
+                property_to_post_facebook_reel = candidate
+                break
+            logger.warning(
+                f"Skipping property {candidate.url}: video creation failed, trying next."
+            )
+
+        if not property_to_post_facebook_reel:
+            logger.error(
+                "Could not create a video for any candidate property; nothing posted to Facebook Reels."
+            )
+            return
 
         media_dir = os.path.join(settings.MEDIA_ROOT, "generated_videos")
         os.makedirs(media_dir, exist_ok=True)
@@ -646,12 +687,17 @@ def post_facebook_reel():
 def create_property_video(
     property_id: int, output_path: str, audio_path: str, duration_per_image: int = 3
 ):
+    # Reel target width. Suumo source photos are often 1200px+ wide; encoding
+    # at native resolution is what exhausted memory on the VPS and got ffmpeg
+    # OOM-killed. Downscaling to this width is the biggest memory saving.
+    MAX_VIDEO_WIDTH = 1080
+
     cerebras_ai_client = CerebrasAI()
     images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
     property = Property.objects.get(pk=property_id)
     if not images:
         logger.error("No images found for the property.")
-        return
+        return None
 
     clips = []
 
@@ -665,6 +711,10 @@ def create_property_video(
             local_path = _download_image_to_tempfile(img_url)
             clip = ImageClip(local_path, duration=duration_per_image)
 
+            # Downscale large images to the reel target width first.
+            if clip.w > MAX_VIDEO_WIDTH:
+                clip = clip.resized(MAX_VIDEO_WIDTH / clip.w)
+
             if clip.w % 2 != 0 or clip.h % 2 != 0:
                 clip = clip.resized((clip.w + (clip.w % 2), clip.h + (clip.h % 2)))
 
@@ -674,33 +724,40 @@ def create_property_video(
 
     if not clips:
         logger.error("No valid images to create video.")
-        return
+        return None
 
     final_video = concatenate_videoclips(clips, method="compose")
 
-    # Write final video
-    final_video.write_videofile(
-        "property_video_without_label.mp4",
-        fps=30,
-        codec="libx264",
-        audio=audio_path,
-        bitrate="3500k",
-        preset="medium",
-        ffmpeg_params=[
-            "-profile:v",
-            "high",
-            "-level",
-            "4.1",
-            "-pix_fmt",
-            "yuv420p",
-            "-movflags",
-            "+faststart",
-            "-g",
-            "60",
-            "-sc_threshold",
-            "0",
-        ],
-    )
+    # Write the base (no-label) video. Lighter preset/bitrate + capped threads
+    # keep peak memory low so ffmpeg isn't OOM-killed. On failure, return None
+    # so the caller can try another property instead of crashing the whole run.
+    try:
+        final_video.write_videofile(
+            "property_video_without_label.mp4",
+            fps=30,
+            codec="libx264",
+            audio=audio_path,
+            bitrate="2500k",
+            preset="ultrafast",
+            threads=2,
+            ffmpeg_params=[
+                "-profile:v",
+                "high",
+                "-level",
+                "4.1",
+                "-pix_fmt",
+                "yuv420p",
+                "-movflags",
+                "+faststart",
+                "-g",
+                "60",
+                "-sc_threshold",
+                "0",
+            ],
+        )
+    except Exception as exc:
+        logger.error(f"Base video encode failed for property {property_id}: {exc}")
+        return None
     clip = VideoFileClip("property_video_without_label.mp4").subclipped(
         0, images.count() * duration_per_image
     )
@@ -759,12 +816,15 @@ def create_property_video(
             codec="libx264",
             audio_codec="aac",
             preset="ultrafast",
+            threads=2,
             ffmpeg_params=["-pix_fmt", "yuv420p", "-movflags", "+faststart"],
         )
         logger.info(f"Video created with overlays: {output_path}")
+        return output_path
     except Exception as exc:
         logger.warning(
             f"Text-overlay composite failed ({exc}); falling back to no-label video."
         )
         shutil.copy("property_video_without_label.mp4", output_path)
         logger.info(f"Video created (no overlays): {output_path}")
+        return output_path
