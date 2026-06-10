@@ -1,6 +1,16 @@
 from django.contrib import admin
 
-from membership.models import PremiumRequest
+from membership.models import InterestRequest, PremiumRequest
+
+
+@admin.register(InterestRequest)
+class InterestRequestAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "name", "email", "source", "property_url", "contacted")
+    list_filter = ("contacted", "source", "created_at")
+    search_fields = ("name", "email", "message", "property_url", "notes")
+    list_editable = ("contacted",)
+    readonly_fields = ("created_at",)
+    date_hierarchy = "created_at"
 
 
 @admin.register(PremiumRequest)

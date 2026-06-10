@@ -37,6 +37,11 @@ urlpatterns = [
         name="submit_premium_request",
     ),
     path(
+        "api/submit-interest",
+        front_views.submit_interest_request,
+        name="submit_interest_request",
+    ),
+    path(
         "authenticate/<int:pk>/<str:redirect_to_premium>/",
         membership_views.show_authenticate_page,
         name="authenticate",
@@ -73,7 +78,9 @@ urlpatterns = [
         front_views.legacy_contact_seller_redirect,
         name="legacy_contact_seller_redirect ",
     ),
-    path("notify-user-expressed-interest/",
-         notify_user_expressed_interest,
-         name="notify_user_expressed_interest")
+    path(
+        "notify-user-expressed-interest/",
+        notify_user_expressed_interest,
+        name="notify_user_expressed_interest",
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

@@ -101,6 +101,74 @@ def submit_premium_request(request):
 
 
 @csrf_exempt
+def submit_interest_request(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request"}, status=400)
+
+    data = json.loads(request.body)
+    name = (data.get("name") or "").strip()
+    email = (data.get("email") or "").strip()
+    message = (data.get("message") or "").strip()
+    property_url = (data.get("property_url") or "").strip()
+
+    if not name or not email:
+        return JsonResponse({"error": "name and email are required"}, status=400)
+
+    from membership.models import InterestRequest
+    from membership.utils import notification_email
+
+    source = (
+        InterestRequest.SOURCE_PROPERTY
+        if property_url
+        else InterestRequest.SOURCE_HOME
+    )
+
+    # Persist so requests are reviewable in /admin/ even if email fails.
+    InterestRequest.objects.create(
+        name=name,
+        email=email,
+        message=message,
+        property_url=property_url,
+        source=source,
+    )
+
+    # Confirmation email to the requester.
+    html_message = render_to_string(
+        "emails/interest_request.html",
+        {"name": name, "property_url": property_url},
+    )
+    confirmation = EmailMessage(
+        subject="Your Akiya in Japan - We received your enquiry",
+        body=html_message,
+        from_email="hello@akiyainjapan.com",
+        to=[email],
+        reply_to=["hello@akiyainjapan.com"],
+    )
+    confirmation.content_subtype = "html"
+    try:
+        confirmation.send()
+    except Exception as e:
+        print(f"Error sending confirmation email: {e}")
+
+    # Admin-facing notification so you can act on it.
+    notification_email(
+        subject=f"EXPRESSION OF INTEREST - {name}",
+        body=(
+            f"<p>New expression of interest.</p>"
+            f"<p><b>Name:</b> {name}</p>"
+            f"<p><b>Email:</b> {email}</p>"
+            f"<p><b>Message:</b> {message or '(none)'}</p>"
+            f"<p><b>Property:</b> {property_url or '(from home page)'}</p>"
+            f"<p>Review and mark as contacted in "
+            f"<a href='https://akiyainjapan.com/admin/membership/interestrequest/'>"
+            f"the admin panel</a>.</p>"
+        ),
+    )
+
+    return JsonResponse({"message": "Request received"})
+
+
+@csrf_exempt
 def send_booking_confirmation(request):
     if request.method == "POST":
         data = json.loads(request.body)
