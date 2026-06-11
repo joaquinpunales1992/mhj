@@ -14,6 +14,124 @@ from django.template.loader import render_to_string
 from django.core.paginator import Paginator
 
 
+# Prefecture -> the lifestyle categories it qualifies for. Used both to resolve
+# the /filter/<category>/ pages and to populate the city dropdown.
+CITY_CATEGORIES = {
+    "Tokyo": ["beach", "onsen"],
+    "Osaka": ["onsen"],
+    "Shizuoka": ["beach", "mountain", "onsen"],
+    "Kanagawa": ["beach", "onsen"],
+    "Aichi": ["onsen"],
+    "Hyogo": ["mountain", "onsen"],
+    "Chiba": ["beach"],
+    "Saitama": ["mountain"],
+    "Fukuoka": ["beach"],
+    "Hiroshima": ["beach"],
+    "Kyoto": ["mountain", "onsen"],
+    "Nagoya": ["onsen"],
+    "Kagawa": ["beach"],
+    "Okayama": ["beach"],
+    "Miyagi": ["snow", "onsen"],
+    "Niigata": ["snow"],
+    "Ishikawa": ["onsen"],
+    "Nagano": ["snow", "mountain", "onsen"],
+    "Gunma": ["mountain", "onsen"],
+    "Tochigi": ["mountain", "onsen"],
+    "Ibaraki": ["beach"],
+    "Yamagata": ["snow", "onsen"],
+    "Fukushima": ["snow", "onsen"],
+    "Shimane": ["onsen"],
+    "Tottori": ["mountain", "beach"],
+    "Nagasaki": ["beach"],
+    "Kumamoto": ["onsen", "mountain"],
+    "Ehime": ["beach"],
+    "Kagoshima": ["onsen", "mountain", "beach"],
+    "Okinawa": ["beach"],
+    "Aomori": ["snow"],
+    "Akita": ["snow", "onsen"],
+    "Yamaguchi": ["beach"],
+    "Toyama": ["snow", "mountain"],
+    "Gifu": ["mountain", "onsen"],
+    "Wakayama": ["beach", "onsen", "mountain"],
+    "Nara": ["mountain"],
+    "Miyazaki": ["beach", "mountain"],
+    "Tokushima": ["mountain"],
+    "Oita": ["onsen"],
+    "Fukui": ["snow"],
+    "Shiga": ["mountain"],
+    "Hokkaido": ["snow", "beach", "onsen"],
+    "Kochi": ["beach"],
+    "Saga": ["onsen"],
+    "Mie": ["beach", "onsen"],
+}
+
+# Cities offered in the dropdown, alphabetical.
+PREFECTURES = sorted(CITY_CATEGORIES.keys())
+
+# Price ranges. Bounds are in the model's stored unit (man-yen, ~70 USD each);
+# labels are the rounded USD equivalents shown to users. price__gt/__lte.
+PRICE_BUCKETS = [
+    {"key": "u50", "label": "Under $50k", "gt": 0, "lte": 714},
+    {"key": "50-100", "label": "$50k – $100k", "gt": 714, "lte": 1428},
+    {"key": "100-200", "label": "$100k – $200k", "gt": 1428, "lte": 2857},
+    {"key": "200-350", "label": "$200k – $350k", "gt": 2857, "lte": 5000},
+]
+PRICE_BUCKETS_BY_KEY = {b["key"]: b for b in PRICE_BUCKETS}
+
+
+def _apply_browse_filters(queryset, request):
+    """Narrow a property queryset by the ?city and ?price query params.
+
+    Returns (queryset, selected_city, selected_price) so the view can echo the
+    current selection back to the template. Unknown values are ignored.
+    """
+    selected_city = (request.GET.get("city") or "").strip()
+    selected_price = (request.GET.get("price") or "").strip()
+
+    if selected_city in CITY_CATEGORIES:
+        queryset = queryset.filter(location__icontains=selected_city)
+
+    bucket = PRICE_BUCKETS_BY_KEY.get(selected_price)
+    if bucket:
+        queryset = queryset.filter(price__gt=bucket["gt"], price__lte=bucket["lte"])
+
+    return queryset, selected_city, selected_price
+
+
+def _available_cities():
+    """Prefectures that actually have browsable listings, with counts.
+
+    Returns [{"name", "count"}] ordered by count desc. Avoids offering dropdown
+    options that would land the user on an empty page. One query + a cheap
+    in-Python scan; the home page is cached hourly so this is not hot.
+    """
+    locations = Property.objects.filter(
+        show_in_front=True, price__gt=0, price__lte=5000
+    ).values_list("location", flat=True)
+
+    counts = {}
+    for loc in locations:
+        low = (loc or "").lower()
+        for pref in CITY_CATEGORIES:
+            if pref.lower() in low:
+                counts[pref] = counts.get(pref, 0) + 1
+
+    return [
+        {"name": name, "count": count}
+        for name, count in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))
+    ]
+
+
+def _browse_filter_context(selected_city="", selected_price=""):
+    """Shared template context for the city/price filter controls."""
+    return {
+        "cities": _available_cities(),
+        "selected_city": selected_city,
+        "price_buckets": PRICE_BUCKETS,
+        "selected_price": selected_price,
+    }
+
+
 @cache_page(60 * 60)
 def display_home(request):
     base_queryset = (
@@ -24,6 +142,10 @@ def display_home(request):
             )
         )
         .filter(show_in_front=True, price__lte=5000, price__gt=0)
+    )
+
+    base_queryset, selected_city, selected_price = _apply_browse_filters(
+        base_queryset, request
     )
 
     featured = list(base_queryset.filter(featured=True))
@@ -38,7 +160,12 @@ def display_home(request):
     return render(
         request,
         "home.html",
-        context={"properties": page.object_list, "page": page, "nav": "home"},
+        context={
+            "properties": page.object_list,
+            "page": page,
+            "nav": "home",
+            **_browse_filter_context(selected_city, selected_price),
+        },
     )
 
 
@@ -265,58 +392,9 @@ def legacy_contact_seller_optional_redirect(request, pk, user_just_registered):
 
 
 def filter_properties(request, category):
-    city_categories = {
-        "Tokyo": ["beach", "onsen"],
-        "Osaka": ["onsen"],
-        "Shizuoka": ["beach", "mountain", "onsen"],
-        "Kanagawa": ["beach", "onsen"],
-        "Aichi": ["onsen"],
-        "Hyogo": ["mountain", "onsen"],
-        "Chiba": ["beach"],
-        "Saitama": ["mountain"],
-        "Fukuoka": ["beach"],
-        "Hiroshima": ["beach"],
-        "Kyoto": ["mountain", "onsen"],
-        "Nagoya": ["onsen"],
-        "Kagawa": ["beach"],
-        "Okayama": ["beach"],
-        "Miyagi": ["snow", "onsen"],
-        "Niigata": ["snow"],
-        "Ishikawa": ["onsen"],
-        "Nagano": ["snow", "mountain", "onsen"],
-        "Gunma": ["mountain", "onsen"],
-        "Tochigi": ["mountain", "onsen"],
-        "Ibaraki": ["beach"],
-        "Yamagata": ["snow", "onsen"],
-        "Fukushima": ["snow", "onsen"],
-        "Shimane": ["onsen"],
-        "Tottori": ["mountain", "beach"],
-        "Nagasaki": ["beach"],
-        "Kumamoto": ["onsen", "mountain"],
-        "Ehime": ["beach"],
-        "Kagoshima": ["onsen", "mountain", "beach"],
-        "Okinawa": ["beach"],
-        "Aomori": ["snow"],
-        "Akita": ["snow", "onsen"],
-        "Yamaguchi": ["beach"],
-        "Toyama": ["snow", "mountain"],
-        "Gifu": ["mountain", "onsen"],
-        "Wakayama": ["beach", "onsen", "mountain"],
-        "Nara": ["mountain"],
-        "Miyazaki": ["beach", "mountain"],
-        "Tokushima": ["mountain"],
-        "Oita": ["onsen"],
-        "Fukui": ["snow"],
-        "Shiga": ["mountain"],
-        "Hokkaido": ["snow", "beach", "onsen"],
-        "Kochi": ["beach"],
-        "Saga": ["onsen"],
-        "Mie": ["beach", "onsen"],
-    }
-
     city_filters = Q()
     for city in [
-        city for city, categories in city_categories.items() if category in categories
+        city for city, categories in CITY_CATEGORIES.items() if category in categories
     ]:
         city_filters |= Q(location__icontains=city)
 
@@ -330,12 +408,22 @@ def filter_properties(request, category):
         )
         .order_by("-featured", "price")
     )
+
+    properties, selected_city, selected_price = _apply_browse_filters(
+        properties, request
+    )
+
     paginator = Paginator(properties, settings.PROPERTIES_PER_PAGE)
     page = paginator.get_page(request.GET.get("page"))
     return render(
         request,
         "home.html",
-        context={"properties": page.object_list, "page": page, "nav": category},
+        context={
+            "properties": page.object_list,
+            "page": page,
+            "nav": category,
+            **_browse_filter_context(selected_city, selected_price),
+        },
     )
 
 

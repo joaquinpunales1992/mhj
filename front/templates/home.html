@@ -74,36 +74,111 @@
 					flex-wrap: wrap;
 				">
 					<style>
-						@media (max-width: 768px) {
-							#filter-bar {
-								gap: 0.9rem;
-								padding-top: 33px !important;
+													/* ---- Mobile (single, properly-closed media query) ---- */
+							@media (max-width: 768px) {
+								#filter-bar {
+									gap: 0.4rem;
+									/* !important is REQUIRED — the div has an inline `padding: 1rem` that
+									   otherwise wins, so the header keeps overlapping no matter the value */
+									padding: 85px 0.6rem 1rem !important;
+									box-sizing: border-box;
+								}
+								.filter-button {
+									flex: 1 1 105px;    /* ~3 per row; grows/wraps, never overflows the viewport */
+									min-width: 0;
+									max-width: none;
+									padding: 0.7rem 0.3rem;
+									font-size: 0.78rem;
+									white-space: normal; /* let long labels wrap instead of overflowing (template sets nowrap) */
+									box-sizing: border-box;
+								}
+								#browse-filters { margin: 0; width: 100%; justify-content: center; flex-wrap: wrap; }
 							}
-							.filter-button {
-								flex: 1 1 calc(50% - 1rem);
-								max-width: calc(30% - 0.1rem);
-								padding: 1.9rem;
-								font-size: 0.8rem;
-							}
-							.filter-button span {
-								font-size: 0.4rem;
-							}
-						}
 
-						/* Filter pills — match the sage-green palette, clear active state */
-						.filter-button {
-							padding: 0.7rem 1.2rem;
-							border-radius: 14px;
-							border: none;
-							transition: background 0.2s ease, color 0.2s ease, transform 0.05s ease;
-						}
-						.filter-button:hover { background: rgba(255, 255, 255, 0.12) !important; }
-						.filter-button.is-active {
-							background: #477535 !important;
-							box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.55) !important;
-						}
-						.filter-button.is-active .icon,
-						.filter-button.is-active span { color: #fff !important; }
+							/* ---- Category filter pills ---- */
+							.filter-button {
+								padding: 0.7rem 1.2rem;
+								border-radius: 14px;
+								border: none;
+								height: auto;       /* contain the label (template forces a fixed button height) */
+								line-height: 1.4;
+								transition: background 0.2s ease, color 0.2s ease, transform 0.05s ease;
+							}
+							.filter-button:hover { background: rgba(255, 255, 255, 0.12) !important; }
+							.filter-button.is-active {
+								background: #477535 !important;
+								box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.55) !important;
+							}
+							.filter-button.is-active .icon,
+							.filter-button.is-active span { color: #fff !important; }
+
+							/* ---- City + price dropdowns (right-hand group in the toolbar row) ---- */
+							/* margin:0 overrides main.css `form { margin: 0 0 2em 0 }` so the row stays centered */
+							#browse-filters {
+								display: flex;
+								align-items: center;
+								gap: 0.75rem;
+								margin: 0 0 0 auto;
+							}
+							/* Pill = icon + transparent select */
+							.browse-field {
+								display: inline-flex;
+								align-items: center;
+								gap: 0.5rem;
+								margin: 0;          /* template gives all but the last form child a bottom margin */
+								background-color: rgba(0, 0, 0, 0.32);
+								-webkit-backdrop-filter: blur(6px);
+								backdrop-filter: blur(6px);
+								border: 1px solid rgba(255, 255, 255, 0.35);
+								border-radius: 999px;
+								padding: 0 0.95rem;
+								box-shadow: 0 6px 16px -10px rgba(0, 0, 0, 0.5);
+								cursor: pointer;
+								transition: background-color 0.2s ease, border-color 0.2s ease;
+							}
+							.browse-field:hover { background-color: rgba(0, 0, 0, 0.45); }
+							.browse-field:focus-within {
+								border-color: rgba(255, 255, 255, 0.75);
+								box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.18);
+							}
+							.browse-ico { width: 16px; height: 16px; flex: 0 0 auto; color: #fff; opacity: 0.9; }
+							.browse-select {
+								appearance: none;
+								-webkit-appearance: none;
+								-moz-appearance: none;
+								background-color: transparent;
+								background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+								background-repeat: no-repeat;
+								background-position: right center;
+								background-size: 13px;
+								color: #fff;
+								border: none;
+								border-radius: 0;
+								height: auto;
+								padding: 0.6rem 1.55rem 0.6rem 0;
+								font-size: 0.95rem;
+								font-weight: 500;
+								font-family: 'Work Sans', -apple-system, sans-serif;
+								cursor: pointer;
+								width: auto;            /* override main.css `select { width: 100% }` */
+								max-width: 55vw;
+								box-shadow: none;
+							}
+							.browse-select:focus { outline: none; }
+							.browse-select option { color: #2b2b2b; background: #fff; }
+							.browse-clear {
+								display: inline-flex;
+								align-items: center;
+								color: #fff;
+								font-size: 0.9rem;
+								font-weight: 500;
+								padding: 0.62rem 1rem;
+								border-radius: 12px;
+								border: 1px solid rgba(255, 255, 255, 0.4);
+								text-decoration: none;
+								transition: background 0.2s ease;
+							}
+							.browse-clear:hover { background: rgba(255, 255, 255, 0.14); text-decoration: none; }
 					</style>
 
 					<button class="filter-button{% if nav == 'home' %} is-active{% endif %}" onclick="window.location.href='{% url "home" %}'" style="
@@ -173,6 +248,31 @@
 						<span class="icon solid fa-fire" style="font-size: 2rem; {% if nav == 'onsen' %} color: #477535; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Onsen</span>
 					</button>
+
+					<!-- City + price filters (compose with the category above) -->
+					<form id="browse-filters" method="get" action="{{ request.path }}">
+						<label class="browse-field">
+							<svg class="browse-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+							<select name="city" aria-label="Filter by city" class="browse-select" onchange="this.form.submit()">
+							<option value="">All cities</option>
+							{% for c in cities %}
+								<option value="{{ c.name }}" {% if c.name == selected_city %}selected{% endif %}>{{ c.name }} ({{ c.count }})</option>
+							{% endfor %}
+						</select>
+						</label>
+						<label class="browse-field">
+							<svg class="browse-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+							<select name="price" aria-label="Filter by price" class="browse-select" onchange="this.form.submit()">
+							<option value="">Any price</option>
+							{% for b in price_buckets %}
+								<option value="{{ b.key }}" {% if b.key == selected_price %}selected{% endif %}>{{ b.label }}</option>
+							{% endfor %}
+						</select>
+						</label>
+						{% if selected_city or selected_price %}
+							<a href="{{ request.path }}" class="browse-clear">Clear filters</a>
+						{% endif %}
+					</form>
 				</div>
 
 				<!-- Header -->
