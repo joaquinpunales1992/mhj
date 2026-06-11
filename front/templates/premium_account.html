@@ -18,30 +18,598 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Akiya in Japan</title>
-  <script src="{% static 'assets/js/property_detail.js' %}"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
-  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
-  <script src="{% static 'assets/js/jquery.min.js' %}"></script>
+  <title>Go Premium — My Akiya in Japan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;600&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #477535;
+      --primary-dark: #3a5f2b;
+      --accent: #d6b58f;
+      --accent-soft: #f3ece2;
+      --secondary: #878787;
+      --foreground: #2b2b2b;
+      --bg: #faf8f4;
+      --card: #ffffff;
+      --border: rgba(71, 117, 53, 0.14);
+      --success: #4f9d5b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--foreground);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .serif { font-family: 'Noto Serif JP', serif; }
+
+    a { color: inherit; }
+
+    /* ---- Top bar ---- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .topbar .brand {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 1.25rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: opacity 0.2s ease;
+    }
+    .back-link:hover { opacity: 0.7; }
+
+    /* ---- Layout ---- */
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem 4rem; }
+
+    /* ---- Hero ---- */
+    .hero {
+      text-align: center;
+      padding: 2.5rem 0 2.75rem;
+    }
+    .eyebrow {
+      display: inline-block;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--accent-soft);
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1.25rem;
+    }
+    .hero h1 {
+      font-family: 'Noto Serif JP', serif;
+      font-weight: 500;
+      font-size: clamp(1.9rem, 4.5vw, 3rem);
+      line-height: 1.15;
+      color: var(--foreground);
+      max-width: 18ch;
+      margin: 0 auto 1rem;
+    }
+    .hero p.sub {
+      font-size: 1.08rem;
+      color: var(--secondary);
+      max-width: 56ch;
+      margin: 0 auto;
+    }
+
+    /* ---- Pricing + features grid ---- */
+    .grid {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 2rem;
+      align-items: start;
+    }
+    @media (max-width: 860px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    /* ---- Feature list ---- */
+    .features h2 {
+      font-family: 'Noto Serif JP', serif;
+      font-weight: 500;
+      font-size: 1.5rem;
+      margin-bottom: 1.25rem;
+      color: var(--foreground);
+    }
+    .feature {
+      display: flex;
+      gap: 0.95rem;
+      align-items: flex-start;
+      padding: 0.85rem 0;
+      border-bottom: 1px solid var(--border);
+    }
+    .feature:last-child { border-bottom: 0; }
+    .feature .ico {
+      flex: 0 0 auto;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--primary);
+    }
+    .feature .ico svg { width: 20px; height: 20px; }
+    .feature h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+      color: var(--foreground);
+    }
+    .feature p { font-size: 0.92rem; color: var(--secondary); margin: 0; }
+
+    /* ---- Pricing card ---- */
+    .pricing {
+      position: sticky;
+      top: 1.5rem;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.9rem 1.75rem;
+      box-shadow: 0 18px 40px -24px rgba(71, 117, 53, 0.45);
+    }
+    .pricing .price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+      margin-bottom: 0.25rem;
+    }
+    .pricing .price {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 2.9rem;
+      font-weight: 600;
+      color: var(--primary);
+      line-height: 1;
+    }
+    .pricing .per { font-size: 1rem; color: var(--secondary); font-weight: 500; }
+    .pricing .price-note { font-size: 0.9rem; color: var(--secondary); margin-bottom: 1.4rem; }
+
+    .check-list { list-style: none; margin: 0 0 1.6rem; padding: 0; }
+    .check-list li {
+      display: flex;
+      gap: 0.6rem;
+      align-items: flex-start;
+      font-size: 0.95rem;
+      margin-bottom: 0.7rem;
+      color: var(--foreground);
+    }
+    .check-list li svg { flex: 0 0 auto; width: 18px; height: 18px; color: var(--primary); margin-top: 0.18rem; }
+
+    .cta-btn {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0.95rem 1rem;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1.05rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease, transform 0.05s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .cta-btn:hover { background: var(--primary-dark); }
+    .cta-btn:active { transform: translateY(1px); }
+    .cta-btn:disabled { opacity: 0.7; cursor: default; }
+
+    .reassure {
+      display: flex;
+      gap: 0.45rem;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: var(--secondary);
+      margin-top: 0.9rem;
+      text-align: center;
+    }
+    .reassure svg { width: 15px; height: 15px; flex: 0 0 auto; }
+
+    /* ---- ripple ---- */
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      background: rgba(255, 255, 255, 0.45);
+      animation: ripple 0.6s linear;
+      pointer-events: none;
+    }
+    @keyframes ripple { to { transform: scale(2.5); opacity: 0; } }
+
+    /* ---- How it works ---- */
+    .how {
+      margin-top: 3.5rem;
+      text-align: center;
+    }
+    .how h2 {
+      font-family: 'Noto Serif JP', serif;
+      font-weight: 500;
+      font-size: 1.6rem;
+      margin-bottom: 0.4rem;
+    }
+    .how .lead { color: var(--secondary); margin-bottom: 2rem; }
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.25rem;
+    }
+    @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
+    .step-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 1.5rem 1.25rem;
+      text-align: center;
+    }
+    .step-card .num {
+      width: 36px; height: 36px;
+      margin: 0 auto 0.75rem;
+      border-radius: 50%;
+      background: var(--primary);
+      color: #fff;
+      font-weight: 600;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .step-card h3 { font-size: 1.02rem; margin-bottom: 0.3rem; }
+    .step-card p { font-size: 0.9rem; color: var(--secondary); }
+
+    /* ---- FAQ ---- */
+    .faq { margin-top: 3.5rem; max-width: 720px; margin-left: auto; margin-right: auto; }
+    .faq h2 {
+      font-family: 'Noto Serif JP', serif;
+      font-weight: 500;
+      font-size: 1.6rem;
+      text-align: center;
+      margin-bottom: 1.5rem;
+    }
+    .faq details {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0 1.25rem;
+      margin-bottom: 0.75rem;
+    }
+    .faq summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 1.05rem 0;
+      font-weight: 600;
+      font-size: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .faq summary::-webkit-details-marker { display: none; }
+    .faq summary .chev { color: var(--primary); transition: transform 0.2s ease; flex: 0 0 auto; }
+    .faq details[open] summary .chev { transform: rotate(180deg); }
+    .faq details p { padding: 0 0 1.1rem; color: var(--secondary); font-size: 0.95rem; }
+
+    /* ---- Inline sign-up (anonymous) ---- */
+    .premium-signup { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.3rem; }
+    .field-label { font-size: 0.9rem; font-weight: 600; color: var(--foreground); }
+    .premium-signup input[type="email"] {
+      width: 100%;
+      padding: 0.8rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1rem;
+      color: var(--foreground);
+      background: #fff;
+    }
+    .premium-signup input[type="email"]::placeholder { color: #b0b0b0; }
+    .premium-signup input[type="email"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(71, 117, 53, 0.15);
+    }
+    .field-error { display: none; color: #c0392b; font-size: 0.85rem; margin: 0; }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.1rem 0;
+      color: var(--secondary);
+      font-size: 0.82rem;
+    }
+    .divider::before, .divider::after { content: ""; flex: 1; height: 1px; background: var(--border); }
+
+    .btn-social {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--foreground);
+      font-size: 0.98rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: background 0.2s ease;
+    }
+    .btn-social:hover { background: var(--accent-soft); }
+    .btn-social img { width: 20px; height: 20px; }
+
+    /* ---- Login prompt (anonymous) ---- */
+    .login-note { font-size: 0.85rem; color: var(--secondary); text-align: center; margin-top: 0.9rem; }
+    .login-note a { color: var(--primary); font-weight: 600; }
+
+    /* ---- Success state ---- */
+    .hidden { display: none; }
+    #success-confirmation {
+      background: rgba(79, 157, 91, 0.08);
+      border: 1px solid rgba(79, 157, 91, 0.3);
+      border-radius: 12px;
+      padding: 1.25rem;
+      margin-top: 1.25rem;
+      display: flex;
+      gap: 0.85rem;
+      align-items: flex-start;
+    }
+    /* ID beats .hidden on specificity, so re-assert hidden at the ID level —
+       otherwise the success box shows on page load instead of after a request. */
+    #success-confirmation.hidden { display: none; }
+    #success-confirmation svg { flex: 0 0 auto; width: 24px; height: 24px; color: var(--success); margin-top: 0.1rem; }
+    #success-confirmation h3 { font-family: 'Noto Serif JP', serif; font-weight: 500; font-size: 1.15rem; margin-bottom: 0.2rem; }
+    #success-confirmation p { font-size: 0.95rem; color: var(--secondary); margin: 0; }
+  </style>
+</head>
+
+<body>
+  <div class="topbar">
+    <span class="brand">My Akiya in Japan</span>
+    <a href="/" class="back-link">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+      </svg>
+      Back to listings
+    </a>
+  </div>
+
+  <div class="wrap">
+    <!-- ===== Hero (context-aware via ?unlock=) ===== -->
+    <header class="hero">
+      <span class="eyebrow">Premium membership</span>
+      {% if request.GET.unlock == 'land-rights' %}
+        <h1 class="serif">Unlock the full land-rights details on this property</h1>
+        <p class="sub">Land rights are one of the most important things to check before buying an akiya. Premium opens them up — for this listing and every other.</p>
+      {% elif request.GET.unlock == 'risk' %}
+        <h1 class="serif">See the complete risk report for this property</h1>
+        <p class="sub">Flood zones, building condition, legal flags and more. Premium unlocks the full risk picture on every listing.</p>
+      {% elif request.GET.unlock == 'newsletter' %}
+        <h1 class="serif">Get 20 new akiya in your inbox every week</h1>
+        <p class="sub">Our weekly picks go to Premium members first — properties you won't find on a free account.</p>
+      {% elif request.GET.unlock == 'listing' or request.GET.unlock == 'property' %}
+        <h1 class="serif">See every property in our listing</h1>
+        <p class="sub">Free accounts see a sample. Premium opens the full catalogue, including exclusive listings held back from everyone else.</p>
+      {% else %}
+        <h1 class="serif">Find your home in Japan, faster</h1>
+        <p class="sub">Premium unlocks exclusive listings, full property details and our weekly drop of fresh akiya — everything you need to move with confidence.</p>
+      {% endif %}
+    </header>
+
+    <!-- ===== Pricing + features ===== -->
+    <div class="grid">
+      <!-- Features -->
+      <section class="features">
+        <h2>What's included</h2>
+
+        <div class="feature">
+          <span class="ico">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/></svg>
+          </span>
+          <div>
+            <h3>Exclusive listings</h3>
+            <p>Access premium properties that never appear on free accounts.</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="ico">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 8a6 6 0 01-7.743 5.743L10 14l-1 1-1 1H6v2H2v-4l4.257-4.257A6 6 0 1118 8zm-6-4a1 1 0 100 2 2 2 0 012 2 1 1 0 102 0 4 4 0 00-4-4z" clip-rule="evenodd"/></svg>
+          </span>
+          <div>
+            <h3>Land rights &amp; risk reports</h3>
+            <p>Full land-rights status and risk details on every property page.</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="ico">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z"/><path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z"/></svg>
+          </span>
+          <div>
+            <h3>Weekly newsletter</h3>
+            <p>20 fresh akiya delivered to your inbox every week, members first.</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="ico">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/></svg>
+          </span>
+          <div>
+            <h3>Priority support</h3>
+            <p>Faster, personal help from our English-speaking team.</p>
+          </div>
+        </div>
+
+        <div class="feature">
+          <span class="ico">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clip-rule="evenodd"/></svg>
+          </span>
+          <div>
+            <h3>Ad-free browsing</h3>
+            <p>A clean, distraction-free experience across the whole site.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pricing card -->
+      <aside class="pricing">
+        <div class="price-row">
+          <span class="price">$4.99</span>
+          <span class="per">/ month</span>
+        </div>
+        <p class="price-note">Cancel anytime. No long-term commitment.</p>
+
+        <ul class="check-list">
+          <li><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> All exclusive premium listings</li>
+          <li><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Land rights &amp; risk reports</li>
+          <li><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Weekly newsletter, members first</li>
+          <li><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg> Priority support &amp; ad-free</li>
+        </ul>
+
+        {% if user_email %}
+          <button id="book-button" class="cta-btn" type="button">Go Premium</button>
+          <div class="reassure">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+            <span>No charge today — we'll email <strong>{{ user_email }}</strong> to set you up.</span>
+          </div>
+        {% else %}
+          <form id="premium-signup" class="premium-signup">
+            <label class="field-label" for="premium-email">Enter your email and we'll set up your membership</label>
+            <input type="email" id="premium-email" name="email" placeholder="you@example.com" autocomplete="email" required>
+            <p id="premium-email-error" class="field-error"></p>
+            <button id="book-button" class="cta-btn" type="submit">Go Premium</button>
+          </form>
+          <div class="reassure">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+            <span>No charge today — we'll email you to set you up. Cancel anytime.</span>
+          </div>
+          <div class="divider">or</div>
+          <a href="{% provider_login_url 'google' next='/upgrade-premium/' %}" class="btn-social">
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt=""> Continue with Google
+          </a>
+          <p class="login-note">Already a member? <a href="{% url 'account_login' %}?next={% url 'upgrade_premium' %}">Log in</a>.</p>
+        {% endif %}
+
+        <!-- Success confirmation -->
+        <div id="success-confirmation" class="hidden">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+          </svg>
+          <div>
+            <h3>Request received</h3>
+            <p>Thanks! We've got your Premium request and will email you shortly with the next steps.</p>
+          </div>
+        </div>
+      </aside>
+    </div>
+
+    <!-- ===== How it works ===== -->
+    <section class="how">
+      <h2 class="serif">How it works</h2>
+      <p class="lead">Setting up Premium takes a moment — here's what happens.</p>
+      <div class="steps">
+        <div class="step-card">
+          <div class="num">1</div>
+          <h3>Request access</h3>
+          <p>Tap “Go Premium” and we'll receive your request right away.</p>
+        </div>
+        <div class="step-card">
+          <div class="num">2</div>
+          <h3>We set you up</h3>
+          <p>Our team emails you to confirm and activate your membership.</p>
+        </div>
+        <div class="step-card">
+          <div class="num">3</div>
+          <h3>Unlock everything</h3>
+          <p>Full listings, land rights, risk reports and the weekly drop.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== FAQ ===== -->
+    <section class="faq">
+      <h2 class="serif">Frequently asked</h2>
+
+      <details>
+        <summary>Will I be charged right now?
+          <svg class="chev" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </summary>
+        <p>No. Requesting Premium doesn't charge you anything. Our team will email you to confirm the details and get your $4.99/month membership started.</p>
+      </details>
+
+      <details>
+        <summary>Can I cancel?
+          <svg class="chev" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </summary>
+        <p>Yes, anytime. There's no long-term commitment — cancel whenever you like and keep access until the end of your billing month.</p>
+      </details>
+
+      <details>
+        <summary>What do I get that free accounts don't?
+          <svg class="chev" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/></svg>
+        </summary>
+        <p>Exclusive listings hidden from free accounts, full land-rights and risk information on every property, our weekly newsletter of 20 fresh akiya, priority support and an ad-free experience.</p>
+      </details>
+    </section>
+  </div>
 
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const bookButton = document.getElementById('book-button');
-      const successConfirmation = document.getElementById('success-confirmation'); // Assuming you have this element
-
-      // Button is not rendered for anonymous visitors (they see a login CTA
-      // instead). Bail before wiring the listener so JS doesn't crash.
+      const successConfirmation = document.getElementById('success-confirmation');
       if (!bookButton) return;
 
-      bookButton.addEventListener('click', function(event) {
-          // Show loading state
-          const originalText = bookButton.textContent;
-          bookButton.textContent = 'Requesting...';
-          bookButton.disabled = true;
+      // We may already know the visitor's email (logged in / has the cookie),
+      // otherwise they type it into the inline form. Either way it's one submit.
+      const knownEmail = '{{ user_email|escapejs }}';
+      const signupForm = document.getElementById('premium-signup');
+      const emailInput = document.getElementById('premium-email');
+      const errorEl = document.getElementById('premium-email-error');
+      const emailRe = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-          // Create a ripple effect
-          const ripple = document.createElement('span');
+      function submitRequest(event) {
+        if (event) event.preventDefault();
+
+        const email = knownEmail || (emailInput ? emailInput.value.trim() : '');
+        if (!emailRe.test(email)) {
+          if (errorEl) { errorEl.textContent = 'Please enter a valid email address.'; errorEl.style.display = 'block'; }
+          if (emailInput) emailInput.focus();
+          return;
+        }
+        if (errorEl) errorEl.style.display = 'none';
+
+        bookButton.textContent = 'Requesting…';
+        bookButton.disabled = true;
+        if (emailInput) emailInput.disabled = true;
+
+        // Ripple effect (only when triggered by a mouse click with coordinates)
+        let ripple = null;
+        if (event && event.clientX) {
+          ripple = document.createElement('span');
           ripple.classList.add('ripple');
           const rect = bookButton.getBoundingClientRect();
           const size = Math.max(rect.width, rect.height);
@@ -49,143 +617,41 @@
           ripple.style.left = `${event.clientX - rect.left - size / 2}px`;
           ripple.style.top = `${event.clientY - rect.top - size / 2}px`;
           bookButton.appendChild(ripple);
+        }
 
-          const property_url = window.location.href;
-
-          // Send booking confirmation email
-          fetch('/api/submit-premium-request', {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                'url': property_url,
-                'user_email': '{{ user_email }}',
-              })
-          })
+        fetch('/api/submit-premium-request', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 'url': window.location.href, 'user_email': email })
+        })
           .then(response => {
-              if (!response.ok) {
-                  throw new Error('Failed to send confirmation email.');
-              }
-              return response.json();
+            if (!response.ok) throw new Error('Failed to submit premium request.');
+            return response.json();
           })
-          .then(data => {
-              // Remove ripple
-              ripple.remove();
-
-              // Show success confirmation
-              successConfirmation.classList.remove('hidden');
-
-              // Scroll to the success message
-              successConfirmation.scrollIntoView({ behavior: 'smooth' });
-
-              // Reset button state
-              bookButton.textContent = originalText;
-              bookButton.disabled = false;
-
-              console.log('Booking confirmed');
+          .then(() => {
+            if (ripple) ripple.remove();
+            bookButton.textContent = 'Request sent ✓';
+            successConfirmation.classList.remove('hidden');
+            successConfirmation.scrollIntoView({ behavior: 'smooth', block: 'center' });
           })
           .catch(error => {
-              ripple.remove();
-              bookButton.textContent = originalText;
-              bookButton.disabled = false;
-              alert('There was an error sending the confirmation email. Please try again.');
-              console.error(error);
+            if (ripple) ripple.remove();
+            bookButton.textContent = 'Go Premium';
+            bookButton.disabled = false;
+            if (emailInput) emailInput.disabled = false;
+            alert('There was an error submitting your request. Please try again.');
+            console.error(error);
           });
-      });
+      }
+
+      // When the inline form exists the button is its submit control; otherwise
+      // (known email) we wire the click directly.
+      if (signupForm) {
+        signupForm.addEventListener('submit', submitRequest);
+      } else {
+        bookButton.addEventListener('click', submitRequest);
+      }
     });
-
   </script>
-</head>
-
-<body>
-  <div class="flex flex-col lg:flex-row min-h-screen">
-    <!-- Sidebar -->
-    <aside class="lg:w-64 bg-neutral-light border-r border-accent/30 p-5 flex flex-col">
-      <div class="mb-8">
-        <h1 class="font-serif text-xl text-primary mb-1">My Akiya in Japan</h1>
-      </div>
-      
-      <nav class="space-y-6 mb-auto">
-        <a href="/" class="flex items-center space-x-3 text-primary group">
-          <div class="w-6 h-6 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-            </svg>
-          </div>
-          <span class="transition-all group-hover:translate-x-1">Back to Listing</span>
-        </a>
-      </nav>
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="flex-1 p-6 lg:p-10 bg-neutral-light">
-      <div class="max-w-8xl mx-auto">
-        <!-- Header -->
-        <header class="mb-12">
-          <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-serif font-light text-primary">Upgrade to Premium</h1>
-          </div>
-        </header>
-
-        <section class="mb-12">
-          <h2 class="text-4xl font-serif text-primary mb-4">Premium Account Features</h2>
-          <ul class="list-disc pl-6 text-secondary">
-            <li>Access to exclusive property listings not available to free users</li>
-            <li>Priority customer support for faster assistance</li>
-            <li>Detailed property reports with historical data and trends</li>
-            <li>Ad-free browsing experience</li>
-          </ul>
-        </section>
-
-        {% if user.is_authenticated or request.COOKIES.email %}
-          <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
-            <div class="p-6 border-b border-accent/20">
-              <h2 class="font-serif text-xxl text-primary mb-1">Apply for a Premium Account - $4,99/month</h2>
-              <p class="text-xxl">We’ll contact you shortly to process your premium membership request</p>
-            </div>            
-            
-            <!-- Book Button -->
-            <div class="p-6">
-              {% if user_email %}
-                <button
-                  id="book-button"
-                  class="w-full primary text-white font-medium hover:bg-primary/90 transition-colors"
-                >Go Premium
-                </button>
-              {% else %}
-                <a href="{% url 'account_login' %}?next={% url 'upgrade_premium' %}"
-                   class="w-full primary text-white font-medium hover:bg-primary/90 transition-colors inline-block text-center p-3"
-                   style="text-decoration:none;">
-                  Log in or register to request Premium
-                </a>
-              {% endif %}
-            </div>
-
-
-            <div id="success-confirmation" class="mt-8 hidden">
-              <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
-                <div class="flex items-start">
-                  <div class="flex-shrink-0 mt-0.5">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-[#81C784]" viewBox="0 0 20 20" fill="currentColor">
-                      <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                    </svg>
-                  </div>
-                  <div class="ml-3">
-                    <h3 class="font-serif text-xll text-primary mb-1">Request Submitted</h3>    
-                    <p class="text-l text-secondary">
-                      Your request for a premium account has been submitted. We’ll review it and get back to you soon.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>    
-          </div>
-        {% endif %}
-      </div>
-    </main>
-  </div>
-
-
 </body>
 </html>

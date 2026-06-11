@@ -1,6 +1,5 @@
 {% load socialaccount %}
 
-
 {% load static %}
 
 <!DOCTYPE html>
@@ -26,9 +25,8 @@
         xfbml      : true,
         version    : '{api-version}'
       });
-        
-      FB.AppEvents.logPageView();   
-        
+
+      FB.AppEvents.logPageView();
     };
 
     (function(d, s, id){
@@ -41,172 +39,255 @@
   </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Akiya in Japan</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
-  <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
-  <script src="https://www.paypal.com/sdk/js?client-id=AZTP_cn7ajpK-tSRt1MGdC15_FNPQNR3eLevMMGNF16gCB8xdeEUg_H7CFfkRdF-wGuzTZGYjWJTwOeq&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
-  <script src="{% static 'assets/js/jquery.min.js' %}"></script>
+  <title>{% if redirect_to_premium == '1' %}Sign up to upgrade{% else %}Sign up{% endif %} — My Akiya in Japan</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;600&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --primary: #477535;
+      --primary-dark: #3a5f2b;
+      --accent: #d6b58f;
+      --accent-soft: #f3ece2;
+      --secondary: #878787;
+      --foreground: #2b2b2b;
+      --bg: #faf8f4;
+      --card: #ffffff;
+      --border: rgba(71, 117, 53, 0.14);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: var(--foreground);
+      background: var(--bg);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    .serif { font-family: 'Noto Serif JP', serif; }
+    a { color: inherit; }
+
+    /* ---- Top bar ---- */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.1rem 1.5rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .topbar .brand {
+      font-family: 'Noto Serif JP', serif;
+      font-size: 1.25rem;
+      color: var(--primary);
+      font-weight: 500;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      color: var(--primary);
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: opacity 0.2s ease;
+    }
+    .back-link:hover { opacity: 0.7; }
+
+    /* ---- Auth layout ---- */
+    .auth-wrap {
+      max-width: 460px;
+      margin: 1.5rem auto 4rem;
+      padding: 0 1.5rem;
+    }
+    .auth-head { text-align: center; margin-bottom: 1.75rem; }
+    .auth-head .eyebrow {
+      display: inline-block;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--primary);
+      background: var(--accent-soft);
+      padding: 0.4rem 0.9rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+    }
+    .auth-head h1 {
+      font-family: 'Noto Serif JP', serif;
+      font-weight: 500;
+      font-size: clamp(1.6rem, 4vw, 2.1rem);
+      line-height: 1.2;
+      margin-bottom: 0.5rem;
+    }
+    .auth-head p { color: var(--secondary); font-size: 1rem; }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 18px 40px -24px rgba(71, 117, 53, 0.45);
+    }
+
+    .field-label { font-size: 0.9rem; font-weight: 600; color: var(--foreground); margin-bottom: 0.5rem; display: block; }
+
+    .email-form { display: flex; flex-direction: column; gap: 0.75rem; }
+    .email-form input[type="email"] {
+      width: 100%;
+      padding: 0.8rem 0.9rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1rem;
+      color: var(--foreground);
+      background: #fff;
+    }
+    .email-form input[type="email"]::placeholder { color: #b0b0b0; }
+    .email-form input[type="email"]:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(71, 117, 53, 0.15);
+    }
+
+    .btn-primary {
+      display: block;
+      width: 100%;
+      text-align: center;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 0.85rem 1rem;
+      font-family: 'Work Sans', sans-serif;
+      font-size: 1.02rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: background 0.2s ease, transform 0.05s ease;
+    }
+    .btn-primary:hover { background: var(--primary-dark); }
+    .btn-primary:active { transform: translateY(1px); }
+
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin: 1.4rem 0;
+      color: var(--secondary);
+      font-size: 0.85rem;
+    }
+    .divider::before, .divider::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: var(--border);
+    }
+
+    .social-row { display: flex; flex-direction: column; gap: 0.75rem; align-items: stretch; }
+    .btn-social {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fff;
+      color: var(--foreground);
+      font-size: 0.98rem;
+      font-weight: 500;
+      text-decoration: none;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+    .btn-social:hover { background: var(--accent-soft); }
+    .btn-social img { width: 20px; height: 20px; }
+
+    .fb-wrap { display: flex; justify-content: center; }
+
+    /* ---- Free features (intro-call variant) ---- */
+    .free-features {
+      margin-top: 1.5rem;
+      background: var(--accent-soft);
+      border-radius: 12px;
+      padding: 1.1rem 1.25rem;
+    }
+    .free-features h2 { font-family: 'Noto Serif JP', serif; font-weight: 500; font-size: 1.05rem; margin-bottom: 0.6rem; }
+    .free-features ul { list-style: none; margin: 0; padding: 0; }
+    .free-features li { display: flex; gap: 0.5rem; align-items: flex-start; font-size: 0.92rem; color: var(--foreground); margin-bottom: 0.4rem; }
+    .free-features li:last-child { margin-bottom: 0; }
+    .free-features svg { flex: 0 0 auto; width: 16px; height: 16px; color: var(--primary); margin-top: 0.2rem; }
+  </style>
 </head>
 
 <body>
-  <div class="flex flex-col lg:flex-row min-h-screen">
-    <!-- Sidebar -->
-    <aside class="lg:w-64 bg-neutral-light border-r border-accent/30 p-5 flex flex-col">
-      <div class="mb-8">
-        <h1 class="text-xl text-primary mb-1">My Akiya in Japan</h1>
-      </div>
-      
-      <nav class="space-y-6 mb-auto">
-        <a href="/" class="flex items-center space-x-3 text-primary group">
-          <div class="w-6 h-6 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-            </svg>
-          </div>
-          <span class="transition-all group-hover:translate-x-1">Back to Listing</span>
-        </a>
-        
-      </nav>
-      
-    </aside>
-    
-    <!-- Main Content -->
-    <main class="flex-1 p-6 lg:p-10 bg-neutral-light">
-      <div class="max-w-8xl mx-auto">
-        <!-- Header -->
-        <header class="mb-12">
-          <div class="flex items-center justify-between mb-6">
-            <h1 class="text-3xl font-light text-primary">{% if redirect_to_premium == '1' %}Sign up to Upgrade{% else %}Sign up to Book your Intro Call{% endif %}</h1>
-            <div class="flex items-center space-x-2">
-              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                </svg>
-              </div>
-              <div class="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z" />
-                </svg>
-              </div>
-            </div>
-          </div>
-        </header>
-      
-        {% if redirect_to_premium == '0' %}
-          <section class="mb-12">
-            <h2 class="text-4xl text-primary mb-4">Free Features</h2>
-            <ul class="list-disc pl-6 text-secondary">
-              <li>Explore an extensive range of properties</li>
-              <li>Ad-free browsing experience</li>
-            </ul>
-          </section>
-        {% endif %}
-
-        <!-- Booking Form -->
-        <div class="card bg-white shadow-sm border border-accent/20 overflow-hidden">
-          <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">Sign up with your email</p>
-            <p class="text-secondary text-sm">
-              <form action="/register-via-email/{{ property_pk }}/{{ redirect_to_premium }}/" method="POST" class="flex items-center space-x-5">
-                {% csrf_token %}
-                <input type="email" id="email" name="email" class="flex-1 p-2 border border-accent/20 rounded" style="background-color: white; border-width: 0.2ch; border-style:solid; color: black;" placeholder="Enter your email" required>
-                <button type="submit" class="primary">Sign Up</button>
-              </form>
-            </p>
-          </div>
-          
-          <div class="p-6 border-b border-accent/20">
-            <p class="text-secondary text-l">or Sign up with your Google Account</p>
-            <p class="text-secondary text-sm">
-                <a href="{% provider_login_url 'google' %}"
-                class="btn btn-light "
-                style="font-size: 1.25rem; padding: 15px 30px; transition: all 0.3s;">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" 
-                    alt="Google Logo" width="32" height="32">
-                </a>
-            </p>
-
-
-            <fb:login-button 
-            scope="public_profile,email"
-            onlogin="checkLoginState();">
-            </fb:login-button>
-          </div>
-        </div>
-        </main>
+  <div class="topbar">
+    <span class="brand">My Akiya in Japan</span>
+    <a href="/" class="back-link">
+      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+      </svg>
+      Back to listings
+    </a>
   </div>
 
-  <script src="{% static 'assets/js/property_detail.js' %}"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      const downloadBtn = document.getElementById('download-zip-btn');
-      
-      downloadBtn.addEventListener('click', async function() {
-        try {
-          // Show loading state
-          const originalText = downloadBtn.innerHTML;
-          downloadBtn.innerHTML = '<span class="animate-pulse">Creating ZIP...</span>';
-          
-          // Create a new zip file
-          const zip = new JSZip();
-          
-          // Add the HTML file
-          const htmlContent = document.documentElement.outerHTML;
-          zip.file("booking-page.html", htmlContent);
-          
-          // Fetch and add the CSS file
-          const cssResponse = await fetch("styles.css");
-          const cssContent = await cssResponse.text();
-          zip.file("styles.css", cssContent);
-          
-          // Fetch and add the JavaScript file
-          const jsResponse = await fetch("script.js");
-          const jsContent = await jsResponse.text();
-          zip.file("script.js", jsContent);
-          
-          // Add README file
-          const readmeContent = 
-    `# Japanese-Inspired Garden Booking Page
+  <div class="auth-wrap">
+    <header class="auth-head">
+      {% if redirect_to_premium == '1' %}
+        <span class="eyebrow">Premium membership</span>
+        <h1 class="serif">Create your account to upgrade</h1>
+        <p>One quick step — sign up, then unlock Premium on the next screen.</p>
+      {% else %}
+        <span class="eyebrow">Free account</span>
+        <h1 class="serif">Sign up to book your intro call</h1>
+        <p>Create a free account to connect with our English-speaking team.</p>
+      {% endif %}
+    </header>
 
-    This is a standalone implementation of a Japanese-inspired garden consultation booking page. The design features a minimalist, zen-like aesthetic with a clean user interface for booking consultations.
+    <div class="card">
+      <!-- Email sign-up -->
+      <form action="/register-via-email/{{ property_pk }}/{{ redirect_to_premium }}/" method="POST" class="email-form">
+        {% csrf_token %}
+        <label class="field-label" for="email">Sign up with your email</label>
+        <input type="email" id="email" name="email" placeholder="Enter your email" required>
+        <button type="submit" class="btn-primary">
+          {% if redirect_to_premium == '1' %}Continue to Premium{% else %}Sign up{% endif %}
+        </button>
+      </form>
 
-    ## Features
+      <div class="divider">or continue with</div>
 
-    - Calendar date picker for selecting consultation dates
-    - Time slot selection for choosing appointment times
-    - Garden preview section showing potential garden elements
-    - Achievement tracking for user progress
-    - Success confirmation message after booking is complete
-    - Responsive design for mobile, tablet, and desktop
+      <!-- Social sign-up -->
+      <div class="social-row">
+        <a href="{% provider_login_url 'google' %}" class="btn-social">
+          <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="">
+          Google
+        </a>
+        <div class="fb-wrap">
+          <fb:login-button scope="public_profile,email" onlogin="checkLoginState();"></fb:login-button>
+        </div>
+      </div>
 
-    ## How to Use
-
-    1. Place all files in the same folder
-    2. Open booking-page.html in your web browser
-    3. No server setup required - works completely client-side
-    `;
-          zip.file("README.md", readmeContent);
-          
-          // Generate the zip file
-          const zipBlob = await zip.generateAsync({type: "blob"});
-          
-          // Save the zip file
-          saveAs(zipBlob, "zen-garden-booking.zip");
-          
-          // Reset button state
-          downloadBtn.innerHTML = originalText;
-        } catch (error) {
-          console.error("Error creating ZIP file:", error);
-          downloadBtn.innerHTML = "Download Failed";
-          setTimeout(() => {
-            downloadBtn.innerHTML = originalText;
-          }, 2000);
-        }
-      });
-    });
-  </script>
+      {% if redirect_to_premium == '0' %}
+        <div class="free-features">
+          <h2>Your free account includes</h2>
+          <ul>
+            <li>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              Explore an extensive range of properties
+            </li>
+            <li>
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+              Ad-free browsing experience
+            </li>
+          </ul>
+        </div>
+      {% endif %}
+    </div>
+  </div>
 </body>
 </html>

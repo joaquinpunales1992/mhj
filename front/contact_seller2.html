@@ -60,6 +60,28 @@
 		</script>
 
 <script>
+  function handleCalendlyClick(userEmail = "", propertyId) {
+    fetch("/notify-user-expressed-interest/", {
+      method: "POST",
+      headers: {
+        'X-CSRFToken': '{{ csrf_token }}',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        email: userEmail,
+        section: "book meeting",
+        property_id: propertyId
+      })
+      }).then(response => {
+          // Show Calendly popup
+          Calendly.initPopupWidget({
+            url: `https://calendly.com/hello-japan/30min?hide_event_type_details=1&hide_gdpr_banner=1&email=${userEmail}&a1=Property%20Identifier%20${propertyId}&primary_color=34a58e`
+          });
+    })
+
+    return false;
+  }
+
   // Get CSRF token if needed
   function getCookie(name) {
     let cookieValue = null;
@@ -93,12 +115,12 @@ function subscribeToNewsletter(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "upgrade_premium" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "upgrade_premium" %}';
     });
 }
 
@@ -119,12 +141,12 @@ function subscribeToNewsletterAuthenticated(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "authenticate" 1 1 %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "authenticate" 1 1 %}';
     });
 }
 
@@ -144,12 +166,12 @@ function landRightsInterest(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "upgrade_premium" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "upgrade_premium" %}';
     });
 }
 
@@ -169,12 +191,12 @@ function landRightsInterestAuthenticated(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "authenticate" 1 1 %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "authenticate" 1 1 %}';
     });
 }
 
@@ -195,12 +217,12 @@ function riskInformationInterest(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "upgrade_premium" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "upgrade_premium" %}';
     });
 }
 
@@ -220,12 +242,12 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "authenticate" 1 1 %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "authenticate" 1 1 %}';
     });
 }
 </script>
@@ -252,6 +274,8 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
   <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
   <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+  <link href="https://assets.calendly.com/assets/external/widget.css" rel="stylesheet">
+  <script src="https://assets.calendly.com/assets/external/widget.js" type="text/javascript" async></script>
 
   <!-- <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js" defer></script> -->
 
@@ -306,7 +330,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
 
 .property-title {
   font-size: 1.1rem;
-  color: #2b2b2b;
+  color: #2c3e50;
   margin-bottom: 0.5rem;
 }
 
@@ -319,7 +343,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
 .property-price {
   font-weight: bold;
   font-size: 1.4rem;
-  color: #477535;
+  color: #3498db;
   margin-bottom: 0.7rem;
 }
 
@@ -327,14 +351,14 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
   display: inline-block;
   margin-top: 0.5rem;
   color: white;
-  background-color: #477535;
+  background-color: #34a58e;
   padding: 0.5rem 1rem;
   border-radius: 6px;
   text-decoration: none;
 }
 
 .property-details-button:hover {
-  background-color: #477535;
+  background-color: #34a58e;
   text-decoration-color: white;
   color: white;
 }
@@ -382,10 +406,10 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
 }
 
 :root {
-    --primary-color: #477535;
-    --secondary-color: #2b2b2b;
-    --background-color: #faf8f4;
-    --text-color: #2b2b2b;
+    --primary-color: #3498db;
+    --secondary-color: #2c3e50;
+    --background-color: #f8f9fa;
+    --text-color: #333;
     --light-text: #f8f9fa;
     --caption-bg: rgba(0, 0, 0, 0.7);
     --transition-speed: 400ms;
@@ -396,7 +420,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
 }
 
 body {
-    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
@@ -491,8 +515,8 @@ footer a:hover {
 }
 
 .carousel-slide {
-    flex: 0 0 100%; /* One large featured image at a time */
-    min-width: 100%;
+    flex: 0 0 33.333%; /* Show 3 slides per row */
+    min-width: 33.333%;
     position: relative;
     overflow: hidden;
 }
@@ -709,8 +733,8 @@ input:checked + .toggle-slider:before {
     }
     
     .carousel-slide {
-        flex: 0 0 100%; /* One image at a time on tablets too */
-        min-width: 100%;
+        flex: 0 0 50%; /* 2 slides per row on tablets */
+        min-width: 50%;
     }
 }
 
@@ -775,7 +799,7 @@ input:checked + .toggle-slider:before {
       top: 0;
       width: 24px;
       height: 24px;
-      background: #477535;
+      background: #337ab7;
       color: white;
       border-radius: 50%;
       text-align: center;
@@ -795,7 +819,7 @@ input:checked + .toggle-slider:before {
     }
 
     .step button {
-      background-color: #477535;
+      background-color: #34a58e;
       color: white;
       padding: 0.6rem 1rem;
       border: none;
@@ -804,32 +828,6 @@ input:checked + .toggle-slider:before {
       margin-top: 0.8rem;
     }
 
-    /* Collapsible "Interested in buying?" — collapsed by default; click to expand. */
-    .buying-details > summary {
-      list-style: none;       /* hide default ▶ disclosure marker */
-      cursor: pointer;
-      padding: 1rem 1.25rem;
-      background: #f4f6f9;
-      border: 1px solid #e0e4ea;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      user-select: none;
-    }
-    .buying-details > summary::-webkit-details-marker { display: none; }
-    .buying-details > summary:hover { background: #eaeef4; }
-    .buying-details > summary .buying-details-arrow {
-      transition: transform 0.2s ease;
-      font-size: 1.5rem;
-      color: #477535;
-    }
-    .buying-details[open] > summary .buying-details-arrow {
-      transform: rotate(180deg);
-    }
-    .buying-details[open] > .step {
-      margin-top: 1.5rem;
-    }
 </style>
 
   <script>
@@ -970,7 +968,9 @@ class ImageCarousel {
 
     this.isTransitioning = true;
 
-    const slideWidth = 100; // one full-width featured image per view
+    let slideWidth = 33.333;
+    if (window.innerWidth <= 768 && window.innerWidth > 480) slideWidth = 50;
+    else if (window.innerWidth <= 480) slideWidth = 100;
 
     this.track.style.transform = `translateX(-${index * slideWidth}%)`;
     this.slides.forEach(s => s.classList.remove('active'));
@@ -1025,7 +1025,9 @@ class ImageCarousel {
   }
 
   handleResize() {
-    const slideWidth = 100; // one full-width featured image per view
+    let slideWidth = 33.333;
+    if (window.innerWidth <= 768 && window.innerWidth > 480) slideWidth = 50;
+    else if (window.innerWidth <= 480) slideWidth = 100;
     this.track.style.transform = `translateX(-${this.currentIndex * slideWidth}%)`;
   }
 }
@@ -1129,102 +1131,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 </script>
 
-<style>
-  /* ===== Match the Premium-page visual system (cream + sage green + beige) ===== */
-  :root {
-    --mhj-primary: #477535;
-    --mhj-primary-dark: #3a5f2b;
-    --mhj-accent-soft: #f3ece2;
-    --mhj-border: rgba(71, 117, 53, 0.14);
-  }
-
-  body { background: #faf8f4; }
-
-  /* Serif display headings, like the premium page */
-  header h1,
-  .related-properties-heading,
-  .modal-title,
-  .buying-details summary h3 { font-family: 'Noto Serif JP', serif; font-weight: 500; }
-
-  /* Brand wordmark + back link in the sidebar */
-  aside h1.font-serif { font-family: 'Noto Serif JP', serif; color: var(--mhj-primary); }
-
-  /* Primary buttons → solid sage green, rounded, with hover */
-  .primary {
-    background: var(--mhj-primary);
-    color: #fff;
-    border-radius: 10px;
-    transition: background 0.2s ease, transform 0.05s ease;
-  }
-  .primary:hover { background: var(--mhj-primary-dark); }
-  .primary:active { transform: translateY(1px); }
-
-  /* Outline "Upgrade / Subscribe" buttons: green outline, soft beige hover fill */
-  button.primary[style*="transparent"] {
-    border-radius: 10px;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-    transition: background 0.2s ease;
-  }
-  button.primary[style*="transparent"]:hover { background: var(--mhj-accent-soft) !important; }
-
-  /* Property-facts panel → clean white card */
-  .max-w-4xl.shadow.rounded-2xl {
-    background: #fff;
-    border: 1px solid var(--mhj-border);
-    box-shadow: 0 18px 40px -24px rgba(71, 117, 53, 0.45);
-  }
-
-  /* Related-property cards */
-  .related-property-card {
-    border: 1px solid var(--mhj-border);
-    border-radius: 14px;
-    box-shadow: 0 10px 30px -22px rgba(71, 117, 53, 0.5);
-  }
-  .related-property-card:hover { box-shadow: 0 16px 38px -20px rgba(71, 117, 53, 0.55); }
-  .property-details-button { border-radius: 8px; }
-
-  /* Buying-flow disclosure */
-  .buying-details > summary {
-    background: var(--mhj-accent-soft);
-    border-color: var(--mhj-border);
-    border-radius: 10px;
-  }
-  .buying-details > summary:hover { background: #ece1d2; }
-  .step button { border-radius: 10px; }
-
-  /* Share / like utility cluster */
-  .bg-primary\/10 { background: var(--mhj-accent-soft) !important; border-radius: 10px; }
-
-  /* Carousel arrows → clean circles (override Bootstrap's gradient-bar controls) */
-  .carousel .carousel-control {
-    top: 50% !important;
-    bottom: auto !important;
-    transform: translateY(-50%) !important;
-    width: auto !important;
-    height: auto !important;
-    padding: 0 !important;
-    border: none !important;
-    border-radius: 0 !important;
-    background: transparent !important;
-    background-image: none !important;
-    color: #fff !important;
-    opacity: 0.95 !important;
-    text-shadow: none !important;
-    box-shadow: none !important;
-    /* keep the white arrow legible on light photos */
-    filter: drop-shadow(0 1px 5px rgba(0, 0, 0, 0.55)) !important;
-    display: flex !important;
-    align-items: center;
-    justify-content: center;
-  }
-  .carousel .carousel-control:hover {
-    transform: translateY(-50%) scale(1.12) !important;
-    opacity: 1 !important;
-  }
-  .carousel .carousel-control svg { display: block; width: 48px; height: 48px; }
-</style>
-
 </head>
 
 <body>
@@ -1266,7 +1172,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Location</p>
-                <p class="text-xll">{{ property.location }} | <a href="#" data-toggle="modal" data-target="#mapModal" class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
+                <p class="text-xll">{{ property.location }} | <a href="{{ property.get_location_url }}" target="_blank" class="text-blue-500 hover:underline">View on Map</a></p>
                 <hr>
               </div>
               </div>
@@ -1286,12 +1192,12 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Rights</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="landRightsInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"></span><span style="color: #477535;"> Upgrade</span>
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="landRightsInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
+                      <span class="icon solid fa-lock" style="color: #34a58e;"></span><span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="landRightsInterest('{{ user_email }}', '{{ property.pk }}')">
-                    <span class="icon solid fa-lock" style="color: #477535;"></span> <span style="color: #477535;"> Upgrade</span>
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="landRightsInterest('{{ user_email }}', '{{ property.pk }}')">
+                    <span class="icon solid fa-lock" style="color: #34a58e;"></span> <span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% endif %}
                 <hr>
@@ -1299,12 +1205,12 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Risk Information</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="riskInformationInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"> </span><span style="color: #477535;"> Upgrade</span>
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="riskInformationInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
+                      <span class="icon solid fa-lock" style="color: #34a58e;"> </span><span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="riskInformationInterest('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"> </span><span style="color: #477535;"> Upgrade</span>
+                  <button class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="riskInformationInterest('{{ user_email }}', '{{ property.pk }}')">
+                      <span class="icon solid fa-lock" style="color: #34a58e;"> </span><span style="color: #34a58e;"> Upgrade</span>
                   </button>
                 {% endif %}
               </div>
@@ -1314,19 +1220,19 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
           
           <br>
-          <hr style="border: 0; height: 1px; background: rgba(71,117,53,0.18); margin: 2.5rem 0;">
+          <hr style="border: 0; height: 2px; background: #3498db; margin: 2.5rem 0; border-radius: 2px; box-shadow: 0 2px 8px rgba(52,152,219,0.15);">
           <center>
           <div class="flex flex-row flex-5 gap-6 w-full">
               <div class="flex-1">
                 <h3>Subscribe to our Newsletter</h3>
                 <p class="text-xll" style="color: black;">Get exclusive access to 20 new properties each week, unavailable to other accounts.</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
-                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="subscribeToNewsletterAuthenticated('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"></span><span style="color: #477535;"> SUBSCRIBE</span>
+                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="subscribeToNewsletterAuthenticated('{{ user_email }}', '{{ property.pk }}')">
+                      <span class="icon solid fa-lock" style="color: #34a58e;"></span><span style="color: #34a58e;"> SUBSCRIBE</span>
                   </button>
                 {% else %}
-                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="subscribeToNewsletter('{{ user_email }}', '{{ property.pk }}')">
-                    <span class="icon solid fa-lock" style="color: #477535;"></span> <span style="color: #477535;"> SUBSCRIBE</span>
+                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #34a58e; color: #34a58e;" onclick="subscribeToNewsletter('{{ user_email }}', '{{ property.pk }}')">
+                    <span class="icon solid fa-lock" style="color: #34a58e;"></span> <span style="color: #34a58e;"> SUBSCRIBE</span>
                   </button>
                 {% endif %}
                 <hr>
@@ -1442,10 +1348,10 @@ document.addEventListener('DOMContentLoaded', () => {
                       </div>
   
                       <button class="carousel-control prev" aria-label="Previous slide">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                          <i class="fas fa-chevron-left" aria-hidden="true"></i>
                       </button>
                       <button class="carousel-control next" aria-label="Next slide">
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                          <i class="fas fa-chevron-right" aria-hidden="true"></i>
                       </button>
   
                       <div class="carousel-indicators" aria-hidden="true"></div>
@@ -1476,48 +1382,74 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>   -->
 
-            <details class="buying-details">
-              <summary>
-                <h3 style="display:inline; margin:0;">Interested in buying?</h3>
-                <span class="buying-details-arrow" aria-hidden="true">▾</span>
-              </summary>
-
-              <div class="step" data-step="1">
-                <h5>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.</h5>
+            <div class="step" data-step="1">
+              
+              <h3>Interested in buying? </h3>
+              <h5>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.
+              </5>
+              {% if user.is_authenticated or request.COOKIES.email %}
                 <div>
-                    <button id="book-button" type="button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" data-toggle="modal" data-target="#interestModal">
+                    <button id="book-button" class="w-full primary text-white py-6 font-medium text-sm md:text-base lg:text-lg" onclick="handleCalendlyClick('{{ user_email }}', '{{ property.pk }}')">
                       Start Buying in Japan
                     </button>
                 </div>
-              </div>
-
-              <div class="step" data-step="2">
-                <h4>2 - Sign & pay the MyAkiyaInJapan service fee and choose up to 3 properties</h4>
+              {% else %}
+                <div>
+                    <button class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" onclick="handleCalendlyClick('', '{{ property.pk }}')">
+                        Start Buying in Japan
+                    </button>
+                </div>
+            {% endif %}
+          </div>
+          
+          
+            <div class="step" data-step="2">
+              <h4>2 - Sign & pay the MyAkiyaInJapan service fee and choose up to 3 properties
+                <button class="toggle-step" onclick="toggleStep(2)">Hide/Show</button>
+              </h4>
+              <div class="step-content" id="step-content-2">
                 <small>We will support you throughout the entire purchase process, ensuring a smooth and confident experience</small>
               </div>
-
-              <div class="step" data-step="3">
-                <h4>3 - Request a Virtual Inspection</h4>
+            </div>
+        
+            <div class="step" data-step="3">
+              <h4>3 - Request a Virtual Inspection
+                <button class="toggle-step" onclick="toggleStep(3)">Hide/Show</button>
+              </h4>
+              <div class="step-content" id="step-content-3">
                 <small>We’ll coordinate a virtual or in-person inspection of your selected properties, providing a detailed condition report</small>
               </div>
-
-              <div class="step" data-step="4">
-                <h4>4 - Submit your offer for the property you’ve chosen</h4>
+            </div>
+    
+            <div class="step" data-step="4">
+              <h4>4 - Submit your offer for the property you’ve chosen
+                <button class="toggle-step" onclick="toggleStep(4)">Hide/Show</button>
+              </h4>
+              <div class="step-content" id="step-content-4">
                 <small>We’ll formally submit your offer to the property owner and help with the negotiation process</small>
               </div>
-
-              <div class="step" data-step="5">
-                <h4>5 - Finalize the details, costs, and documentation</h4>
+            </div>
+        
+            <div class="step" data-step="5">
+              <h4>5 - Finalize the details, costs, and documentation
+                <button class="toggle-step" onclick="toggleStep(5)">Hide/Show</button>
+              </h4>
+              <div class="step-content" id="step-content-5">
                 <small>Complete all necessary paperwork, tax payments, and contract signings to finalize your purchase</small>
               </div>
+            </div>
 
-              <div class="step" data-step="6">
-                <h4>6 - Receive the keys to your new home in Japan</h4>
+            <div class="step" data-step="6">
+              <h4>6 - Receive the keys to your new home in Japan
+                <button class="toggle-step" onclick="toggleStep(6)">Hide/Show</button>
+              </h4>
+              <div class="step-content" id="step-content-6">
                 <small>Congratulations! Your new home is ready for you!</small>
               </div>
-            </details>
+            </div>
+            </div>
 
-            <hr style="border: 0; height: 1px; background: rgba(71,117,53,0.18); margin: 2.5rem 0;">
+            <hr style="border: 0; height: 2px; background: #3498db; margin: 2.5rem 0; border-radius: 2px; box-shadow: 0 2px 8px rgba(52,152,219,0.15);">
             <div class="related-properties-container">
             <h2 class="related-properties-heading">Discover other traditional Japanese houses:</h2>
             {% find_related_properties property.pk as related_properties %}
@@ -1534,7 +1466,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="property-info">
                       <p class="property-location">Akiya in 📍 {{ property.get_location_for_front }}</p>
                       <p class="property-price">{{ property.get_price_for_front }}</p>
-                      <a href="{% url 'property_detail' property.pk 0 %}" class="property-details-button" style="background-color: transparent;  border: 2px solid #477535; color: #477535;"> <span style="color: #477535;">Learn More</span></a>
+                      <a href="{% url 'property_detail' property.pk 0 %}" class="property-details-button" style="background-color: transparent;  border: 2px solid #34a58e; color: #34a58e;"> <span style="color: #34a58e;">Learn More</span></a>
                     </div>
                   </div>
                 {% endfor %}
@@ -1546,125 +1478,5 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     </main>
   </div>
-
-  <!-- Map modal: lazy-loads Google Maps embed when opened -->
-  <div class="modal fade" id="mapModal" tabindex="-1" role="dialog" aria-labelledby="mapModalLabel">
-    <div class="modal-dialog modal-lg" role="document" style="max-width: 900px;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-          <h4 class="modal-title" id="mapModalLabel">{{ property.location }}</h4>
-        </div>
-        <div class="modal-body" style="padding:0;">
-          <iframe
-            id="mapIframe"
-            src="https://www.google.com/maps?q={{ property.get_location_for_map|urlencode }}&output=embed"
-            width="100%"
-            height="500"
-            frameborder="0"
-            style="border:0; display:block;"
-            allowfullscreen
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade">
-          </iframe>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script>
-    // Defer the Google Maps iframe load until the user actually opens the modal.
-    document.addEventListener('DOMContentLoaded', function() {
-      var modal = document.getElementById('mapModal');
-      if (!modal) return;
-      $(modal).on('shown.bs.modal', function() {
-        var iframe = document.getElementById('mapIframe');
-        if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
-      });
-    });
-  </script>
-
-  <!-- Expression of Interest modal -->
-  <style>
-    /* main.css sets a light grey (#a0a0a1) on inputs site-wide, which makes
-       typed text nearly invisible on the white modal. Force dark text here. */
-    #interestModal .modal-content { color: #333; }
-    #interestModal .modal-body p { color: #555; }
-    #interestModal label { color: #333; font-weight: 600; margin-bottom: 4px; }
-    #interestModal .form-control {
-      color: #333 !important; background-color: #fff !important;
-      border: 1px solid #ccc; box-shadow: none; height: auto; line-height: 1.4;
-    }
-    #interestModal .form-control:focus { border-color: #477535; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
-    #interestModal .form-control::placeholder { color: #999 !important; }
-  </style>
-  <div class="modal fade" id="interestModal" tabindex="-1" role="dialog" aria-labelledby="interestModalLabel">
-    <div class="modal-dialog" role="document" style="max-width: 520px;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-          <h4 class="modal-title" id="interestModalLabel">Start Buying in Japan</h4>
-        </div>
-        <div class="modal-body">
-          <p style="margin-bottom:16px;">Tell us a little about what you're looking for and our English-speaking team will be in touch.</p>
-          <form id="interestForm">
-            <input type="hidden" name="property_url" value="{{ request.build_absolute_uri }}">
-            <div style="margin-bottom:12px;">
-              <label for="interestName">Name</label>
-              <input type="text" id="interestName" name="name" required class="form-control" placeholder="Your name">
-            </div>
-            <div style="margin-bottom:12px;">
-              <label for="interestEmail">Email</label>
-              <input type="email" id="interestEmail" name="email" required class="form-control" placeholder="you@example.com" value="{{ user_email|default:'' }}">
-            </div>
-            <div style="margin-bottom:12px;">
-              <label for="interestMessage">Message</label>
-              <textarea id="interestMessage" name="message" rows="4" class="form-control" placeholder="What are you looking for?"></textarea>
-            </div>
-            <p id="interestError" style="color:#c0392b; display:none; margin-bottom:12px;"></p>
-            <button type="submit" id="interestSubmit" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">Send request</button>
-          </form>
-          <div id="interestSuccess" style="display:none; text-align:center; padding:16px 0;">
-            <h4 class="text-primary">Thank you!</h4>
-            <p>We've received your request and will be in touch shortly.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var form = document.getElementById('interestForm');
-      if (!form) return;
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var btn = document.getElementById('interestSubmit');
-        var errorEl = document.getElementById('interestError');
-        errorEl.style.display = 'none';
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-        fetch('{% url "submit_interest_request" %}', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: form.elements['name'].value,
-            email: form.elements['email'].value,
-            message: form.elements['message'].value,
-            property_url: form.elements['property_url'].value
-          })
-        })
-        .then(function(r) {
-          if (!r.ok) throw new Error('Request failed');
-          form.style.display = 'none';
-          document.getElementById('interestSuccess').style.display = 'block';
-        })
-        .catch(function() {
-          errorEl.textContent = 'Something went wrong. Please try again.';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = 'Send request';
-        });
-      });
-    });
-  </script>
 </body>
 </html>

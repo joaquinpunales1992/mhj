@@ -89,9 +89,24 @@
 								font-size: 0.4rem;
 							}
 						}
+
+						/* Filter pills — match the sage-green palette, clear active state */
+						.filter-button {
+							padding: 0.7rem 1.2rem;
+							border-radius: 14px;
+							border: none;
+							transition: background 0.2s ease, color 0.2s ease, transform 0.05s ease;
+						}
+						.filter-button:hover { background: rgba(255, 255, 255, 0.12) !important; }
+						.filter-button.is-active {
+							background: #477535 !important;
+							box-shadow: 0 8px 20px -10px rgba(0, 0, 0, 0.55) !important;
+						}
+						.filter-button.is-active .icon,
+						.filter-button.is-active span { color: #fff !important; }
 					</style>
 
-					<button class="filter-button" onclick="window.location.href='{% url "home" %}'" style="
+					<button class="filter-button{% if nav == 'home' %} is-active{% endif %}" onclick="window.location.href='{% url "home" %}'" style="
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -100,12 +115,12 @@
 						cursor: pointer;
 						box-shadow: none;
 					">
-						<span class="icon solid fa-recycle" style="font-size: 2rem; {% if nav == 'home' %} color: #34a58e; {% endif %}"></span>
+						<span class="icon solid fa-recycle" style="font-size: 2rem; {% if nav == 'home' %} color: #477535; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Explore All</span>
 					</button>
 
 
-					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "beach" %}'" style="
+					<button class="filter-button{% if nav == 'beach' %} is-active{% endif %}" onclick="window.location.href='{% url "filter_properties" "beach" %}'" style="
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -115,11 +130,11 @@
 						cursor: pointer;
 						box-shadow: none;
 					">
-						<span class="icon solid fa-umbrella-beach" style="font-size: 2rem; {% if nav == 'beach' %} color: #34a58e; {% endif %}"></span>
+						<span class="icon solid fa-umbrella-beach" style="font-size: 2rem; {% if nav == 'beach' %} color: #477535; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Beach Town</span>
 					</button>
 
-					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "snow" %}'" style="
+					<button class="filter-button{% if nav == 'snow' %} is-active{% endif %}" onclick="window.location.href='{% url "filter_properties" "snow" %}'" style="
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -129,10 +144,10 @@
 						cursor: pointer;
 						box-shadow: none;
 					">
-						<span class="icon solid fa-snowflake" style="font-size: 2rem; {% if nav == 'snow' %} color: #34a58e; {% endif %}"></span>
+						<span class="icon solid fa-snowflake" style="font-size: 2rem; {% if nav == 'snow' %} color: #477535; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Snow Town</span>
 					</button>
-					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "mountain" %}'" style="
+					<button class="filter-button{% if nav == 'mountain' %} is-active{% endif %}" onclick="window.location.href='{% url "filter_properties" "mountain" %}'" style="
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -142,10 +157,10 @@
 						cursor: pointer;
 						box-shadow: none;
 					">
-						<span class="icon solid fa-mountain" style="font-size: 2rem;  {% if nav == 'mountain' %} color: #34a58e; {% endif %}"></span>
+						<span class="icon solid fa-mountain" style="font-size: 2rem;  {% if nav == 'mountain' %} color: #477535; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Mountain Town</span>
 					</button>
-					<button class="filter-button" onclick="window.location.href='{% url "filter_properties" "onsen" %}'" style="
+					<button class="filter-button{% if nav == 'onsen' %} is-active{% endif %}" onclick="window.location.href='{% url "filter_properties" "onsen" %}'" style="
 						display: flex;
 						flex-direction: column;
 						align-items: center;
@@ -155,7 +170,7 @@
 						cursor: pointer;
 						box-shadow: none;
 					">
-						<span class="icon solid fa-fire" style="font-size: 2rem; {% if nav == 'onsen' %} color: #34a58e; {% endif %}"></span>
+						<span class="icon solid fa-fire" style="font-size: 2rem; {% if nav == 'onsen' %} color: #477535; {% endif %}"></span>
 						<span style="font-size: 0.8rem;">Onsen</span>
 					</button>
 				</div>
@@ -231,11 +246,11 @@
 											<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
 												{% if property.premium %}
 													{% if user.is_authenticated or request.COOKIES.email %}
-														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
+														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=property'">
 															Upgrade to Learn More
 														</button>
 													{% else %}
-														<button class="primary" onclick="window.location.href='{% url "authenticate" property.pk 1 %}'">
+														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=property'">
 															Upgrade to Learn More
 														</button>
 													{% endif %}
@@ -290,11 +305,11 @@
 									<!-- Info on the left -->
 									<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
 										{% if user.is_authenticated or request.COOKIES.email %}
-											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}'">
+											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=listing'">
 												Upgrade to Access Full Listing
 											</button>
 										{% else %}
-											<button class="primary" onclick="window.location.href='{% url "authenticate" 1 1 %}'">
+											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=listing'">
 												Upgrade to Access Full Listing
 											</button>
 										{% endif %}
@@ -418,7 +433,7 @@
 				   and panels (10001); bottom offset clears the ~5.25em-tall bar. */
 				position: fixed; bottom: 6em; right: 24px; z-index: 10010;
 				display: inline-flex; align-items: center; gap: 8px;
-				background-color: #34a58e; color: #fff !important; border: none; border-radius: 9999px;
+				background-color: #477535; color: #fff !important; border: none; border-radius: 9999px;
 				height: auto; line-height: 1.2; padding: 14px 24px;
 				font-family: 'Source Sans Pro', Helvetica, sans-serif; font-size: 15px; font-weight: 600;
 				letter-spacing: normal; text-transform: none; white-space: nowrap; cursor: pointer;
@@ -435,7 +450,7 @@
 				padding: 28px; position: relative; font-family: 'Source Sans Pro', Helvetica, sans-serif;
 				max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.4);
 			}
-			#eoi-box h3 { margin: 0 0 8px; color: #34a58e; font-size: 22px; font-weight: 700; text-transform: none; letter-spacing: normal; }
+			#eoi-box h3 { margin: 0 0 8px; color: #477535; font-size: 22px; font-weight: 700; text-transform: none; letter-spacing: normal; }
 			#eoi-box p { color: #555; font-size: 15px; line-height: 1.5; }
 			#eoi-box label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 5px; text-transform: none; letter-spacing: normal; }
 			#eoi-box input, #eoi-box textarea {
@@ -444,7 +459,7 @@
 				font-family: inherit; font-size: 15px; font-weight: 400; text-transform: none; letter-spacing: normal;
 				box-shadow: none; box-sizing: border-box; -webkit-appearance: none; appearance: none;
 			}
-			#eoi-box input:focus, #eoi-box textarea:focus { outline: none; border-color: #34a58e; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
+			#eoi-box input:focus, #eoi-box textarea:focus { outline: none; border-color: #477535; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
 			#eoi-box textarea { resize: vertical; min-height: 90px; }
 			#eoi-close {
 				position: absolute; top: 10px; right: 14px; width: auto; height: auto; min-height: 0;
@@ -455,7 +470,7 @@
 			#eoi-close:hover { color: #333 !important; background: none; box-shadow: none; }
 			#eoi-submit {
 				display: block; width: 100%; height: auto; line-height: 1.2; margin-top: 4px; padding: 13px 16px;
-				background-color: #34a58e; color: #fff !important; border: none; border-radius: 6px;
+				background-color: #477535; color: #fff !important; border: none; border-radius: 6px;
 				font-family: inherit; font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: normal;
 				box-shadow: none; cursor: pointer;
 			}
@@ -463,7 +478,7 @@
 			#eoi-submit:disabled { opacity: 0.6; cursor: default; }
 			#eoi-error { color: #c0392b; display: none; margin-bottom: 12px; font-size: 14px; }
 			#eoi-success { display: none; text-align: center; padding: 8px 0; }
-			#eoi-success h3 { color: #34a58e; }
+			#eoi-success h3 { color: #477535; }
 			/* On screens <= 736px the site's nav bar moves to the top (top: 0),
 			   so the bottom is free and the button can sit at the bottom edge. */
 			@media (max-width: 736px) {

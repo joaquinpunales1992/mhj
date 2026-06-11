@@ -58,9 +58,15 @@ def submit_premium_request(request):
         # "log in or register first" prompt.
         return JsonResponse({"error": "user_email required"}, status=400)
 
+    # Premium requests now come straight from the upgrade page — anonymous
+    # visitors type their email here instead of going through a separate
+    # sign-up page first. Treat a brand-new email as a registration so the
+    # admin "new user" notification still fires once.
+    is_new_registration = request.COOKIES.get("email", "") != user_email
+
     # Persist so the requests are reviewable in /admin/ even if email fails.
     from membership.models import PremiumRequest
-    from membership.utils import notification_email
+    from membership.utils import notification_email, notify_user_registered_via_email
 
     PremiumRequest.objects.create(
         user_email=user_email or "",
@@ -97,7 +103,15 @@ def submit_premium_request(request):
         ),
     )
 
-    return JsonResponse({"message": "Email sent"})
+    if is_new_registration:
+        notify_user_registered_via_email(user_email)
+
+    # Remember the visitor so they stay recognised across the site (this is the
+    # cookie the gating checks and the upgrade page read), mirroring the old
+    # register-via-email step we just folded into this endpoint.
+    response = JsonResponse({"message": "Email sent"})
+    response.set_cookie("email", user_email)
+    return response
 
 
 @csrf_exempt
