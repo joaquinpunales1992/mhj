@@ -361,6 +361,10 @@ def update_like_count(request, property_id, user_email=None):
 
 def property_detail(request, pk, user_just_registered=0):
     property = Property.objects.filter(pk=pk).first()
+    if property is None:
+        # Listing no longer exists (deleted / expired). Without this guard the
+        # page renders broken with property=None; send the visitor home instead.
+        return redirect("home")
     user_email = (
         request.user.email
         if request.user.is_authenticated
@@ -428,13 +432,5 @@ def filter_properties(request, category):
 
 
 def redirect_404_view(request, exception=None):
-    properties = (
-        Property.objects.filter(show_in_front=True, price__lte=5000, price__gt=0)
-        .annotate(
-            has_any_image=models.Exists(
-                PropertyImage.objects.filter(property=models.OuterRef("pk"))
-            )
-        )
-        .order_by("-featured", "price")[: settings.PROPERTIES_TO_DISPLAY]
-    )
-    return render(request, "home.html", context={"properties": properties})
+    # Any broken / no-longer-existing URL sends the visitor to the homepage.
+    return redirect("home")

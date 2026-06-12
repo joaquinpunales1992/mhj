@@ -143,6 +143,11 @@ class Property(TimestampMixin):
         def at(p):
             return values[min(int(p / 100 * n), n - 1)]
 
+        def usd(yen):
+            # Whole-dollar USD; convert_yen_to_usd keeps cents, which look
+            # noisy on a per-m² figure. Same 0.007 rate as the rest of the site.
+            return f"${round(yen * 0.007):,}"
+
         return {
             "area": area,
             "sample_size": n,
@@ -153,8 +158,8 @@ class Property(TimestampMixin):
             "percentile": percentile,
             "band": band,
             "band_label": label,
-            "value_per_m2_display": f"¥{round(own):,}/m²",
-            "area_range_display": f"¥{round(at(25)):,} – ¥{round(at(75)):,}/m²",
+            "value_per_m2_display": f"{usd(own)}/m²",
+            "area_range_display": f"{usd(at(25))} – {usd(at(75))}/m²",
         }
 
 

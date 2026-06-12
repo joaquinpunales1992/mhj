@@ -1140,6 +1140,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
   body { background: #faf8f4; }
 
+  /* ===== Reusable info tooltip (hover / tap / keyboard) ===== */
+  .mhj-tip { position: relative; display: inline-block; margin-left: 6px; vertical-align: middle; cursor: help; }
+  .mhj-tip-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--mhj-primary); color: #fff;
+    font-size: 11px; font-weight: 700; font-style: normal; line-height: 1;
+    font-family: Georgia, 'Times New Roman', serif;
+  }
+  .mhj-tip-text {
+    visibility: hidden; opacity: 0; transition: opacity 0.15s ease;
+    position: absolute; z-index: 10050; left: 50%; transform: translateX(-50%);
+    bottom: 150%; width: 250px; max-width: 70vw;
+    background: #1f2224; color: #f0f0f0; text-align: left;
+    padding: 10px 12px; border-radius: 8px;
+    font-size: 13px; line-height: 1.45; font-weight: 400;
+    text-transform: none; letter-spacing: normal;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+    pointer-events: none;
+  }
+  .mhj-tip-text::after {
+    content: ""; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+    border: 6px solid transparent; border-top-color: #1f2224;
+  }
+  .mhj-tip:hover .mhj-tip-text,
+  .mhj-tip:focus .mhj-tip-text,
+  .mhj-tip:focus-within .mhj-tip-text { visibility: visible; opacity: 1; }
+
   /* Serif display headings, like the premium page */
   header h1,
   .related-properties-heading,
@@ -1272,12 +1300,12 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Building Area</p>
+                <p class="text-xll" style="color: black; font-weight: bold;">Building Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Building Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The total floor area of the building (建物面積), as reported by the listing source. Shown in square meters (㎡).</span></span></p>
                 <p class="text-xll">{{ property.building_area }}</p>
                 <hr>
               </div>
               <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Land Area</p>
+                <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡). "(public book)" means the figure is from the official land register.</span></span></p>
                 <p class="text-xll">{{ property.land_area }} </p>
               </div>
             </div>
@@ -1285,20 +1313,17 @@ document.addEventListener('DOMContentLoaded', () => {
             {% with cmp=property.price_per_sqm_comparison %}
             {% if cmp %}
             <div class="flex flex-row flex-2 gap-4 w-full">
-              <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Price per m&sup2; (building)</p>
-                <p class="text-xll">
-                  {{ cmp.value_per_m2_display }}
+              <div class="flex-1" style="background:#f4f8f1; border:1px solid #d9e6d0; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
+                <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:4px;">Price per m&sup2; (building)<span class="mhj-tip" tabindex="0" role="img" aria-label="How is price per m² calculated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The asking price divided by the building floor area, shown in USD. The label compares it to every listing in {{ cmp.area }}: "Great value" means cheaper per m² than most nearby homes, "Around average" means mid-range. "Typical" is the middle 50% of listings in the area.</span></span></p>
+                <p class="text-xll" style="margin:0;">
+                  <span style="font-size:1.5em; font-weight:800; color:#1f2224;">{{ cmp.value_per_m2_display }}</span>
                   {% if cmp.band == 'great_value' %}
-                    <span style="display:inline-block; margin-left:8px; padding:2px 12px; border-radius:9999px; background:#e6f0e1; color:#477535; font-weight:700; font-size:0.8em;">{{ cmp.band_label }}</span>
-                  {% elif cmp.band == 'premium' %}
-                    <span style="display:inline-block; margin-left:8px; padding:2px 12px; border-radius:9999px; background:#f7e2dd; color:#c0533f; font-weight:700; font-size:0.8em;">{{ cmp.band_label }}</span>
-                  {% else %}
-                    <span style="display:inline-block; margin-left:8px; padding:2px 12px; border-radius:9999px; background:#eeeeee; color:#555555; font-weight:700; font-size:0.8em;">{{ cmp.band_label }}</span>
+                    <span style="display:inline-block; margin-left:10px; padding:3px 14px; border-radius:9999px; background:#477535; color:#ffffff; font-weight:700; font-size:0.75em; vertical-align:middle;">{{ cmp.band_label }}</span>
+                  {% elif cmp.band == 'average' %}
+                    <span style="display:inline-block; margin-left:10px; padding:3px 14px; border-radius:9999px; background:#e2e2e2; color:#555555; font-weight:700; font-size:0.75em; vertical-align:middle;">{{ cmp.band_label }}</span>
                   {% endif %}
                 </p>
-                <p class="text-xll" style="color:#666666;">Typical in {{ cmp.area }}: {{ cmp.area_range_display }} <span style="color:#999999;">({{ cmp.sample_size }} listings)</span></p>
-                <hr>
+                <p class="text-xll" style="color:#666666; margin:6px 0 0; font-size:0.95em;">Typical in {{ cmp.area }}: {{ cmp.area_range_display }} <span style="color:#999999;">({{ cmp.sample_size }} listings)</span></p>
               </div>
             </div>
             {% endif %}
@@ -1306,7 +1331,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Land Rights</p>
+                <p class="text-xll" style="color: black; font-weight: bold;">Land Rights<span class="mhj-tip" tabindex="0" role="img" aria-label="What are Land Rights?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Whether the land is owned outright (freehold, 所有権) or leased from another owner (leasehold, 借地権). This affects ongoing costs, financing and resale. Unlock the full details for this property.</span></span></p>
                 {% if user.is_authenticated or request.COOKIES.email %}
                   <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="landRightsInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #477535;"></span><span style="color: #477535;"> Upgrade</span>
@@ -1319,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <hr>
               </div>
               <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Risk Information</p>
+                <p class="text-xll" style="color: black; font-weight: bold;">Risk Information<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Risk Information?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Known risks affecting the property — such as flood or landslide hazard zones, legal/zoning restrictions, or building limitations. Unlock the full risk report for this property.</span></span></p>
                 {% if user.is_authenticated or request.COOKIES.email %}
                   <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="riskInformationInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #477535;"> </span><span style="color: #477535;"> Upgrade</span>
