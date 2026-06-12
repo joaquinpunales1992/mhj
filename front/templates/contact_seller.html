@@ -1282,6 +1282,28 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
 
+            {% with cmp=property.price_per_sqm_comparison %}
+            {% if cmp %}
+            <div class="flex flex-row flex-2 gap-4 w-full">
+              <div class="flex-1">
+                <p class="text-xll" style="color: black; font-weight: bold;">Price per m&sup2; (building)</p>
+                <p class="text-xll">
+                  {{ cmp.value_per_m2_display }}
+                  {% if cmp.band == 'great_value' %}
+                    <span style="display:inline-block; margin-left:8px; padding:2px 12px; border-radius:9999px; background:#e6f0e1; color:#477535; font-weight:700; font-size:0.8em;">{{ cmp.band_label }}</span>
+                  {% elif cmp.band == 'premium' %}
+                    <span style="display:inline-block; margin-left:8px; padding:2px 12px; border-radius:9999px; background:#f7e2dd; color:#c0533f; font-weight:700; font-size:0.8em;">{{ cmp.band_label }}</span>
+                  {% else %}
+                    <span style="display:inline-block; margin-left:8px; padding:2px 12px; border-radius:9999px; background:#eeeeee; color:#555555; font-weight:700; font-size:0.8em;">{{ cmp.band_label }}</span>
+                  {% endif %}
+                </p>
+                <p class="text-xll" style="color:#666666;">Typical in {{ cmp.area }}: {{ cmp.area_range_display }} <span style="color:#999999;">({{ cmp.sample_size }} listings)</span></p>
+                <hr>
+              </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Rights</p>

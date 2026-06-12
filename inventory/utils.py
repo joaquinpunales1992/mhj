@@ -1,6 +1,25 @@
 import locale
+import re
 
 locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+
+
+def parse_area_to_m2(text):
+    """Pull the leading square-meterage out of a free-text area field.
+
+    Scraped values look like '103.24㎡ (crystal)' or '170㎡ (public book)';
+    we want the first number. Returns a float, or None if unparseable.
+    """
+    if not text:
+        return None
+    match = re.search(r"(\d+(?:\.\d+)?)", text.replace(",", ""))
+    if not match:
+        return None
+    try:
+        value = float(match.group(1))
+    except ValueError:
+        return None
+    return value if value > 0 else None
 
 
 def convert_price_string(price):

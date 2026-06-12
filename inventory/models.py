@@ -1,7 +1,13 @@
 import urllib.parse
 from django.db import models
 from django.urls import reverse
-from inventory.utils import convert_price_string, convert_yen_to_usd, infer_location
+from inventory.constants import MIN_AREA_SAMPLE_FOR_COMPARISON
+from inventory.utils import (
+    convert_price_string,
+    convert_yen_to_usd,
+    infer_location,
+    parse_area_to_m2,
+)
 
 
 class TimestampMixin(models.Model):
@@ -84,6 +90,72 @@ class Property(TimestampMixin):
     @property
     def get_public_url(self):
         return reverse("property_detail", kwargs={"pk": self.pk})
+
+    def building_price_per_m2(self):
+        """Price per m² of building floor area, in yen. None if unparseable."""
+        area = parse_area_to_m2(self.building_area)
+        if not area or not self.price:
+            return None
+        return (self.price * 10000) / area
+
+    def price_per_sqm_comparison(self):
+        """Where this property's building ¥/m² sits within its prefecture.
+
+        Returns a dict with a value band ("Great value" / "Around average" /
+        "Premium") and context numbers, or None when this property has no
+        parseable ¥/m² or the area has too few comparable listings to mean
+        anything (see MIN_AREA_SAMPLE_FOR_COMPARISON).
+        """
+        own = self.building_price_per_m2()
+        if not own:
+            return None
+
+        area = self.get_location_for_front()
+        # Pull price + building_area for every front-visible listing in the
+        # same prefecture in one query and parse ¥/m² in Python — building_area
+        # is free text, so it can't be aggregated in SQL.
+        rows = Property.objects.filter(
+            location__icontains=area, show_in_front=True
+        ).values_list("price", "building_area")
+
+        values = []
+        for price, building_area in rows:
+            sqm = parse_area_to_m2(building_area)
+            if sqm and price:
+                values.append((price * 10000) / sqm)
+
+        if len(values) < MIN_AREA_SAMPLE_FOR_COMPARISON:
+            return None
+
+        values.sort()
+        n = len(values)
+        # Percentile = share of nearby listings that are cheaper per m².
+        below = sum(1 for v in values if v < own)
+        percentile = round(below / n * 100)
+
+        if percentile < 33:
+            band, label = "great_value", "Great value"
+        elif percentile < 67:
+            band, label = "average", "Around average"
+        else:
+            band, label = "premium", "Premium"
+
+        def at(p):
+            return values[min(int(p / 100 * n), n - 1)]
+
+        return {
+            "area": area,
+            "sample_size": n,
+            "value_per_m2": round(own),
+            "area_low": round(at(25)),
+            "area_median": round(at(50)),
+            "area_high": round(at(75)),
+            "percentile": percentile,
+            "band": band,
+            "band_label": label,
+            "value_per_m2_display": f"¥{round(own):,}/m²",
+            "area_range_display": f"¥{round(at(25)):,} – ¥{round(at(75)):,}/m²",
+        }
 
 
 class PropertyImage(models.Model):
