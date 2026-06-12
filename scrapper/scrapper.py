@@ -176,7 +176,20 @@ def persist_property(property_data: dict) -> None:
             url=property_data["property_url"]
         )
         if not created:
-            print(f"Property {property_data['property_url']} already exists.")
+            # Already stored. Earlier runs (before image extraction was fixed)
+            # could persist a property with no images; if this one is still
+            # imageless, backfill the photos we just scraped rather than
+            # skipping it. Other fields are left untouched so any manual
+            # curation survives.
+            image_urls = property_data.get("image_urls", [])
+            if image_urls and not property_obj.property_has_any_image():
+                for image_url in image_urls:
+                    PropertyImage.objects.create(property=property_obj, file=image_url)
+                print(
+                    f"Backfilled {len(image_urls)} images: {property_obj.title!r}"
+                )
+            else:
+                print(f"Property {property_data['property_url']} already exists.")
             return
 
         property_obj.url = property_data["property_url"]

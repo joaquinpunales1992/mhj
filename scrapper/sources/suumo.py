@@ -111,14 +111,17 @@ def parse_listing(url: str) -> dict | None:
     construction = table.get("完成時期（築年月）") or table.get("完成時期(築年月)", "")
     location = table.get("住所") or table.get("所在地", "")
 
-    # SUUMO embeds listing photos inside inline JSON/JS data on most detail
-    # pages, so scan the raw response text. Only capture the direct CDN URLs
-    # (suumo.jp/front/gazo/bukken/...) — they return the full-size original
-    # and need no query params. The img01.suumo.com/jj/resizeImage variants
-    # require &w=&h= params which are easy to lose during extraction and
-    # render the URL 400-broken without them.
+    # SUUMO serves listing photos two ways depending on the page:
+    #   1) direct CDN originals under suumo.jp/front/gazo/bukken/...
+    #   2) img01.suumo.com/jj/resizeImage?src=<url-encoded path>&w=&h=
+    # Most detail pages use form (2). For those the param-free original is
+    # only a 100x100 thumbnail, so we must request a sized render — w/h are
+    # required, not optional. Each photo appears several times at different
+    # sizes, so dedupe by the encoded src and keep one entry per photo in
+    # page order.
     image_urls: list[str] = []
     seen: set[str] = set()
+
     for match in re.findall(
         r"https?://suumo\.jp/front/gazo/bukken/[^\"'\s]+\.(?:jpg|jpeg|png)",
         response.text,
@@ -126,6 +129,15 @@ def parse_listing(url: str) -> dict | None:
         if match not in seen:
             seen.add(match)
             image_urls.append(match)
+
+    for enc in re.findall(
+        r"resizeImage\?src=(gazo%2[Ff]bukken[^&\"'\s]+)", response.text
+    ):
+        if enc not in seen:
+            seen.add(enc)
+            image_urls.append(
+                f"https://img01.suumo.com/jj/resizeImage?src={enc}&w=1024&h=768"
+            )
 
     translator = GoogleTranslator(source="auto", target="en")
 

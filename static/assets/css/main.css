@@ -1436,7 +1436,7 @@ input, select, textarea {
 /* Header */
 
 	body {
-		padding: 0 0 4em 0;
+		padding: 0 0 6em 0;
 	}
 
 	#header {
@@ -1453,9 +1453,9 @@ input, select, textarea {
 		-webkit-user-select: none;
 		background: #1f2224;
 		bottom: -1em;
-		height: 6.25em;
+		height: 8.5em;
 		left: 0;
-		line-height: 5.25em;
+		line-height: 8.5em;
 		padding: 0 1.5em;
 		position: fixed;
 		user-select: none;
@@ -1473,8 +1473,8 @@ input, select, textarea {
 		#header h1 {
 			color: #a0a0a1;
 			display: inline-block;
-			font-size: 1.5em;
-			line-height: 1;
+			font-size: 2em;
+			line-height: 1.25;
 			margin: 0;
 			vertical-align: middle;
 		}
@@ -1484,16 +1484,18 @@ input, select, textarea {
 				color: inherit;
 			}
 
-			/* Small descriptive tagline shown next to the brand. */
+			/* Descriptive tagline shown beneath the brand. Stacks on its own
+			   line so the longer copy doesn't collide with the nav. */
 			#header h1 .site-tagline {
-				color: #6f6f70;
-				font-size: 0.55em;
+				color: #8a8a8b;
+				display: block;
+				font-size: 0.6em;
 				font-weight: 300;
 				letter-spacing: 0.05em;
-				margin-left: 0.6em;
-				text-transform: none;
-				vertical-align: middle;
+				line-height: 1.3;
+				margin-top: 0.25em;
 				white-space: nowrap;
+				text-transform: none;
 			}
 
 				#header h1 a:hover {
@@ -1525,7 +1527,7 @@ input, select, textarea {
 						border: 0;
 						color: #ffffff;
 						display: inline-block;
-						font-size: 1.1em;
+						font-size: 1.4em;
 						letter-spacing: 0.1em;
 						padding: 0 1.65em;
 						text-transform: uppercase;
