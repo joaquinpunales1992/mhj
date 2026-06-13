@@ -722,8 +722,6 @@ def post_facebook_reel():
         target_path = os.path.join(media_dir, "property_video.mp4")
         shutil.move("property_video.mp4", target_path)
 
-        video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
-
         ai_caption, caption = generate_caption_for_post(
             property_to_post_facebook_reel.location,
             property_to_post_facebook_reel.get_public_url,
@@ -758,14 +756,22 @@ def post_facebook_reel():
             )
             return
 
-        # Step 2: tell Meta where to fetch the video from (hosted on our site).
-        upload_response = requests.post(
-            upload_url,
-            headers={
-                "Authorization": f"OAuth {access_token}",
-                "file_url": video_url,
-            },
-        )
+        # Step 2: upload the video bytes directly. We send the file rather than a
+        # file_url because Meta fetches file_url with its `meta-externalagent`
+        # crawler, which our (Cloudflare-managed) robots.txt blocks — the hosted
+        # path fails with "403 Restricted by robots.txt". A direct upload isn't a
+        # crawl, so robots.txt doesn't apply.
+        file_size = os.path.getsize(target_path)
+        with open(target_path, "rb") as video_file:
+            upload_response = requests.post(
+                upload_url,
+                headers={
+                    "Authorization": f"OAuth {access_token}",
+                    "offset": "0",
+                    "file_size": str(file_size),
+                },
+                data=video_file,
+            )
         logger.info("Facebook reel upload response: " + upload_response.text)
         if not upload_response.json().get("success"):
             logger.error(
