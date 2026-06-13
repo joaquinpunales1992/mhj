@@ -241,6 +241,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>My Akiya in Japan</title>
+  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
   <link rel="canonical" href="https://{{ request.get_host }}{{ request.get_full_path }}" />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
@@ -1652,7 +1653,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <h4 class="modal-title" id="interestModalLabel">Get help finding the right property</h4>
         </div>
         <div class="modal-body">
-          <p style="margin-bottom:16px;">Tell us a little about what you're looking for and our English-speaking team will be in touch.</p>
+          <p style="margin-bottom:16px;">Tell us what you're looking for and we'll connect you with an English-speaking agent in Japan who finds options that fit &mdash; no listing pressure, no fee to talk.</p>
           <form id="interestForm">
             <input type="hidden" name="property_url" value="{{ request.build_absolute_uri }}">
             <div style="margin-bottom:12px;">
@@ -1664,11 +1665,24 @@ document.addEventListener('DOMContentLoaded', () => {
               <input type="email" id="interestEmail" name="email" required class="form-control" placeholder="you@example.com" value="{{ user_email|default:'' }}">
             </div>
             <div style="margin-bottom:12px;">
-              <label for="interestMessage">Message</label>
-              <textarea id="interestMessage" name="message" rows="4" class="form-control" placeholder="What are you looking for?"></textarea>
+              <label for="interestTimeline">Timeline</label>
+              <select id="interestTimeline" name="timeline" class="form-control">
+                <option value="">Select one</option>
+                <option value="Just exploring">Just exploring</option>
+                <option value="Next 6 months">Next 6 months</option>
+                <option value="Ready now">Ready now</option>
+              </select>
+            </div>
+            <div style="margin-bottom:12px;">
+              <label for="interestVisited">Have you visited Japan?</label>
+              <select id="interestVisited" name="visited_japan" class="form-control">
+                <option value="">Select one</option>
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
             </div>
             <p id="interestError" style="color:#c0392b; display:none; margin-bottom:12px;"></p>
-            <button type="submit" id="interestSubmit" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">Send request</button>
+            <button type="submit" id="interestSubmit" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">Get matched with an agent</button>
           </form>
           <div id="interestSuccess" style="display:none; text-align:center; padding:16px 0;">
             <h4 class="text-primary">Thank you!</h4>
@@ -1695,7 +1709,8 @@ document.addEventListener('DOMContentLoaded', () => {
           body: JSON.stringify({
             name: form.elements['name'].value,
             email: form.elements['email'].value,
-            message: form.elements['message'].value,
+            timeline: form.elements['timeline'].value,
+            visited_japan: form.elements['visited_japan'].value,
             property_url: form.elements['property_url'].value
           })
         })
@@ -1708,7 +1723,7 @@ document.addEventListener('DOMContentLoaded', () => {
           errorEl.textContent = 'Something went wrong. Please try again.';
           errorEl.style.display = 'block';
           btn.disabled = false;
-          btn.textContent = 'Send request';
+          btn.textContent = 'Get matched with an agent';
         });
       });
     });

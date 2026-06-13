@@ -252,6 +252,16 @@ def submit_interest_request(request):
     message = (data.get("message") or "").strip()
     property_url = (data.get("property_url") or "").strip()
 
+    # Qualification fields from the CTA form. Regions arrives as a list (home
+    # page multi-select); store it comma-joined.
+    regions_raw = data.get("regions") or []
+    if isinstance(regions_raw, str):
+        regions_raw = [regions_raw]
+    regions = ", ".join(r.strip() for r in regions_raw if r and r.strip())
+    budget = (data.get("budget") or "").strip()
+    timeline = (data.get("timeline") or "").strip()
+    visited_japan = (data.get("visited_japan") or "").strip()
+
     if not name or not email:
         return JsonResponse({"error": "name and email are required"}, status=400)
 
@@ -269,6 +279,10 @@ def submit_interest_request(request):
         name=name,
         email=email,
         message=message,
+        regions=regions,
+        budget=budget,
+        timeline=timeline,
+        visited_japan=visited_japan,
         property_url=property_url,
         source=source,
     )
@@ -298,6 +312,10 @@ def submit_interest_request(request):
             f"<p>New expression of interest.</p>"
             f"<p><b>Name:</b> {name}</p>"
             f"<p><b>Email:</b> {email}</p>"
+            f"<p><b>Region(s):</b> {regions or '(not provided)'}</p>"
+            f"<p><b>Budget:</b> {budget or '(not provided)'}</p>"
+            f"<p><b>Timeline:</b> {timeline or '(not provided)'}</p>"
+            f"<p><b>Visited Japan:</b> {visited_japan or '(not provided)'}</p>"
             f"<p><b>Message:</b> {message or '(none)'}</p>"
             f"<p><b>Property:</b> {property_url or '(from home page)'}</p>"
             f"<p>Review and mark as contacted in "

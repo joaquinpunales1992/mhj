@@ -15,6 +15,13 @@ class InterestRequest(models.Model):
     name = models.CharField(max_length=200)
     email = models.EmailField()
     message = models.TextField(blank=True, default="")
+    # Qualification fields collected by the CTA form. Stored as the chosen
+    # labels (free of choices constraints so the form copy can evolve without
+    # a migration). Region(s) and budget only apply to the home-page form.
+    regions = models.CharField(max_length=500, blank=True, default="")
+    budget = models.CharField(max_length=50, blank=True, default="")
+    timeline = models.CharField(max_length=50, blank=True, default="")
+    visited_japan = models.CharField(max_length=10, blank=True, default="")
     property_url = models.URLField(
         max_length=500,
         blank=True,

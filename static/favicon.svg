@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="My Akiya in Japan">
+  <rect width="64" height="64" rx="14" fill="#477535"/>
+  <polygon points="32,13 55,34 9,34" fill="#ffffff"/>
+  <rect x="17" y="32" width="30" height="20" fill="#ffffff"/>
+  <rect x="28" y="39" width="8" height="13" fill="#477535"/>
+</svg>

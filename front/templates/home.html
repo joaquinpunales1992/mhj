@@ -52,6 +52,7 @@
 		<meta name="twitter:card" content="summary_large_image" />
 
 		<link rel="canonical" href="https://akiyainjapan.com" />
+		<link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		{% compress css %}
 			<link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
@@ -565,14 +566,30 @@
 			#eoi-box h3 { margin: 0 0 8px; color: #477535; font-size: 22px; font-weight: 700; text-transform: none; letter-spacing: normal; }
 			#eoi-box p { color: #555; font-size: 15px; line-height: 1.5; }
 			#eoi-box label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 5px; text-transform: none; letter-spacing: normal; }
-			#eoi-box input, #eoi-box textarea {
+			#eoi-box input, #eoi-box textarea, #eoi-box select {
 				display: block; width: 100%; height: auto; line-height: 1.4; padding: 11px 12px; margin: 0 0 16px;
 				border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #333 !important;
 				font-family: inherit; font-size: 15px; font-weight: 400; text-transform: none; letter-spacing: normal;
 				box-shadow: none; box-sizing: border-box; -webkit-appearance: none; appearance: none;
 			}
-			#eoi-box input:focus, #eoi-box textarea:focus { outline: none; border-color: #477535; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
+			#eoi-box input:focus, #eoi-box textarea:focus, #eoi-box select:focus { outline: none; border-color: #477535; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
 			#eoi-box textarea { resize: vertical; min-height: 90px; }
+			#eoi-box .eoi-hint { font-size: 12px; color: #888; margin: -12px 0 16px; }
+			/* Region picker = tappable chips (a native multi-select needs Cmd/Ctrl
+			   and doesn't work on touch). Scoped under #eoi-box to override the
+			   generic `#eoi-box input/label` block styling. */
+			#eoi-box #eoi-regions-box {
+				display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto;
+				border: 1px solid #ccc; border-radius: 6px; padding: 8px; margin: 0 0 8px; box-sizing: border-box;
+			}
+			#eoi-box .eoi-region { display: inline-flex; margin: 0; }
+			#eoi-box .eoi-region input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; padding: 0; }
+			#eoi-box .eoi-region span {
+				display: inline-block; padding: 6px 12px; border: 1px solid #ccc; border-radius: 9999px;
+				font-size: 13px; font-weight: 400; color: #333; cursor: pointer; user-select: none;
+			}
+			#eoi-box .eoi-region input:checked + span { background: #477535; color: #fff; border-color: #477535; }
+			#eoi-box .eoi-region input:focus + span { box-shadow: 0 0 0 2px rgba(52,165,142,0.3); }
 			#eoi-close {
 				position: absolute; top: 10px; right: 14px; width: auto; height: auto; min-height: 0;
 				background: none; border: none; box-shadow: none; padding: 4px 8px; margin: 0;
@@ -603,15 +620,40 @@
 				<button id="eoi-close" type="button" aria-label="Close">&times;</button>
 				<form id="eoi-form">
 					<h3 id="eoi-title">Get help finding the right property</h3>
-					<p style="margin-bottom:16px;">Tell us a little about what you're looking for and our English-speaking team will be in touch.</p>
+					<p style="margin-bottom:16px;">Tell us what you're looking for and we'll connect you with an English-speaking agent in Japan who finds options that fit &mdash; no listing pressure, no fee to talk.</p>
 					<label for="eoi-name">Name</label>
 					<input type="text" id="eoi-name" name="name" required placeholder="Your name">
 					<label for="eoi-email">Email</label>
 					<input type="email" id="eoi-email" name="email" required placeholder="you@example.com">
-					<label for="eoi-message">Message</label>
-					<textarea id="eoi-message" name="message" rows="4" placeholder="What are you looking for?"></textarea>
+					<label>Region(s) of interest</label>
+					<div id="eoi-regions-box">
+						{% for c in cities %}
+							<label class="eoi-region"><input type="checkbox" name="regions" value="{{ c.name }}"><span>{{ c.name }}</span></label>
+						{% endfor %}
+					</div>
+					<p class="eoi-hint">Tap all that apply.</p>
+					<label for="eoi-budget">Budget range</label>
+					<select id="eoi-budget" name="budget">
+						<option value="">No preference</option>
+						<option value="Under $50k">Under $50k</option>
+						<option value="$50k – $100k">$50k – $100k</option>
+						<option value="$100k+">$100k+</option>
+					</select>
+					<label for="eoi-timeline">Timeline</label>
+					<select id="eoi-timeline" name="timeline">
+						<option value="">Select one</option>
+						<option value="Just exploring">Just exploring</option>
+						<option value="Next 6 months">Next 6 months</option>
+						<option value="Ready now">Ready now</option>
+					</select>
+					<label for="eoi-visited">Have you visited Japan?</label>
+					<select id="eoi-visited" name="visited_japan">
+						<option value="">Select one</option>
+						<option value="Yes">Yes</option>
+						<option value="No">No</option>
+					</select>
 					<p id="eoi-error"></p>
-					<button type="submit" id="eoi-submit">Send request</button>
+					<button type="submit" id="eoi-submit">Get matched with an agent</button>
 				</form>
 				<div id="eoi-success">
 					<h3>Thank you!</h3>
@@ -636,13 +678,17 @@
 					var errorEl = document.getElementById('eoi-error');
 					errorEl.style.display = 'none';
 					btn.disabled = true; btn.textContent = 'Sending...';
+					var regions = Array.prototype.map.call(form.querySelectorAll('input[name="regions"]:checked'), function(c) { return c.value; });
 					fetch('{% url "submit_interest_request" %}', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						body: JSON.stringify({
 							name: form.elements['name'].value,
 							email: form.elements['email'].value,
-							message: form.elements['message'].value
+							regions: regions,
+							budget: form.elements['budget'].value,
+							timeline: form.elements['timeline'].value,
+							visited_japan: form.elements['visited_japan'].value
 						})
 					})
 					.then(function(r) {
@@ -653,7 +699,7 @@
 					.catch(function() {
 						errorEl.textContent = 'Something went wrong. Please try again.';
 						errorEl.style.display = 'block';
-						btn.disabled = false; btn.textContent = 'Send request';
+						btn.disabled = false; btn.textContent = 'Get matched with an agent';
 					});
 				});
 			})();
