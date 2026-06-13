@@ -179,12 +179,16 @@ def build_hashtags(location: str = "") -> str:
 
 
 def select_properties_to_post(posts_queryset, price_limit, limit=None):
-    """Featured properties under price_limit, ordered for fair rotation.
+    """Properties with images under price_limit, cheapest first.
 
-    Never-posted properties come first (cheapest first), then the rest ordered
-    by least-recently-posted. This replaces the old "exclude posted, else just
-    grab the cheapest N" logic, which reposted the same cheapest properties
-    over and over once the eligible inventory was exhausted.
+    Eligibility: must have at least one image and a real price within
+    (0, price_limit]. Featured is NOT required — it's only a tiebreaker.
+
+    Ordering: never-posted properties come first so fresh inventory gets a
+    turn before anything is reposted; within each group we sort cheapest
+    first, then prefer featured, and within the already-posted group we
+    surface the least-recently-posted to keep the rotation fair (so we don't
+    spam the single cheapest property once inventory is exhausted).
 
     `posts_queryset` is the SocialPost rows for the relevant channel; matching
     is by property_url == Property.url (same value written when a post is made).
@@ -194,17 +198,20 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
 
     candidates = list(
         Property.objects.filter(
-            images__isnull=False, price__lte=price_limit, featured=True
+            images__isnull=False, price__gt=0, price__lte=price_limit
         ).distinct()
     )
-    # Sort key: (already-posted?, last-posted-time, price). The first element
-    # keeps never-posted ahead of posted; within never-posted we fall back to
-    # cheapest-first; within posted we surface the oldest post first.
+    # Sort key, in priority order:
+    #   1. already-posted?    never-posted ahead of posted
+    #   2. last-posted-time   oldest repost first (only separates the posted group)
+    #   3. price              cheapest first
+    #   4. not featured       featured wins ties (False < True)
     candidates.sort(
         key=lambda p: (
             last_posted.get(p.url) is not None,
             last_posted.get(p.url) or 0,
             p.price or 0,
+            not p.featured,
         )
     )
     return candidates[:limit] if limit else candidates
@@ -701,22 +708,63 @@ def post_facebook_reel():
             use_ai_caption=USE_AI_CAPTION,
         )
 
-        # Step: Upload video to Facebook Page
+        # Facebook Page Reels use a dedicated 3-phase flow. The old /videos edge
+        # posts a normal feed video (not a Reel) and rejects file_url uploads:
+        #   1) start  -> open an upload session, get video_id + upload_url
+        #   2) upload -> hand Meta the hosted video via the `file_url` header
+        #   3) finish -> publish with video_state=PUBLISHED
         page_id = PAGE_ID
         access_token = get_fresh_token()
+        reels_url = f"https://graph.facebook.com/v19.0/{page_id}/video_reels"
 
-        upload_url = f"https://graph.facebook.com/v19.0/{page_id}/videos"
-        payload = {
-            "file_url": video_url,
-            "description": caption,
-            "published": "true",
-            "access_token": access_token,
-        }
+        # Step 1: start an upload session.
+        start_response = requests.post(
+            reels_url,
+            data={"upload_phase": "start", "access_token": access_token},
+        )
+        logger.info("Facebook reel start response: " + start_response.text)
+        start_data = start_response.json()
+        video_id = start_data.get("video_id")
+        upload_url = start_data.get("upload_url")
+        if not video_id or not upload_url:
+            logger.error(
+                "Failed to start Facebook Reel upload: " + start_response.text
+            )
+            return
 
-        response = requests.post(upload_url, data=payload)
-        logger.info("Facebook video upload response: " + response.text)
+        # Step 2: tell Meta where to fetch the video from (hosted on our site).
+        upload_response = requests.post(
+            upload_url,
+            headers={
+                "Authorization": f"OAuth {access_token}",
+                "file_url": video_url,
+            },
+        )
+        logger.info("Facebook reel upload response: " + upload_response.text)
+        if not upload_response.json().get("success"):
+            logger.error(
+                "Failed to upload Facebook Reel video: " + upload_response.text
+            )
+            return
 
-        if response.status_code == 200 and "id" in response.json():
+        # Meta fetches and transcodes the hosted file asynchronously; give it
+        # time before asking to publish (mirrors the Instagram flow).
+        time.sleep(180)
+
+        # Step 3: publish the reel.
+        finish_response = requests.post(
+            reels_url,
+            data={
+                "upload_phase": "finish",
+                "video_id": video_id,
+                "video_state": "PUBLISHED",
+                "description": caption,
+                "access_token": access_token,
+            },
+        )
+        logger.info("Facebook reel finish response: " + finish_response.text)
+
+        if finish_response.status_code == 200 and finish_response.json().get("success"):
             logger.info("Successfully posted to Facebook Reels!")
 
             # Log the post
@@ -729,7 +777,7 @@ def post_facebook_reel():
                 sound_track=audio_path,
             )
         else:
-            logger.error("Failed to post Facebook Reel: " + response.text)
+            logger.error("Failed to publish Facebook Reel: " + finish_response.text)
 
     except Exception as e:
         logger.error(f"Error posting Facebook Reel: {e}")
