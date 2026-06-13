@@ -1,4 +1,9 @@
-PAGE_ACCESS_TOKEN = ""
+import os
+
+# Long-lived Facebook *user* token, read from the environment (.env) so the
+# secret stays out of git. refresh_access_token() exchanges it via /me/accounts
+# for the (non-expiring) Page token it writes to social_access_token.json.
+PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN", "")
 PAGE_ID = "612249001976104"
 INSTAGRAM_USER_ID = "17841473089014615"
 

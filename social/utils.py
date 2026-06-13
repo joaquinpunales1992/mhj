@@ -43,21 +43,47 @@ MAX_REEL_ATTEMPTS = 3
 
 
 def refresh_access_token():
+    """Renew the stored Page token from the long-lived user token in .env.
+
+    The seed (PAGE_ACCESS_TOKEN) is a long-lived FB *user* token; /me/accounts
+    exchanges it for the Page token, which — derived from a long-lived user
+    token — does not expire. We pick the page matching PAGE_ID rather than
+    blindly taking data[0], so a multi-page account can't grab the wrong one.
+    Run on a cron so the token in social_access_token.json stays valid.
+    """
     def save_token(token):
         with open("social_access_token.json", "w") as f:
             json.dump({"access_token": token}, f)
 
-    url = "https://graph.facebook.com/v19.0/me/accounts/"
-    params = {"access_token": PAGE_ACCESS_TOKEN}
+    # Read at call time so a fresh .env value is picked up without a code change.
+    seed_token = os.getenv("PAGE_ACCESS_TOKEN", "") or PAGE_ACCESS_TOKEN
+    if not seed_token:
+        logger.error(
+            "PAGE_ACCESS_TOKEN (long-lived user token) is not set in .env; "
+            "cannot refresh the Page access token."
+        )
+        return None
 
-    response = requests.get(url, params=params)
-    if response.status_code == 200:
-        new_token = response.json().get("data")[0].get("access_token")
-        save_token(new_token)
-        logger.info("Access token refreshed successfully.")
-    else:
+    url = "https://graph.facebook.com/v19.0/me/accounts/"
+    response = requests.get(url, params={"access_token": seed_token})
+    if response.status_code != 200:
         logger.error(f"Failed to refresh access token: {response.json()}")
         return None
+
+    pages = response.json().get("data", [])
+    page = next((p for p in pages if str(p.get("id")) == str(PAGE_ID)), None)
+    if page is None:
+        page = pages[0] if pages else None
+    if not page or not page.get("access_token"):
+        logger.error(
+            f"No Page access token for PAGE_ID={PAGE_ID} in /me/accounts response: "
+            f"{response.json()}"
+        )
+        return None
+
+    save_token(page["access_token"])
+    logger.info("Access token refreshed successfully.")
+    return page["access_token"]
 
 
 def get_fresh_token():
