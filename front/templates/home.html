@@ -100,12 +100,19 @@
 								/* Inline styles set a 2rem icon + 0.8rem label — shrink both on mobile. */
 								.filter-button .icon { font-size: 1.3rem !important; }
 								.filter-button span:not(.icon) { font-size: 0.62rem !important; line-height: 1.15; }
-								/* Keep Location + Price side by side on one line as equal-width pills. */
-								#browse-filters { margin: 0.2rem 0 0; width: 100%; justify-content: center; flex-wrap: nowrap; gap: 0.4rem; }
-								.browse-field { flex: 1 1 0; min-width: 0; padding: 0 0.7rem; }
-								.browse-select { flex: 1 1 auto; font-size: 0.82rem; padding: 0.4rem 1.3rem 0.4rem 0; max-width: none; width: 100%; }
+								/* Location + Price share the top row (equal width); Clear filters
+								   drops to its own line below. min-width:0 + ellipsis stops a long
+								   option like "Ishikawa (445)" from overflowing its pill into the
+								   next one (which is what looked broken on mobile). */
+								#browse-filters { margin: 0.2rem 0 0; width: 100%; justify-content: center; flex-wrap: wrap; gap: 0.4rem; }
+								.browse-field { flex: 1 1 42%; min-width: 0; padding: 0 0.7rem; }
+								.browse-select {
+									flex: 1 1 auto; min-width: 0; width: 100%; max-width: none;
+									font-size: 0.82rem; padding: 0.4rem 1.3rem 0.4rem 0;
+									overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+								}
 								.browse-ico { width: 14px; height: 14px; }
-								.browse-clear { flex: 0 0 auto; font-size: 0.78rem; padding: 0.4rem 0.6rem; }
+								.browse-clear { flex: 1 1 100%; justify-content: center; font-size: 0.78rem; padding: 0.45rem 0.6rem; }
 							}
 
 							/* ---- Category filter pills ---- */
@@ -611,7 +618,12 @@
 			/* On screens <= 736px the site's nav bar moves to the top (top: 0),
 			   so the bottom is free and the button can sit at the bottom edge. */
 			@media (max-width: 736px) {
-				#eoi-fab { bottom: 1.25em; right: 1em; padding: 12px 18px; font-size: 14px; }
+				/* white-space:normal + max-width so the long label wraps instead of
+				   running off-screen / being clipped; center the wrapped lines. */
+				#eoi-fab {
+					bottom: 1.25em; right: 1em; padding: 12px 18px; font-size: 14px;
+					white-space: normal; max-width: 72vw; text-align: center; line-height: 1.3;
+				}
 			}
 		</style>
 		<button id="eoi-fab" type="button">Get help finding the right property</button>
