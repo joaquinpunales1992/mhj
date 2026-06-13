@@ -77,22 +77,34 @@
 													/* ---- Mobile (single, properly-closed media query) ---- */
 							@media (max-width: 768px) {
 								#filter-bar {
-									gap: 0.4rem;
+									gap: 0.3rem;
 									/* !important is REQUIRED — the div has an inline `padding: 1rem` that
 									   otherwise wins, so the header keeps overlapping no matter the value */
-									padding: 85px 0.6rem 1rem !important;
+									padding: 70px 0.5rem 0.6rem !important;
+									margin-bottom: 1rem;
 									box-sizing: border-box;
 								}
 								.filter-button {
-									flex: 1 1 105px;    /* ~3 per row; grows/wraps, never overflows the viewport */
+									/* !important: the base .filter-button rule is declared *after* this
+									   media block, so without it the base padding (0.7rem 1.2rem) wins and
+									   the buttons stay wide — only 4 fit and Onsen wraps. */
+									flex: 1 1 56px !important;   /* 5 per row so all categories fit on one line */
 									min-width: 0;
 									max-width: none;
-									padding: 0.7rem 0.3rem;
+									padding: 0.35rem 0.15rem !important;
 									font-size: 0.78rem;
 									white-space: normal; /* let long labels wrap instead of overflowing (template sets nowrap) */
 									box-sizing: border-box;
 								}
-								#browse-filters { margin: 0; width: 100%; justify-content: center; flex-wrap: wrap; }
+								/* Inline styles set a 2rem icon + 0.8rem label — shrink both on mobile. */
+								.filter-button .icon { font-size: 1.3rem !important; }
+								.filter-button span:not(.icon) { font-size: 0.62rem !important; line-height: 1.15; }
+								/* Keep Location + Price side by side on one line as equal-width pills. */
+								#browse-filters { margin: 0.2rem 0 0; width: 100%; justify-content: center; flex-wrap: nowrap; gap: 0.4rem; }
+								.browse-field { flex: 1 1 0; min-width: 0; padding: 0 0.7rem; }
+								.browse-select { flex: 1 1 auto; font-size: 0.82rem; padding: 0.4rem 1.3rem 0.4rem 0; max-width: none; width: 100%; }
+								.browse-ico { width: 14px; height: 14px; }
+								.browse-clear { flex: 0 0 auto; font-size: 0.78rem; padding: 0.4rem 0.6rem; }
 							}
 
 							/* ---- Category filter pills ---- */
@@ -585,12 +597,12 @@
 				#eoi-fab { bottom: 1.25em; right: 1em; padding: 12px 18px; font-size: 14px; }
 			}
 		</style>
-		<button id="eoi-fab" type="button">Start Buying in Japan</button>
+		<button id="eoi-fab" type="button">Get help finding the right property</button>
 		<div id="eoi-overlay" role="dialog" aria-modal="true" aria-labelledby="eoi-title">
 			<div id="eoi-box">
 				<button id="eoi-close" type="button" aria-label="Close">&times;</button>
 				<form id="eoi-form">
-					<h3 id="eoi-title">Start Buying in Japan</h3>
+					<h3 id="eoi-title">Get help finding the right property</h3>
 					<p style="margin-bottom:16px;">Tell us a little about what you're looking for and our English-speaking team will be in touch.</p>
 					<label for="eoi-name">Name</label>
 					<input type="text" id="eoi-name" name="name" required placeholder="Your name">
