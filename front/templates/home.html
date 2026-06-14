@@ -289,6 +289,61 @@
 								transition: background 0.2s ease;
 							}
 							.browse-clear:hover { background: rgba(255, 255, 255, 0.14); text-decoration: none; }
+
+							/* Per-card "Share" button */
+							/* Match the theme's .primary button box exactly so it lines up
+							   with "Learn More" (which is a fixed 3.05556em tall, 0.9em font). */
+							.share-btn {
+								display: inline-flex; align-items: center; justify-content: center; gap: 0.55em;
+								height: 3.05556em; line-height: 1; padding: 0 1.6em; box-sizing: border-box;
+								background: transparent; color: #fff !important;
+								border: 2px solid #477535; border-radius: 4px;
+								font-family: inherit; font-size: 0.9em; font-weight: 300; letter-spacing: 0.1em;
+								cursor: pointer; white-space: nowrap; transition: background 0.2s ease;
+							}
+							.share-btn svg { width: 1.1em; height: 1.1em; }
+							.share-btn:hover { background: rgba(71, 117, 53, 0.35); }
+							.share-btn.copied { border-color: #6fbf73; }
+
+							/* Share menu (social options) */
+							.share-overlay {
+								position: fixed; inset: 0; z-index: 30000; /* above the poptrox lightbox (baseZIndex 20000) */
+								background: rgba(0, 0, 0, 0.6);
+								display: none; align-items: center; justify-content: center; padding: 16px;
+							}
+							.share-overlay.open { display: flex; }
+							.share-card {
+								position: relative; width: 100%; max-width: 340px;
+								background: #fff; color: #2b2b2b; border-radius: 14px;
+								padding: 22px 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+								font-family: 'Work Sans', -apple-system, sans-serif;
+							}
+							.share-card h4 {
+								margin: 0 0 16px; font-family: 'Noto Serif JP', serif; font-weight: 500;
+								color: #477535; font-size: 1.25rem; text-align: center;
+							}
+							.share-close {
+								position: absolute; top: 6px; right: 10px;
+								background: none !important; border: none !important; box-shadow: none !important;
+								width: auto !important; min-width: 0 !important; height: auto !important; min-height: 0 !important;
+								font-size: 26px !important; line-height: 1 !important; color: #999 !important;
+								padding: 2px 8px !important; cursor: pointer; text-transform: none !important;
+							}
+							.share-close:hover { color: #333 !important; }
+							.share-options { display: flex; flex-direction: column; gap: 10px; }
+							/* !important throughout: the home theme styles all <button>s
+							   (white uppercase text, borders) and would otherwise hide these. */
+							.share-opt {
+								display: flex !important; align-items: center; gap: 11px; width: 100%; text-align: left;
+								background: #f6f5f1 !important; border: 1px solid rgba(71, 117, 53, 0.18) !important; border-radius: 10px;
+								padding: 11px 14px !important; min-height: 0 !important; box-shadow: none !important;
+								font-family: 'Work Sans', sans-serif !important; font-size: 1rem !important; font-weight: 500 !important;
+								text-transform: none !important; letter-spacing: normal !important;
+								color: #2b2b2b !important; cursor: pointer; transition: background 0.15s ease;
+							}
+							.share-opt:hover { background: #ece9e1 !important; }
+							.share-opt img { width: 20px; height: 20px; }
+							.share-opt .share-opt-ico { width: 20px; text-align: center; font-size: 1.05rem; }
 					</style>
 
 					<button class="filter-button{% if nav == 'home' %} is-active{% endif %}" onclick="window.location.href='{% url "home" %}'" style="
@@ -477,10 +532,19 @@
 													{% endif %}
 
 													
-														<button class="primary" onclick="window.location.href='{% url "property_detail" property.pk 0 %}'">
-															<span class="lock-icon"></span> Learn More
-														</button>
-											
+														<div style="display:flex; gap:0.5rem; align-items:stretch; flex-wrap:wrap;">
+															<button class="primary" onclick="window.location.href='{% url "property_detail" property.pk 0 %}'">
+																<span class="lock-icon"></span> Learn More
+															</button>
+															<button type="button" class="share-btn"
+																data-share-url="{{ request.scheme }}://{{ request.get_host }}{% url 'property_detail' property.pk %}"
+																data-share-title="{{ property.get_title_for_front }} — {{ property.get_location_for_front }}, Japan"
+																aria-label="Share this property" title="Share this property">
+																<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+																<span class="share-btn-label">Share</span>
+															</button>
+														</div>
+
 												{% endif %}
 											</div>
 										</div>
@@ -624,7 +688,80 @@
 
 			</div>
 
+		<!-- Share menu (social options) -->
+		<div id="share-overlay" class="share-overlay" role="dialog" aria-modal="true" aria-label="Share this property">
+			<div class="share-card">
+				<button type="button" class="share-close" aria-label="Close">&times;</button>
+				<h4>Share this property</h4>
+				<div class="share-options">
+					<button type="button" class="share-opt" data-net="facebook"><img src="{% static 'images/social_icons/facebook.png' %}" alt=""> Facebook</button>
+					<button type="button" class="share-opt" data-net="x"><img src="{% static 'images/social_icons/twitter.png' %}" alt=""> X (Twitter)</button>
+					<button type="button" class="share-opt" data-net="whatsapp"><img src="{% static 'images/social_icons/whatsapp.png' %}" alt=""> WhatsApp</button>
+					<button type="button" class="share-opt" data-net="email"><span class="share-opt-ico">✉</span> Email</button>
+					<button type="button" class="share-opt" data-net="copy" data-label="Copy link"><span class="share-opt-ico">🔗</span> Copy link</button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Scripts -->
+			<script>
+				// Per-card "Share" opens a menu of social options for that property.
+				// Attached directly to each button so the gallery click handler
+				// on the card can't swallow it.
+				(function () {
+					var overlay = document.getElementById('share-overlay');
+					if (!overlay) return;
+					var current = { url: '', title: '' };
+
+					function hrefFor(net) {
+						var u = encodeURIComponent(current.url), t = encodeURIComponent(current.title);
+						if (net === 'facebook') return 'https://www.facebook.com/sharer/sharer.php?u=' + u;
+						if (net === 'x') return 'https://twitter.com/intent/tweet?url=' + u + '&text=' + t;
+						if (net === 'whatsapp') return 'https://api.whatsapp.com/send?text=' + t + '%20' + u;
+						if (net === 'email') return 'mailto:?subject=' + t + '&body=' + u;
+						return '#';
+					}
+					function openMenu(url, title) {
+						current.url = url; current.title = title || 'My Akiya in Japan';
+						overlay.classList.add('open');
+					}
+					function closeMenu() { overlay.classList.remove('open'); }
+
+					// Delegated in the CAPTURE phase so it also works for the Share
+					// button cloned into the poptrox lightbox caption — poptrox stops
+					// the bubble-phase click, so we intercept it on the way down.
+					document.addEventListener('click', function (e) {
+						var btn = e.target.closest ? e.target.closest('.share-btn') : null;
+						if (!btn) return;
+						e.preventDefault(); e.stopPropagation();
+						openMenu(btn.getAttribute('data-share-url'), btn.getAttribute('data-share-title'));
+					}, true);
+
+					var opts = overlay.querySelectorAll('.share-opt');
+					for (var j = 0; j < opts.length; j++) {
+						opts[j].addEventListener('click', function () {
+							var net = this.getAttribute('data-net');
+							var self = this;
+							if (net === 'copy') {
+								if (navigator.clipboard && navigator.clipboard.writeText) {
+									navigator.clipboard.writeText(current.url).then(function () {
+										self.textContent = 'Copied!';
+										setTimeout(function () { self.innerHTML = '<span class="share-opt-ico">🔗</span> Copy link'; }, 1400);
+									}, function () { window.prompt('Copy this link:', current.url); });
+								} else { window.prompt('Copy this link:', current.url); }
+								return;
+							}
+							window.open(hrefFor(net), '_blank', 'noopener,noreferrer,width=620,height=640');
+							closeMenu();
+						});
+					}
+
+					overlay.addEventListener('click', function (e) { if (e.target === overlay) closeMenu(); });
+					var closeBtn = overlay.querySelector('.share-close');
+					if (closeBtn) closeBtn.addEventListener('click', closeMenu);
+					document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
+				})();
+			</script>
 			<script src="{% static 'assets/js/units.js' %}"></script>
 			<script src="{% static 'assets/js/jquery.min.js' %}"></script>
 			<script src="{% static 'assets/js/jquery.poptrox.min.js' %}"></script>

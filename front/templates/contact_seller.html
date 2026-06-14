@@ -240,9 +240,24 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
 </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>My Akiya in Japan</title>
+  <title>{{ property.title|default:"Akiya" }} — {{ property.get_location_for_front }} | My Akiya in Japan</title>
   <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
   <link rel="canonical" href="https://{{ request.get_host }}{{ request.get_full_path }}" />
+
+  <!-- Open Graph / Twitter: rich preview when a property link is shared -->
+  {% with share_img=property.get_ordered_images.first %}
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="My Akiya in Japan" />
+  <meta property="og:title" content="{{ property.title }} — {{ property.get_location_for_front }}, Japan" />
+  <meta property="og:description" content="{{ property.get_price_for_front }} · {{ property.get_location_for_front }}, Japan. View photos and full details on My Akiya in Japan." />
+  <meta property="og:url" content="{{ request.build_absolute_uri }}" />
+  {% if share_img %}<meta property="og:image" content="{{ share_img.file }}" />
+  <meta property="og:image:alt" content="{{ property.title }}" />{% endif %}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="{{ property.title }} — {{ property.get_location_for_front }}, Japan" />
+  <meta name="twitter:description" content="{{ property.get_price_for_front }} · {{ property.get_location_for_front }}, Japan." />
+  {% if share_img %}<meta name="twitter:image" content="{{ share_img.file }}" />{% endif %}
+  {% endwith %}
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
@@ -345,35 +360,66 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
         display: none;
     }
 
-    /* Popup container - visible */
+    /* Share popup overlay */
     .popup {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: rgba(0,0,0,0.5);
-        z-index: 1000;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.6);
+        z-index: 11000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px;
     }
 
-    /* Popup content */
+    /* Share card */
     .popup-content {
-        background-color: hsl(60, 30%, 96%);
-        margin: 10% auto;
-        padding: 20px;
-        width: 300px;
+        background: #fff;
+        width: 100%;
+        max-width: 340px;
+        padding: 22px 24px;
         position: relative;
-        border-radius: 3px;
+        border-radius: 14px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
     }
+    .share-card-title {
+        margin: 0 0 16px;
+        font-family: 'Noto Serif JP', serif;
+        font-weight: 500;
+        color: #477535 !important; /* beat the #pp-layout h4 dark-color rule */
+        font-size: 1.25rem;
+        text-align: center;
+    }
+    .share-options { display: flex; flex-direction: column; gap: 10px; }
+    .share-opt {
+        display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
+        background: #f6f5f1 !important; border: 1px solid rgba(71, 117, 53, 0.18); border-radius: 10px;
+        padding: 11px 14px; font-family: 'Work Sans', sans-serif; font-size: 1rem; font-weight: 500;
+        color: #2b2b2b !important; cursor: pointer; transition: background 0.15s ease; text-transform: none; letter-spacing: normal;
+    }
+    .share-opt:hover { background: #ece9e1 !important; }
+    .share-opt img { width: 20px; height: 20px; }
+    .share-opt .share-opt-ico { width: 20px; text-align: center; font-size: 1.05rem; }
 
     /* Close button */
     .close-btn {
         position: absolute;
-        top: 10px;
-        right: 15px;
-        font-size: 20px;
+        top: 6px;
+        right: 10px;
+        font-size: 26px !important;
+        line-height: 1 !important;
+        color: #999 !important;
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        width: auto !important;
+        min-width: 0 !important;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 2px 8px !important;
         cursor: pointer;
     }
+    .close-btn:hover { color: #333 !important; }
 
   /* Base styles and reset */
 *, *::before, *::after {
@@ -868,6 +914,37 @@ document.addEventListener('DOMContentLoaded', () => {
 
   window.addEventListener('click', event => {
     if (event.target === popup) popup.classList.add('hidden');
+  });
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') popup.classList.add('hidden');
+  });
+
+  // Share options (Facebook / X / WhatsApp / Email / Copy link)
+  const shareUrl = popup.getAttribute('data-share-url') || location.href;
+  const shareTitle = popup.getAttribute('data-share-title') || document.title;
+  const shareHref = net => {
+    const u = encodeURIComponent(shareUrl), t = encodeURIComponent(shareTitle);
+    if (net === 'facebook') return 'https://www.facebook.com/sharer/sharer.php?u=' + u;
+    if (net === 'x') return 'https://twitter.com/intent/tweet?url=' + u + '&text=' + t;
+    if (net === 'whatsapp') return 'https://api.whatsapp.com/send?text=' + t + '%20' + u;
+    if (net === 'email') return 'mailto:?subject=' + t + '&body=' + u;
+    return '#';
+  };
+  popup.querySelectorAll('.share-opt').forEach(opt => {
+    opt.addEventListener('click', function () {
+      const net = this.getAttribute('data-net');
+      if (net === 'copy') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(shareUrl).then(() => {
+            this.textContent = 'Copied!';
+            setTimeout(() => { this.innerHTML = '<span class="share-opt-ico">🔗</span> Copy link'; }, 1400);
+          }, () => window.prompt('Copy this link:', shareUrl));
+        } else { window.prompt('Copy this link:', shareUrl); }
+        return;
+      }
+      window.open(shareHref(net), '_blank', 'noopener,noreferrer,width=620,height=640');
+      popup.classList.add('hidden');
+    });
   });
 
   const carousel = new ImageCarousel('imageCarousel');
@@ -1588,23 +1665,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div> -->
               </div>
               
-              <div id="sharePopup" class="popup hidden">
-                <div class="popup-content">
-                  <span class="close-btn" id="closePopup">&times;</span>
-                  <h4 class="text-4xl text-primary">Share this Property</h4><br>
-                  <div>
-                    <div style="display: flex; padding-left: 5rem;">
-                        <img src="{% static 'images/social_icons/facebook.png' %}" alt="" style="width: 20px; height: 20px;">
-                        &nbsp;{% post_to_facebook "https://akiyainajapan.com" "Share on Facebook" %}
-                    </div><br>
-                    <div style="display: flex; padding-left: 5rem;">
-                        <img src="{% static 'images/social_icons/twitter.png' %}" alt="" style="width: 20px; height: 20px;">
-                        &nbsp; {% post_to_twitter "I've found this Property in Japan!"  "https://akiyainjapan.com" "Share on X" %} 
-                    </div><br>
-                    <div style="display: flex; padding-left: 5rem;">
-                        <img src="{% static 'images/social_icons/whatsapp.png' %}" alt="" style="width: 20px; height: 20px;">
-                        &nbsp; {% post_to_whatsapp "https://akiyainjapan.com" "Share on Whatsapp" %} 
-                    </div>
+              <div id="sharePopup" class="popup hidden"
+                   data-share-url="{{ request.build_absolute_uri }}"
+                   data-share-title="{{ property.title }} — {{ property.get_location_for_front }}, Japan">
+                <div class="popup-content share-card">
+                  <button type="button" class="close-btn" id="closePopup" aria-label="Close">&times;</button>
+                  <h4 class="share-card-title">Share this property</h4>
+                  <div class="share-options">
+                    <button type="button" class="share-opt" data-net="facebook"><img src="{% static 'images/social_icons/facebook.png' %}" alt=""> Facebook</button>
+                    <button type="button" class="share-opt" data-net="x"><img src="{% static 'images/social_icons/twitter.png' %}" alt=""> X (Twitter)</button>
+                    <button type="button" class="share-opt" data-net="whatsapp"><img src="{% static 'images/social_icons/whatsapp.png' %}" alt=""> WhatsApp</button>
+                    <button type="button" class="share-opt" data-net="email"><span class="share-opt-ico">✉</span> Email</button>
+                    <button type="button" class="share-opt" data-net="copy" data-label="Copy link"><span class="share-opt-ico">🔗</span> Copy link</button>
                   </div>
                 </div>
               </div>
