@@ -1193,6 +1193,32 @@ document.addEventListener('DOMContentLoaded', () => {
     height: auto;
     line-height: 1.3;
   }
+
+  /* --- Mobile (<lg) property-page reorder: gallery-first --------------------
+     Desktop keeps its two columns (sidebar + main). Below 1024px we flatten
+     both columns with display:contents so every block becomes a sibling of
+     the page flex container, then sequence them with `order`:
+       brand, back, TITLE, GALLERY, details, CTA, newsletter, related.
+     Stray <br>/<hr> dividers inside the flattened wrappers are hidden. */
+  @media (max-width: 1023px) {
+    .pp-flatten { display: contents; }
+    .pp-flatten > br, .pp-flatten > hr { display: none; }
+    #pp-layout .pp-brand   { order: 1; }
+    #pp-layout .pp-back    { order: 2; }
+    #pp-layout .pp-title   { order: 3; }
+    #pp-layout .pp-gallery { order: 4; }
+    #pp-layout .pp-details { order: 5; }
+    #pp-layout .pp-cta     { order: 6; }
+    #pp-layout .pp-newsletter { order: 7; }
+    /* The divider above this section is a flattened <hr> we hide on mobile,
+       so give the section its own top separator + breathing room. */
+    #pp-layout .related-properties-container {
+      order: 8;
+      margin-top: 2.5rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(71,117,53,0.18);
+    }
+  }
   .primary:hover { background: var(--mhj-primary-dark); }
   .primary:active { transform: translateY(1px); }
 
@@ -1275,15 +1301,15 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="spinner"></div>
   </div>
   
-  <div class="flex flex-col lg:flex-row min-h-screen">
+  <div class="flex flex-col lg:flex-row min-h-screen" id="pp-layout">
     <!-- Sidebar -->
-    <aside class="lg:w-120 bg-neutral-light border-r border-accent/30 p-5 flex flex-col">
-      <div class="mb-8">
+    <aside class="lg:w-120 bg-neutral-light border-r border-accent/30 p-5 flex flex-col pp-flatten">
+      <div class="mb-8 pp-brand">
         <h1 class="font-serif text-xl text-primary mb-1" style="font-size: 2rem;">My Akiya in Japan</h1>
       </div>
-      
-      <nav class="space-y-6 mb-auto">
-        <a href="/" class="flex items-center space-x-3 text-primary group">
+
+      <nav class="space-y-6 mb-auto pp-flatten">
+        <a href="/" class="flex items-center space-x-3 text-primary group pp-back">
           <div class="w-6 h-6 flex items-center justify-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
@@ -1292,13 +1318,13 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="transition-all group-hover:translate-x-1" style="font-size: 2rem;">Back to Listing</span>
         </a>
 
-        <div class="max-w-4xl mx-auto p-4 shadow rounded-2xl">
+        <div class="max-w-4xl mx-auto p-4 shadow rounded-2xl pp-details">
           <!-- Top Row: Main Property Info -->
           <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll font-semibold" style="color: black; font-weight: bold;">Price</p>
-                <p class="text-xll font-semibold">{{ property.get_price_for_front }}</p>
+                <p class="text-xll font-semibold" style="color: #477535; font-weight: 800; font-size: 1.6em; line-height: 1.2;">{{ property.get_price_for_front }}</p>
                 <hr>
               </div>
               <div class="flex-1">
@@ -1369,9 +1395,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
           </div>
           
+          </div>
           <br>
           <hr style="border: 0; height: 1px; background: rgba(71,117,53,0.18); margin: 2.5rem 0;">
-          <center>
+          <center class="pp-newsletter">
           <div class="flex flex-row flex-5 gap-6 w-full">
               <div class="flex-1">
                 <h3>Subscribe to our Newsletter</h3>
@@ -1395,10 +1422,10 @@ document.addEventListener('DOMContentLoaded', () => {
     </aside>
     
     <!-- Main Content -->
-    <main class="flex-1 p-6 lg:p-10 bg-neutral-light">
-      <div class="max-w-8xl mx-auto">
+    <main class="flex-1 p-6 lg:p-10 bg-neutral-light pp-flatten">
+      <div class="max-w-8xl mx-auto pp-flatten">
         <!-- Header -->
-        <header class="mb-12">
+        <header class="mb-12 pp-title">
           <div class="flex items-center justify-between mb-6">
               <h1 class="text-4xl text-primary">{{ property_title}} {{ property.get_location_for_front }}</h1>
             <div class="flex items-center space-x-2">
@@ -1480,7 +1507,7 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>    
         </header>
 
-        <div class="container">
+        <div class="container pp-gallery">
           <main>
               <section class="carousel-container">
                   <div class="carousel" id="imageCarousel">
@@ -1513,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
 
         <br>
-        <div class="step-container">
+        <div class="step-container pp-flatten">
             <!-- <div id="success-confirmation" class="mt-8 hidden py-10 mb-12">
                 <div class="bg-[#81C784]/10 rounded-lg p-6 border border-[#81C784]/20 element-appear">
                   <div class="flex items-start">
@@ -1532,7 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
               </div>   -->
 
-            <details class="buying-details">
+            <details class="buying-details pp-cta">
               <summary>
                 <h3 style="display:inline; margin:0;">Interested in buying?</h3>
                 <span class="buying-details-arrow" aria-hidden="true">▾</span>
