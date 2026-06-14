@@ -63,6 +63,19 @@ class Property(TimestampMixin):
     def get_price_for_front(self):
         return convert_yen_to_usd(convert_price_string(self.price))
 
+    @property
+    def price_yen(self):
+        """Raw asking price in yen (price is stored in 万/man units)."""
+        return (self.price or 0) * 10000
+
+    def building_area_m2(self):
+        """Building floor area as a float (m²), or None. For the unit toggle."""
+        return parse_area_to_m2(self.building_area)
+
+    def land_area_m2(self):
+        """Land area as a float (m²), or None. For the unit toggle."""
+        return parse_area_to_m2(self.land_area)
+
     def get_location_for_map(self):
         # Scraped locations sometimes have trailing UI junk like
         # "[ ■ Surrounding environment]" (SUUMO) that Google Maps refuses
@@ -160,6 +173,8 @@ class Property(TimestampMixin):
             "band_label": label,
             "value_per_m2_display": f"{usd(own)}/m²",
             "area_range_display": f"{usd(at(25))} – {usd(at(75))}/m²",
+            "area_low_display": f"{usd(at(25))}/m²",
+            "area_high_display": f"{usd(at(75))}/m²",
         }
 
 

@@ -1224,6 +1224,39 @@ document.addEventListener('DOMContentLoaded', () => {
   /* CTAs use Work Sans like the upgrade page's .cta-btn */
   .primary { font-family: 'Work Sans', sans-serif; font-weight: 600; }
 
+  /* Units / currency preference control */
+  .unit-prefs {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-bottom: 0.9rem;
+  }
+  .unit-prefs label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--mhj-secondary);
+  }
+  .unit-prefs select {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 1.2rem;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--mhj-foreground);
+    background: #fff;
+    border: 1px solid var(--mhj-border);
+    border-radius: 10px;
+    padding: 0.6rem 0.95rem;
+    cursor: pointer;
+  }
+  .unit-prefs select:focus { outline: none; border-color: var(--mhj-primary); }
+
   /* The theme sets white-space:nowrap on all buttons, which clips the long
      CTA label on narrow screens. Let these wrap to multiple lines instead. */
   #book-button, #interestSubmit {
@@ -1374,12 +1407,29 @@ document.addEventListener('DOMContentLoaded', () => {
         </a>
 
         <div class="max-w-4xl mx-auto p-4 shadow rounded-2xl pp-details">
+          <!-- Units / currency preference (remembered across the site) -->
+          <div class="unit-prefs">
+            <label>Units
+              <select data-mhj-unit aria-label="Area units">
+                <option value="m2">m²</option>
+                <option value="ft2">ft²</option>
+              </select>
+            </label>
+            <label>Currency
+              <select data-mhj-currency aria-label="Currency">
+                <option value="USD">USD $</option>
+                <option value="AUD">AUD A$</option>
+                <option value="EUR">EUR €</option>
+                <option value="JPY">JPY ¥</option>
+              </select>
+            </label>
+          </div>
           <!-- Top Row: Main Property Info -->
           <div class="flex flex-col md:flex-row md:justify-between md:items-center space-y-2 md:space-y-0 md:space-x-4">
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll font-semibold" style="color: black; font-weight: bold;">Price</p>
-                <p class="text-xll font-semibold" style="color: #477535; font-weight: 800; font-size: 1.6em; line-height: 1.2;">{{ property.get_price_for_front }}</p>
+                <p class="text-xll font-semibold" style="color: #477535; font-weight: 800; font-size: 1.6em; line-height: 1.2;"><span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
                 <hr>
               </div>
               <div class="flex-1">
@@ -1390,13 +1440,13 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Building Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Building Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The total floor area of the building (建物面積), as reported by the listing source. Shown in square meters (㎡).</span></span></p>
-                <p class="text-xll">{{ property.building_area }}</p>
+                <p class="text-xll" style="color: black; font-weight: bold;">Building Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Building Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The total floor area of the building (建物面積), as reported by the listing source. Shown in square meters (㎡) or square feet (ft²) per your unit setting.</span></span></p>
+                <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
                 <hr>
               </div>
               <div class="flex-1">
-                <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡). "(public book)" means the figure is from the official land register.</span></span></p>
-                <p class="text-xll">{{ property.land_area }} </p>
+                <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡) or square feet (ft²) per your unit setting. "(public book)" means the figure is from the official land register.</span></span></p>
+                <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
               </div>
             </div>
 
@@ -1404,16 +1454,16 @@ document.addEventListener('DOMContentLoaded', () => {
             {% if cmp %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1" style="background:#f4f8f1; border:1px solid #d9e6d0; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
-                <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:4px;">Price per m&sup2; (building)<span class="mhj-tip" tabindex="0" role="img" aria-label="How is price per m² calculated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The asking price divided by the building floor area, shown in USD. The label compares it to every listing in {{ cmp.area }}: "Great value" means cheaper per m² than most nearby homes, "Around average" means mid-range. "Typical" is the middle 50% of listings in the area.</span></span></p>
+                <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:4px;">Price per <span class="js-unit-label">m&sup2;</span> (building)<span class="mhj-tip" tabindex="0" role="img" aria-label="How is price per m² calculated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The asking price divided by the building floor area, shown in USD. The label compares it to every listing in {{ cmp.area }}: "Great value" means cheaper per m² than most nearby homes, "Around average" means mid-range. "Typical" is the middle 50% of listings in the area.</span></span></p>
                 <p class="text-xll" style="margin:0;">
-                  <span style="font-size:1.5em; font-weight:800; color:#1f2224;">{{ cmp.value_per_m2_display }}</span>
+                  <span style="font-size:1.5em; font-weight:800; color:#1f2224;" data-yen-per-m2="{{ cmp.value_per_m2 }}">{{ cmp.value_per_m2_display }}</span>
                   {% if cmp.band == 'great_value' %}
                     <span style="display:inline-block; margin-left:10px; padding:3px 14px; border-radius:9999px; background:#477535; color:#ffffff; font-weight:700; font-size:0.75em; vertical-align:middle;">{{ cmp.band_label }}</span>
                   {% elif cmp.band == 'average' %}
                     <span style="display:inline-block; margin-left:10px; padding:3px 14px; border-radius:9999px; background:#e2e2e2; color:#555555; font-weight:700; font-size:0.75em; vertical-align:middle;">{{ cmp.band_label }}</span>
                   {% endif %}
                 </p>
-                <p class="text-xll" style="color:#666666; margin:6px 0 0; font-size:0.95em;">Typical in {{ cmp.area }}: {{ cmp.area_range_display }} <span style="color:#999999;">({{ cmp.sample_size }} listings)</span></p>
+                <p class="text-xll" style="color:#666666; margin:6px 0 0; font-size:0.95em;">Typical in {{ cmp.area }}: <span data-yen-per-m2="{{ cmp.area_low }}">{{ cmp.area_low_display }}</span> – <span data-yen-per-m2="{{ cmp.area_high }}">{{ cmp.area_high_display }}</span> <span style="color:#999999;">({{ cmp.sample_size }} listings)</span></p>
               </div>
             </div>
             {% endif %}
@@ -1671,7 +1721,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     {% endwith %}
                     <div class="property-info">
                       <p class="property-location">Akiya in 📍 {{ property.get_location_for_front }}</p>
-                      <p class="property-price">{{ property.get_price_for_front }}</p>
+                      <p class="property-price"><span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
                       <a href="{% url 'property_detail' property.pk 0 %}" class="property-details-button" style="background-color: transparent;  border: 2px solid #477535; color: #477535;"> <span style="color: #477535;">Learn More</span></a>
                     </div>
                   </div>
@@ -1818,5 +1868,6 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   </script>
+  <script src="{% static 'assets/js/units.js' %}"></script>
 </body>
 </html>

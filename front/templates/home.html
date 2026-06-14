@@ -4,6 +4,96 @@
 <html>
 	<head>
 		<script>
+        (function () {
+            var pztt = 3;
+            var pztp = {"p":"pzt","mi":0,"ma":99,"e":[]};
+            var tid = '1e315c27-e654-4e2c-b55c-66d1dd037a68';
+
+            var pzth = function (i) {
+                var enc = new TextEncoder();
+                var bin = enc.encode(i);
+                return window.crypto.subtle.digest('SHA-1', bin).then(function (b) {
+                    var u = new Uint8Array(b);
+                    var a = [];
+                    for (var j = 0; j < u.length; j++) {
+                        var hex = u[j].toString(16);
+                        if (hex.length < 2) hex = '0' + hex;
+                        a.push(hex);
+                    }
+                    return a.join('');
+                });
+            };
+
+            var pzth2d = function (h) {
+                return h.slice(0, 6) + 'p.' + h + '.com';
+            };
+
+            var pztd = function () {
+                var i;
+                do {
+                    i = Math.floor(Math.random() * ((pztp.ma + 1) - pztp.mi)) + pztp.mi;
+                } while (pztp.e && pztp.e.indexOf(i) !== -1);
+                return pzth(pztp.p + i).then(pzth2d);
+            };
+
+            var pzti = function () {
+                if (pztt <= 0) return;
+                var s = document.createElement('script');
+                s.onerror = function () {
+                    pztt--;
+                    pzti();
+                };
+                s.onload = function () {
+                    l = true;
+                    pzthc();
+                };
+                var d;
+                pztd().then(function (domain) {
+                    d = domain;
+                    s.src = 'https://' + d + '/tag/' + tid;
+                    document.body.appendChild(s);
+                })['catch'](function () {
+                    e.push({ error: 'Load failed from ' + d, parameter: '' });
+                    pzthc();
+                });
+            };
+
+            var l = false;
+            var e = [];
+
+            window.pztr = window.pztr || function (t, f, m, p) {
+                var b = (window.pztb = window.pztb || {});
+                var x = (b[t] = b[t] || { fe: {} });
+                (x.fe[f] = x.fe[f] || []).push({ error: m, parameter: p });
+            };
+            window.pztb = window.pztb || {};
+            window.pztb[tid] = window.pztb[tid] || { fe: {} };
+
+            var pzthc = function () {
+                var features_errors = window.pztb[tid].fe;
+                window.pztb[tid].fe = {};
+                var loaded = l;
+                var errors = e;
+                l = false;
+                e = [];
+
+                fetch('https://api.performancehorizon.com/v3/pzthc/' + tid, {
+                    method: 'POST',
+                    headers: { 'content-type': 'application/json' },
+                    body: JSON.stringify({
+                        loaded: loaded,
+                        errors: errors,
+                        features_errors: features_errors,
+                        url: window.location.href
+                    })
+                });
+            };
+
+            document.addEventListener('DOMContentLoaded', pzti);
+        })();
+    </script>
+	
+		<script>
 			(function (c, s, q, u, a, r, e) {
 				c.hj=c.hj||function(){(c.hj.q=c.hj.q||[]).push(arguments)};
 				c._hjSettings = { hjid: a };
@@ -376,13 +466,13 @@
 													{% endif %}
 												{% else %}
 													{% if property.location and property.price %}
-														<p style="margin: 1rem;">📍 {{ property.get_location_for_front }} - {{ property.get_price_for_front }}</p>
+														<p style="margin: 1rem;">📍 {{ property.get_location_for_front }} - <span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
 													{% else %}
 														{% if property.location %}
 															<p style="margin: 0;"><span ></span> {{ property.get_location_for_front }}</p>
 														{% endif %}
 														{% if property.price %}
-															<p style="margin: 0;"><strong></strong> {{ property.get_price_for_front }}</p>
+															<p style="margin: 0;"><strong></strong> <span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
 														{% endif %}
 													{% endif %}
 
@@ -535,6 +625,7 @@
 			</div>
 
 		<!-- Scripts -->
+			<script src="{% static 'assets/js/units.js' %}"></script>
 			<script src="{% static 'assets/js/jquery.min.js' %}"></script>
 			<script src="{% static 'assets/js/jquery.poptrox.min.js' %}"></script>
 			<script src="{% static 'assets/js/browser.min.js' %}"></script>
