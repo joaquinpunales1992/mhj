@@ -1546,6 +1546,29 @@ document.addEventListener('DOMContentLoaded', () => {
             {% endif %}
             {% endwith %}
 
+            {% with strp=property.short_term_rental_potential %}
+            {% if strp %}
+            <div class="flex flex-row flex-2 gap-4 w-full">
+              <div class="flex-1" style="background:#f6f7f4; border:1px solid #e2e2dc; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
+                <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:6px;">Short-term rental (Airbnb) potential<span class="mhj-tip" tabindex="0" role="img" aria-label="How is this estimated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Indicative only, from this property's zoning (用途地域). Short-term lets in Japan run under the minpaku law (max 180 nights/yr) or a lodging licence, and each municipality sets its own limits — confirm with the local government. Not legal advice.</span></span></p>
+                <p style="margin:0;">
+                  {% if strp.band == 'strong' %}
+                    <span style="display:inline-block; padding:4px 14px; border-radius:9999px; background:#477535; color:#fff; font-weight:700; font-size:0.9em;">{{ strp.label }}</span>
+                  {% elif strp.band == 'minpaku' %}
+                    <span style="display:inline-block; padding:4px 14px; border-radius:9999px; background:#e6f0e1; color:#477535; font-weight:700; font-size:0.9em;">{{ strp.label }}</span>
+                  {% elif strp.band == 'restricted' %}
+                    <span style="display:inline-block; padding:4px 14px; border-radius:9999px; background:#f7e2dd; color:#c0533f; font-weight:700; font-size:0.9em;">{{ strp.label }}</span>
+                  {% else %}
+                    <span style="display:inline-block; padding:4px 14px; border-radius:9999px; background:#ececec; color:#555555; font-weight:700; font-size:0.9em;">{{ strp.label }}</span>
+                  {% endif %}
+                </p>
+                <p class="text-xll" style="color:#666666; margin:8px 0 0; font-size:0.92em;">{{ strp.note }}</p>
+                <p class="text-xll" style="color:#999999; margin:4px 0 0; font-size:0.85em;">Zoning: {{ strp.zoning }} · <a href="#" data-toggle="modal" data-target="#interestModal" style="color:#477535; font-weight:600;">Ask us to verify</a></p>
+              </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Rights<span class="mhj-tip" tabindex="0" role="img" aria-label="What are Land Rights?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Whether the land is owned outright (freehold, 所有権) or leased from another owner (leasehold, 借地権). This affects ongoing costs, financing and resale. Unlock the full details for this property.</span></span></p>

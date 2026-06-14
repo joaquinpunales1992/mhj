@@ -104,6 +104,71 @@ class Property(TimestampMixin):
     def get_public_url(self):
         return reverse("property_detail", kwargs={"pk": self.pk})
 
+    def short_term_rental_potential(self):
+        """Heuristic 'can this do Airbnb?' signal derived from zoning (用途地域).
+
+        Returns {band, label, note, zoning} or None when zoning is unknown.
+        This is indicative only — actual eligibility depends on the local
+        municipality's minpaku ordinance, registration and building/fire
+        compliance. NOT legal advice.
+        """
+        z = (self.zoning or "").strip().lower()
+        if not z:
+            return None
+
+        def has(*subs):
+            return any(s in z for s in subs)
+
+        # Handles both the (Google-translated) English and raw Japanese (用途地域)
+        # forms. Order matters: check semi-/低層 before their base terms.
+        if has("無指定", "指定なし", "not designated"):
+            band = "verify"
+        elif has("commercial", "商業"):
+            band = "strong"
+        elif has("semi-industrial", "semi industrial", "semi-residential",
+                 "semi residential", "準工業", "準住居"):
+            band = "strong"
+        elif has("industrial", "工業"):
+            band = "restricted"
+        elif has("low-rise", "low rise", "低層"):
+            band = "restricted"
+        elif has("residen", "中高", "住居", "住宅"):  # residential / residences
+            band = "minpaku"
+        else:
+            band = "verify"
+
+        labels = {
+            "strong": "Good potential",
+            "minpaku": "Possible via minpaku",
+            "restricted": "Restricted zoning",
+            "verify": "Needs checking",
+        }
+        notes = {
+            "strong": (
+                "Commercial / semi-industrial zoning generally permits lodging — "
+                "both the 180-night minpaku route and a guesthouse/hotel licence "
+                "may be possible."
+            ),
+            "minpaku": (
+                "Residential zoning typically allows short-term rental under the "
+                "minpaku law (up to 180 nights/year), subject to local rules."
+            ),
+            "restricted": (
+                "Low-rise residential / industrial zoning heavily limits lodging; "
+                "minpaku is often capped or banned by the local government here."
+            ),
+            "verify": (
+                "Zoning here is unclassified or special — short-term-rental "
+                "eligibility must be confirmed with the local municipality."
+            ),
+        }
+        return {
+            "band": band,
+            "label": labels[band],
+            "note": notes[band],
+            "zoning": self.zoning,
+        }
+
     def building_price_per_m2(self):
         """Price per m² of building floor area, in yen. None if unparseable."""
         area = parse_area_to_m2(self.building_area)
