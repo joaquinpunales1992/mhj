@@ -1186,6 +1186,44 @@ document.addEventListener('DOMContentLoaded', () => {
     transition: background 0.2s ease, transform 0.05s ease;
   }
 
+  /* ===== Full visual match to the upgrade (premium) page ===================
+     Same palette, Work Sans body + Noto Serif JP headings, white cards with a
+     faint green border and soft green shadow, muted secondary copy. ======= */
+  :root {
+    --mhj-accent: #d6b58f;
+    --mhj-secondary: #878787;
+    --mhj-foreground: #2b2b2b;
+    --mhj-card: #ffffff;
+  }
+  body {
+    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    color: var(--mhj-foreground);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* Dark serif display title, like the premium hero */
+  #pp-layout header h1 { color: var(--mhj-foreground); line-height: 1.15; }
+  #pp-layout h2, #pp-layout h3, #pp-layout h4, #pp-layout h5,
+  .related-properties-heading, .modal-title {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 500;
+    color: var(--mhj-foreground);
+  }
+  /* White card surfaces with the faint green border + soft shadow */
+  .pp-details,
+  .related-property-card {
+    background: var(--mhj-card);
+    border: 1px solid var(--mhj-border);
+    border-radius: 16px;
+    box-shadow: 0 18px 40px -24px rgba(71, 117, 53, 0.45);
+  }
+  /* Muted secondary copy */
+  .buying-details .step small,
+  .buying-details .step h5,
+  .related-property-card .property-location { color: var(--mhj-secondary); }
+  /* CTAs use Work Sans like the upgrade page's .cta-btn */
+  .primary { font-family: 'Work Sans', sans-serif; font-weight: 600; }
+
   /* The theme sets white-space:nowrap on all buttons, which clips the long
      CTA label on narrow screens. Let these wrap to multiple lines instead. */
   #book-button, #interestSubmit {
@@ -1218,6 +1256,23 @@ document.addEventListener('DOMContentLoaded', () => {
       padding-top: 2rem;
       border-top: 1px solid rgba(71,117,53,0.18);
     }
+
+    /* The flattened columns lost their p-5/p-6 padding, so give the page a
+       consistent side gutter here and prevent any stray horizontal overflow. */
+    #pp-layout { padding-left: 1.1rem; padding-right: 1.1rem; overflow-x: hidden; }
+
+    /* Gallery breaks out of that gutter to fill the full viewport width
+       (margin-left:50% + translateX(-50%) centers a 100vw block on screen). */
+    #pp-layout .pp-gallery {
+      width: 100vw;
+      max-width: 100vw;
+      margin-left: 50%;
+      transform: translateX(-50%);
+      padding-left: 0;
+      padding-right: 0;
+    }
+    #pp-layout .pp-gallery .carousel-container { margin: 0; }
+    #pp-layout .pp-gallery .carousel { border-radius: 0; }
   }
   .primary:hover { background: var(--mhj-primary-dark); }
   .primary:active { transform: translateY(1px); }
