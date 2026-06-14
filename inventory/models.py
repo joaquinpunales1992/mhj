@@ -113,7 +113,12 @@ class Property(TimestampMixin):
         compliance. NOT legal advice.
         """
         z = (self.zoning or "").strip().lower()
-        if not z:
+        cp = (self.city_planning or "").strip().lower()
+        # 市街化調整区域: building/use changes are heavily restricted — converting
+        # to lodging is usually not allowed without special approval.
+        control_area = "control area" in cp or "調整区域" in cp or "市街化調整" in cp
+
+        if not z and not control_area:
             return None
 
         def has(*subs):
@@ -121,7 +126,9 @@ class Property(TimestampMixin):
 
         # Handles both the (Google-translated) English and raw Japanese (用途地域)
         # forms. Order matters: check semi-/低層 before their base terms.
-        if has("無指定", "指定なし", "not designated"):
+        if not z:
+            band = "verify"
+        elif has("無指定", "指定なし", "not designated"):
             band = "verify"
         elif has("commercial", "商業"):
             band = "strong"
@@ -137,10 +144,14 @@ class Property(TimestampMixin):
         else:
             band = "verify"
 
+        # City-planning override: an urbanization control area trumps zoning.
+        if control_area:
+            band = "restricted"
+
         labels = {
             "strong": "Good potential",
             "minpaku": "Possible via minpaku",
-            "restricted": "Restricted zoning",
+            "restricted": "Restricted",
             "verify": "Needs checking",
         }
         notes = {
@@ -162,10 +173,17 @@ class Property(TimestampMixin):
                 "eligibility must be confirmed with the local municipality."
             ),
         }
+        note = notes[band]
+        if control_area:
+            note = (
+                "Urbanization control area (市街化調整区域): converting a building to a "
+                "lodging / short-term-rental business is heavily restricted here and "
+                "usually requires special approval."
+            )
         return {
             "band": band,
             "label": labels[band],
-            "note": notes[band],
+            "note": note,
             "zoning": self.zoning,
         }
 
