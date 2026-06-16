@@ -494,14 +494,15 @@
 						</nav>
 					</header>
 
+				{% if region_name %}
+				<header class="region-hero" style="width: 100%; max-width: 60rem; margin: 0 auto; padding: 2.25rem 1.25rem 1.25rem; text-align: center; box-sizing: border-box;">
+					<h1 style="font-family: 'Noto Serif JP', serif; font-weight: 500; text-transform: none; letter-spacing: normal; white-space: normal; overflow-wrap: break-word; font-size: clamp(1.3rem, 5vw, 2.5rem); line-height: 1.25; color: #fff; margin: 0 0 0.6rem;">Houses &amp; Akiya for Sale in {{ region_name }}, Japan</h1>
+					<p style="color: rgba(255,255,255,0.72); font-size: 1.02rem; line-height: 1.55; margin: 0 auto; max-width: 40rem;">Browse affordable homes and akiya in {{ region_name }} prefecture — we help you through the entire purchase process, from viewing to keys.</p>
+				</header>
+				{% endif %}
+
 				<!-- Main -->
 					<div id="main">
-						{% if region_name %}
-						<header style="grid-column: 1 / -1; padding: 1.5rem 1rem 0.5rem; max-width: 60rem; margin: 0 auto; text-align: center;">
-							<h1 style="font-size: 2rem; margin: 0 0 0.4rem;">Houses &amp; Akiya for Sale in {{ region_name }}, Japan</h1>
-							<p style="opacity: 0.85; margin: 0;">Browse affordable homes and akiya in {{ region_name }} prefecture. We help you through the entire purchase process — from viewing to keys.</p>
-						</header>
-						{% endif %}
 						{% for property in properties %}
 							{% if property.has_any_image %}
 								<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
