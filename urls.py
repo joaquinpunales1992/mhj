@@ -12,6 +12,14 @@ handler404 = "front.views.redirect_404_view"
 urlpatterns = [
     path("", front_views.display_home, name="home"),
     path(
+        "houses-in-<str:region>/",
+        front_views.region_listing,
+        name="region_listing",
+    ),
+    path("about/", front_views.about, name="about"),
+    path("how-to-buy/", front_views.how_to_buy, name="how_to_buy"),
+    path("faqs/", front_views.faqs, name="faqs"),
+    path(
         "filter/<str:category>/",
         front_views.filter_properties,
         name="filter_properties",

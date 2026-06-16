@@ -169,6 +169,78 @@ def display_home(request):
     )
 
 
+def about(request):
+    return render(request, "about.html")
+
+
+def how_to_buy(request):
+    return render(request, "how_to_buy.html")
+
+
+def faqs(request):
+    return render(request, "faqs.html")
+
+
+@cache_page(60 * 60)
+def region_listing(request, region):
+    """SEO landing page for one prefecture, e.g. /houses-in-tokyo/.
+
+    Reuses the home grid/template but scoped to a region, with a unique title,
+    description and H1 so it can rank (and become a Google sitelink) on its own.
+    """
+    region_name = next(
+        (name for name in CITY_CATEGORIES if name.lower() == region.lower()), None
+    )
+    if not region_name:
+        return redirect("home")
+
+    base_queryset = (
+        Property.objects.prefetch_related("images")
+        .annotate(
+            has_any_image=models.Exists(
+                PropertyImage.objects.filter(property=models.OuterRef("pk"))
+            )
+        )
+        .filter(
+            show_in_front=True,
+            price__lte=5000,
+            price__gt=0,
+            location__icontains=region_name,
+        )
+    )
+
+    featured = list(base_queryset.filter(featured=True))
+    non_featured = list(base_queryset.filter(featured=False))
+    random.shuffle(featured)
+    random.shuffle(non_featured)
+    properties = featured + non_featured
+
+    paginator = Paginator(properties, settings.PROPERTIES_PER_PAGE)
+    page = paginator.get_page(request.GET.get("page"))
+    count = len(properties)
+
+    return render(
+        request,
+        "home.html",
+        context={
+            "properties": page.object_list,
+            "page": page,
+            "nav": "home",
+            "region_name": region_name,
+            "page_title": (
+                f"Houses & Akiya for Sale in {region_name}, Japan | My Akiya in Japan"
+            ),
+            "page_description": (
+                f"Browse {count} affordable homes and akiya for sale in {region_name}, "
+                f"Japan — photos, prices and full details, with help through the entire "
+                f"purchase process."
+            ),
+            "canonical_url": request.build_absolute_uri(request.path),
+            **_browse_filter_context(region_name, ""),
+        },
+    )
+
+
 @csrf_exempt
 def submit_premium_request(request):
     if request.method != "POST":

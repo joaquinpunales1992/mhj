@@ -3,11 +3,37 @@ from inventory.models import Property
 from xml.etree.ElementTree import Element, SubElement, tostring
 from django.http import HttpResponse
 
+from front.views import CITY_CATEGORIES
+
 
 def display_sitemaps(request):
     views = [
         {"url": reverse("home"), "priority": "1.0", "changefreq": "weekly"},
+        {"url": reverse("upgrade_premium"), "priority": "0.8", "changefreq": "monthly"},
+        {"url": reverse("how_to_buy"), "priority": "0.7", "changefreq": "monthly"},
+        {"url": reverse("faqs"), "priority": "0.7", "changefreq": "monthly"},
+        {"url": reverse("about"), "priority": "0.6", "changefreq": "monthly"},
     ]
+
+    # Region landing pages (one per prefecture we cover).
+    for region in CITY_CATEGORIES:
+        views.append(
+            {
+                "url": reverse("region_listing", args=[region.lower()]),
+                "priority": "0.8",
+                "changefreq": "weekly",
+            }
+        )
+
+    # Category landing pages.
+    for category in ("beach", "snow", "mountain", "onsen"):
+        views.append(
+            {
+                "url": reverse("filter_properties", args=[category]),
+                "priority": "0.7",
+                "changefreq": "weekly",
+            }
+        )
 
     # Property pages
     for property in Property.objects.filter(show_in_front=True, premium=False):

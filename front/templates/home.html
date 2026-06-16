@@ -130,18 +130,44 @@
 
 		gtag('config', 'G-QBY9Y9CMPS');
 		</script>
-		<title>My Akiya in Japan</title>
+		<title>{{ page_title|default:"My Akiya in Japan — Affordable Homes & Akiya for Sale in Japan" }}</title>
 		<meta charset="utf-8" />
-		<meta name="description" content="Discover your dream home in Japan. We guide you through every step of buying an affordable home in Japan, no matter your budget." />
+		<meta name="description" content="{{ page_description|default:'Discover your dream home in Japan. We guide you through every step of buying an affordable home in Japan, no matter your budget.' }}" />
 		<meta name="keywords" content="Japan, Akiya, Japanese homes, affordable homes, cheap houses japan, cheap house, buy home in Japan, dream home, real estate Japan" />
 		<meta name="author" content="My Akiya in Japan" />
-		<meta property="og:title" content="My Akiya in Japan" />
-		<meta property="og:description" content="Discover your dream home in Japan. We guide you through every step of buying an affordable home in Japan, no matter your budget." />
+		<meta property="og:title" content="{{ page_title|default:'My Akiya in Japan' }}" />
+		<meta property="og:description" content="{{ page_description|default:'Discover your dream home in Japan. We guide you through every step of buying an affordable home in Japan, no matter your budget.' }}" />
 		<meta property="og:image" content="{% static 'assets/images/og-image.jpg' %}" />
-		<meta property="og:url" content="https://www.myhouseinjapan.com" />
+		<meta property="og:url" content="{{ canonical_url|default:'https://akiyainjapan.com/' }}" />
 		<meta name="twitter:card" content="summary_large_image" />
 
-		<link rel="canonical" href="https://akiyainjapan.com" />
+		<link rel="canonical" href="{{ canonical_url|default:'https://akiyainjapan.com/' }}" />
+
+		<!-- Brand / site structured data (helps Google form a rich brand result + sitelinks searchbox) -->
+		<script type="application/ld+json">
+		{
+		  "@context": "https://schema.org",
+		  "@type": "Organization",
+		  "name": "My Akiya in Japan",
+		  "url": "https://akiyainjapan.com/",
+		  "logo": "https://akiyainjapan.com{% static 'favicon.svg' %}",
+		  "description": "We help you find and buy affordable homes and akiya in Japan, guiding you through the entire purchase process.",
+		  "sameAs": ["https://www.instagram.com/myakiyainjapan/"]
+		}
+		</script>
+		<script type="application/ld+json">
+		{
+		  "@context": "https://schema.org",
+		  "@type": "WebSite",
+		  "name": "My Akiya in Japan",
+		  "url": "https://akiyainjapan.com/",
+		  "potentialAction": {
+		    "@type": "SearchAction",
+		    "target": { "@type": "EntryPoint", "urlTemplate": "https://akiyainjapan.com/?city={search_term_string}" },
+		    "query-input": "required name=search_term_string"
+		  }
+		}
+		</script>
 		<link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
 		{% compress css %}
@@ -446,14 +472,14 @@
 						<nav>
 							<ul>
 								<li class="responsive-icon">
-									<a href="#purchasing-process" class="icon solid fa-home"><span class="responsive-text">How to Buy?</span></a>
+									<a href="{% url 'how_to_buy' %}" class="icon solid fa-home"><span class="responsive-text">How to Buy?</span></a>
 								</li>
 								<li class="responsive-icon">
-									<a href="#faqs" class="icon solid fa-question-circle"><span class="responsive-text">FAQs</span></a>
+									<a href="{% url 'faqs' %}" class="icon solid fa-question-circle"><span class="responsive-text">FAQs</span></a>
 									
 								</li>
 								<li class="responsive-icon">
-									<a href="#about" class="icon solid fa-info-circle"><span class="responsive-text">About</span></a>
+									<a href="{% url 'about' %}" class="icon solid fa-info-circle"><span class="responsive-text">About</span></a>
 								</li>
 
 								<style>
@@ -470,6 +496,12 @@
 
 				<!-- Main -->
 					<div id="main">
+						{% if region_name %}
+						<header style="grid-column: 1 / -1; padding: 1.5rem 1rem 0.5rem; max-width: 60rem; margin: 0 auto; text-align: center;">
+							<h1 style="font-size: 2rem; margin: 0 0 0.4rem;">Houses &amp; Akiya for Sale in {{ region_name }}, Japan</h1>
+							<p style="opacity: 0.85; margin: 0;">Browse affordable homes and akiya in {{ region_name }} prefecture. We help you through the entire purchase process — from viewing to keys.</p>
+						</header>
+						{% endif %}
 						{% for property in properties %}
 							{% if property.has_any_image %}
 								<article class="thumb" style="display: flex; gap: 4rem; align-items: flex-start; border-width: 10px;">
@@ -605,6 +637,16 @@
 							</nav>
 						{% endif %}
 					</div>
+
+				<!-- Browse by region (internal links for SEO / sitelinks) -->
+					<nav class="region-links" aria-label="Browse homes by region" style="max-width: 70rem; margin: 2rem auto; padding: 1.5rem 1.25rem; text-align: center;">
+						<h2 style="font-size: 1.4rem; margin: 0 0 1rem;">Browse homes by region</h2>
+						<div style="display: flex; flex-wrap: wrap; gap: 0.5rem 0.9rem; justify-content: center;">
+							{% for c in cities %}
+								<a href="{% url 'region_listing' region=c.name|lower %}" style="color: #fff; opacity: 0.85; text-decoration: none; border: 1px solid rgba(255,255,255,0.25); border-radius: 9999px; padding: 0.3rem 0.85rem; font-size: 0.9rem;">Houses in {{ c.name }} ({{ c.count }})</a>
+							{% endfor %}
+						</div>
+					</nav>
 
 				<!-- Footer -->
 					<footer id="about" class="panel">
