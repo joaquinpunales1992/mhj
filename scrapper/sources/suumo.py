@@ -23,21 +23,22 @@ _PREFECTURE_AR = {
     # 030 Kanto
     "ibaraki": "030", "tochigi": "030", "gunma": "030", "saitama": "030",
     "chiba": "030", "tokyo": "030", "kanagawa": "030",
-    # 040 Chubu/Tokai
+    # 040 Koshinetsu / Hokuriku (甲信越・北陸)
     "niigata": "040", "toyama": "040", "ishikawa": "040", "fukui": "040",
-    "yamanashi": "040", "nagano": "040", "gifu": "040", "shizuoka": "040",
-    "aichi": "040", "mie": "040",
-    # 050 Kinki
-    "shiga": "050", "kyoto": "050", "osaka": "050", "hyogo": "050",
-    "nara": "050", "wakayama": "050",
-    # 060 Chugoku
-    "tottori": "060", "shimane": "060", "okayama": "060", "hiroshima": "060",
-    "yamaguchi": "060",
-    # 070 Shikoku
+    "yamanashi": "040", "nagano": "040",
+    # 050 Tokai (東海)
+    "gifu": "050", "shizuoka": "050", "aichi": "050", "mie": "050",
+    # 060 Kinki / Kansai (関西)
+    "shiga": "060", "kyoto": "060", "osaka": "060", "hyogo": "060",
+    "nara": "060", "wakayama": "060",
+    # 070 Shikoku (四国)
     "tokushima": "070", "kagawa": "070", "ehime": "070", "kochi": "070",
-    # 080 Kyushu/Okinawa
-    "fukuoka": "080", "saga": "080", "nagasaki": "080", "kumamoto": "080",
-    "oita": "080", "miyazaki": "080", "kagoshima": "080", "okinawa": "080",
+    # 080 Chugoku (中国)
+    "tottori": "080", "shimane": "080", "okayama": "080", "hiroshima": "080",
+    "yamaguchi": "080",
+    # 090 Kyushu / Okinawa (九州・沖縄)
+    "fukuoka": "090", "saga": "090", "nagasaki": "090", "kumamoto": "090",
+    "oita": "090", "miyazaki": "090", "kagoshima": "090", "okinawa": "090",
 }
 
 _LIST_TEMPLATE = BASE_URL + "/jj/bukken/ichiran/JJ010FJ001/?ar={ar}&bs=021&ta={code}&page={page}"
