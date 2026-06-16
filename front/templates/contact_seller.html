@@ -1859,20 +1859,22 @@ document.addEventListener('DOMContentLoaded', () => {
   </footer>
 
   <style>
-    .site-footer { background:#1f2224; color:#cfd2cf; font-family:'Work Sans',sans-serif; padding:2.5rem 1.5rem 1.5rem; margin-top:2rem; text-align:left; }
-    .site-footer-inner { max-width:1000px; margin:0 auto; display:flex; flex-wrap:wrap; gap:2rem; text-align:left; }
-    .site-footer-col { align-items:flex-start; }
-    .site-footer-col { flex:1 1 220px; min-width:200px; display:flex; flex-direction:column; gap:.45rem; }
-    .site-footer-col p { color:#9a9d99; font-size:.9rem; line-height:1.5; margin:.3rem 0 0; }
-    .site-footer-brand { font-family:'Noto Serif JP',serif; font-size:1.2rem; color:#fff; text-decoration:none; }
-    .site-footer-col h4 { color:#fff; font-size:.8rem; letter-spacing:.06em; text-transform:uppercase; margin-bottom:.3rem; font-weight:600; }
+    /* Pinned in px (not rem) + !important because this page's theme uses a
+       small root font-size and thin, letter-spaced links — so the footer
+       matches the content pages (links 15px / weight 400 / no letter-spacing). */
+    .site-footer { background:#1f2224; color:#cfd2cf; font-family:'Work Sans',sans-serif; padding:40px 24px 24px; margin-top:2rem; text-align:left; }
+    .site-footer-inner { max-width:1000px; margin:0 auto; display:flex; flex-wrap:wrap; gap:32px; text-align:left; }
+    .site-footer-col { flex:1 1 220px; min-width:200px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
+    .site-footer-col p { color:#9a9d99 !important; font-size:14px !important; font-weight:400 !important; letter-spacing:normal !important; line-height:1.5; margin:5px 0 0; }
+    .site-footer-brand { font-family:'Noto Serif JP',serif !important; font-size:20px !important; font-weight:500 !important; letter-spacing:normal !important; color:#fff !important; text-decoration:none; }
+    .site-footer-col h4 { color:#fff !important; font-size:13px !important; letter-spacing:.06em !important; text-transform:uppercase; margin-bottom:5px; font-weight:600 !important; }
     /* The site theme puts a border/box-shadow "underline" on every <a>;
        kill it inside the footer so the links don't show stray lines. */
     .site-footer a { border-bottom:0 !important; box-shadow:none !important; text-decoration:none !important; }
-    .site-footer-col a { color:#cfd2cf; font-size:.95rem; padding:.15rem 0; }
+    .site-footer-col a { color:#cfd2cf !important; font-size:15px !important; font-weight:400 !important; letter-spacing:normal !important; padding:2px 0; }
     .site-footer-col a:hover { color:#fff !important; text-decoration:underline !important; }
-    .site-footer-bottom { max-width:1000px; margin:1.75rem auto 0; padding-top:1.25rem; border-top:1px solid rgba(255,255,255,.12); font-size:.85rem; color:#9a9d99; text-align:center; }
-    .site-footer-bottom a { color:#9a9d99; }
+    .site-footer-bottom { max-width:1000px; margin:28px auto 0; padding-top:20px; border-top:1px solid rgba(255,255,255,.12); font-size:13px; font-weight:400; letter-spacing:normal; color:#9a9d99; text-align:center; }
+    .site-footer-bottom a { color:#9a9d99 !important; }
   </style>
 
   <!-- Map modal: lazy-loads Google Maps embed when opened -->
