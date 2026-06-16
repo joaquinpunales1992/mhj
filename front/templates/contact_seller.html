@@ -1862,6 +1862,9 @@ document.addEventListener('DOMContentLoaded', () => {
     /* Pinned in px (not rem) + !important because this page's theme uses a
        small root font-size and thin, letter-spaced links — so the footer
        matches the content pages (links 15px / weight 400 / no letter-spacing). */
+    /* main.css adds body bottom-padding for the home page's fixed bottom bar;
+       this page has no such bar, so remove it to kill the trailing whitespace. */
+    body { padding-bottom: 0 !important; }
     .site-footer { background:#1f2224; color:#cfd2cf; font-family:'Work Sans',sans-serif; padding:40px 24px 24px; margin-top:2rem; text-align:left; }
     .site-footer-inner { max-width:1000px; margin:0 auto; display:flex; flex-wrap:wrap; gap:32px; text-align:left; }
     .site-footer-col { flex:1 1 220px; min-width:200px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
