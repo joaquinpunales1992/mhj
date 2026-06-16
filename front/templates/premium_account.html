@@ -577,6 +577,46 @@
     </section>
   </div>
 
+  <style>
+    .site-footer { background:#1f2224; color:#cfd2cf; font-family:'Work Sans',sans-serif; padding:40px 24px 24px; margin-top:3rem; text-align:left; }
+    .site-footer-inner { max-width:1000px; margin:0 auto; display:flex; flex-wrap:wrap; gap:32px; }
+    .site-footer-col { flex:1 1 220px; min-width:200px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
+    .site-footer-col p { color:#9a9d99; font-size:14px; line-height:1.5; margin:5px 0 0; }
+    .site-footer-brand { font-family:'Noto Serif JP',serif; font-size:20px; font-weight:500; color:#fff; text-decoration:none; }
+    .site-footer-col h4 { color:#fff; font-size:13px; letter-spacing:.06em; text-transform:uppercase; margin-bottom:5px; font-weight:600; }
+    .site-footer a { text-decoration:none; }
+    .site-footer-col a { color:#cfd2cf; font-size:15px; padding:2px 0; }
+    .site-footer-col a:hover { color:#fff; text-decoration:underline; }
+    .site-footer-bottom { max-width:1000px; margin:28px auto 0; padding-top:20px; border-top:1px solid rgba(255,255,255,.12); font-size:13px; color:#9a9d99; text-align:center; }
+    .site-footer-bottom a { color:#9a9d99; }
+  </style>
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <div class="site-footer-col">
+        <a class="site-footer-brand" href="/">My Akiya in Japan</a>
+        <p>Affordable homes &amp; akiya for sale across Japan — we guide you through the entire purchase process.</p>
+      </div>
+      <div class="site-footer-col">
+        <h4>Explore</h4>
+        <a href="/">Browse homes</a>
+        <a href="{% url 'how_to_buy' %}">How to buy</a>
+        <a href="{% url 'faqs' %}">FAQs</a>
+        <a href="{% url 'about' %}">About</a>
+        <a href="{% url 'upgrade_premium' %}">Pricing</a>
+      </div>
+      <div class="site-footer-col">
+        <h4>Popular regions</h4>
+        <a href="{% url 'region_listing' 'tokyo' %}">Houses in Tokyo</a>
+        <a href="{% url 'region_listing' 'osaka' %}">Houses in Osaka</a>
+        <a href="{% url 'region_listing' 'kyoto' %}">Houses in Kyoto</a>
+        <a href="{% url 'region_listing' 'kanagawa' %}">Houses in Kanagawa</a>
+        <a href="{% url 'region_listing' 'shizuoka' %}">Houses in Shizuoka</a>
+        <a href="{% url 'region_listing' 'fukuoka' %}">Houses in Fukuoka</a>
+      </div>
+    </div>
+    <div class="site-footer-bottom">&copy; My Akiya in Japan &middot; <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a></div>
+  </footer>
+
   <script>
     document.addEventListener("DOMContentLoaded", () => {
       const bookButton = document.getElementById('book-button');
