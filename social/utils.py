@@ -207,8 +207,10 @@ def build_hashtags(location: str = "") -> str:
 def select_properties_to_post(posts_queryset, price_limit, limit=None):
     """Properties with images under price_limit, cheapest first.
 
-    Eligibility: must have at least one image and a real price within
-    (0, price_limit]. Featured is NOT required — it's only a tiebreaker.
+    Eligibility matches the homepage grid (show_in_front=True, price in
+    (0, price_limit]) plus the social-only requirement of at least one image
+    — we can't build a reel/post without a photo. Featured is NOT required;
+    it's only a tiebreaker.
 
     Ordering: never-posted properties come first so fresh inventory gets a
     turn before anything is reposted; within each group we sort cheapest
@@ -224,7 +226,10 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
 
     candidates = list(
         Property.objects.filter(
-            images__isnull=False, price__gt=0, price__lte=price_limit
+            show_in_front=True,
+            images__isnull=False,
+            price__gt=0,
+            price__lte=price_limit,
         ).distinct()
     )
     # Sort key, in priority order:
