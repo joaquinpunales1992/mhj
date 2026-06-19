@@ -29,7 +29,7 @@ from moviepy import (
     vfx,
 )
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
-from PIL import Image
+from PIL import Image, ImageChops
 from membership.utils import notify_social_token_expired
 import logging
 from django.conf import settings
@@ -830,15 +830,32 @@ def create_property_video(
         logger.error("No images found for the property.")
         return None
 
+    def _trim_white_borders(im):
+        """Crop near-white borders some SUUMO photos carry (and the white
+        padding from fixed-box resizes) so reels don't show white frames."""
+        rgb = im.convert("RGB")
+        bg = Image.new("RGB", rgb.size, (255, 255, 255))
+        diff = ImageChops.difference(rgb, bg)
+        # Amplify + offset so anything brighter than ~235 counts as "white".
+        diff = ImageChops.add(diff, diff, 2.0, -20)
+        bbox = diff.getbbox()
+        # Only crop if there's a real border (ignore tiny/no-op or full-white).
+        if bbox and bbox != (0, 0, rgb.width, rgb.height):
+            cropped = im.crop(bbox)
+            if cropped.width >= 50 and cropped.height >= 50:
+                return cropped
+        return im
+
     def _make_slide(local_path):
         """Vertical 9:16 slide: photo fit onto a dark canvas (downscale only).
 
         We pre-shrink with PIL so a large source image is never fully decoded
         into a giant array — upscaling to 'cover' is what OOM-killed the VPS.
         """
-        # Downscale to fit within the canvas, in place (Pillow only shrinks).
+        # Trim white borders, then downscale to fit within the canvas in place
+        # (Pillow only shrinks).
         with Image.open(local_path) as im:
-            im = im.convert("RGB")
+            im = _trim_white_borders(im.convert("RGB"))
             im.thumbnail((W, H), Image.LANCZOS)
             im.save(local_path, "JPEG", quality=88)
 
