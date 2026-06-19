@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import re
+import urllib.parse
 
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
@@ -112,35 +113,34 @@ def parse_listing(url: str) -> dict | None:
     construction = table.get("完成時期（築年月）") or table.get("完成時期(築年月)", "")
     location = table.get("住所") or table.get("所在地", "")
 
-    # SUUMO serves listing photos two ways depending on the page:
-    #   1) direct CDN originals under suumo.jp/front/gazo/bukken/...
+    # SUUMO references each listing photo two ways on a detail page:
+    #   1) the clean full-size original under suumo.jp/front/gazo/bukken/...
     #   2) img01.suumo.com/jj/resizeImage?src=<url-encoded path>&w=&h=
-    # Most detail pages use form (2). For those the param-free original is
-    # only a 100x100 thumbnail, so we must request a sized render. Use a
-    # WIDTH only (&w=1024) — NOT a fixed w&h box: a fixed box makes SUUMO
-    # center smaller / non-4:3 photos on a white canvas (the "white rectangle"
-    # look), whereas width-only scales proportionally with no padding. Each
-    # photo appears several times at different sizes, so dedupe by the encoded
-    # src and keep one entry per photo in page order.
+    # The resizeImage renders carry a baked-in white frame (the "white
+    # rectangle" look), so we always store form (1). When a photo only
+    # appears as a resizeImage URL, its src decodes to the same
+    # gazo/bukken/... path, so we rebuild the clean original from it:
+    #   https://suumo.jp/front/<decoded src>
+    # Each photo appears several times, so dedupe by filename in page order.
     image_urls: list[str] = []
     seen: set[str] = set()
+
+    def _add(url: str) -> None:
+        key = url.rsplit("/", 1)[-1].split("?")[0]
+        if key and key not in seen:
+            seen.add(key)
+            image_urls.append(url)
 
     for match in re.findall(
         r"https?://suumo\.jp/front/gazo/bukken/[^\"'\s]+\.(?:jpg|jpeg|png)",
         response.text,
     ):
-        if match not in seen:
-            seen.add(match)
-            image_urls.append(match)
+        _add(match)
 
     for enc in re.findall(
         r"resizeImage\?src=(gazo%2[Ff]bukken[^&\"'\s]+)", response.text
     ):
-        if enc not in seen:
-            seen.add(enc)
-            image_urls.append(
-                f"https://img01.suumo.com/jj/resizeImage?src={enc}&w=1024"
-            )
+        _add("https://suumo.jp/front/" + urllib.parse.unquote(enc))
 
     translator = GoogleTranslator(source="auto", target="en")
 

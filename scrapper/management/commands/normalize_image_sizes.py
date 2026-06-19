@@ -1,4 +1,5 @@
 import re
+import urllib.parse
 
 from django.core.management.base import BaseCommand
 
@@ -10,9 +11,9 @@ _SRC_RE = re.compile(r"resizeImage\?src=([^&\s\"']+)")
 
 class Command(BaseCommand):
     help = (
-        "Normalize stored SUUMO resizeImage URLs to a full-width render "
-        "(&w=1024, no fixed height). Fixes images saved as tiny thumbnails "
-        "(&w=220&h=165) or white-padded fixed boxes (&w=1024&h=768)."
+        "Rewrite stored SUUMO resizeImage URLs to their clean full-size "
+        "originals on suumo.jp/front/gazo/bukken/... The resizeImage renders "
+        "carry a baked-in white frame; the decoded src is the original path."
     )
 
     def add_arguments(self, parser):
@@ -32,9 +33,8 @@ class Command(BaseCommand):
             match = _SRC_RE.search(current)
             if not match:
                 continue
-            new_url = (
-                f"https://img01.suumo.com/jj/resizeImage?src={match.group(1)}&w=1024"
-            )
+            path = urllib.parse.unquote(match.group(1))
+            new_url = "https://suumo.jp/front/" + path
             if new_url == current:
                 continue
             changed += 1
