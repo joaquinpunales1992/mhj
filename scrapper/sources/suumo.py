@@ -116,10 +116,12 @@ def parse_listing(url: str) -> dict | None:
     #   1) direct CDN originals under suumo.jp/front/gazo/bukken/...
     #   2) img01.suumo.com/jj/resizeImage?src=<url-encoded path>&w=&h=
     # Most detail pages use form (2). For those the param-free original is
-    # only a 100x100 thumbnail, so we must request a sized render — w/h are
-    # required, not optional. Each photo appears several times at different
-    # sizes, so dedupe by the encoded src and keep one entry per photo in
-    # page order.
+    # only a 100x100 thumbnail, so we must request a sized render. Use a
+    # WIDTH only (&w=1024) — NOT a fixed w&h box: a fixed box makes SUUMO
+    # center smaller / non-4:3 photos on a white canvas (the "white rectangle"
+    # look), whereas width-only scales proportionally with no padding. Each
+    # photo appears several times at different sizes, so dedupe by the encoded
+    # src and keep one entry per photo in page order.
     image_urls: list[str] = []
     seen: set[str] = set()
 
@@ -137,7 +139,7 @@ def parse_listing(url: str) -> dict | None:
         if enc not in seen:
             seen.add(enc)
             image_urls.append(
-                f"https://img01.suumo.com/jj/resizeImage?src={enc}&w=1024&h=768"
+                f"https://img01.suumo.com/jj/resizeImage?src={enc}&w=1024"
             )
 
     translator = GoogleTranslator(source="auto", target="en")
