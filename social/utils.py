@@ -212,11 +212,12 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
     — we can't build a reel/post without a photo. Featured is NOT required;
     it's only a tiebreaker.
 
-    Ordering: never-posted properties come first so fresh inventory gets a
-    turn before anything is reposted; within each group we sort cheapest
-    first, then prefer featured, and within the already-posted group we
-    surface the least-recently-posted to keep the rotation fair (so we don't
-    spam the single cheapest property once inventory is exhausted).
+    Ordering: featured properties come first, mirroring the homepage grid
+    which leads with featured listings. Within the featured group (and the
+    non-featured group after it) never-posted properties get a turn before
+    anything is reposted, then we surface the least-recently-posted to keep
+    the rotation fair, then cheapest first (so we don't spam the single
+    cheapest property once inventory is exhausted).
 
     `posts_queryset` is the SocialPost rows for the relevant channel; matching
     is by property_url == Property.url (same value written when a post is made).
@@ -233,16 +234,16 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
         ).distinct()
     )
     # Sort key, in priority order:
-    #   1. already-posted?    never-posted ahead of posted
-    #   2. last-posted-time   oldest repost first (only separates the posted group)
-    #   3. price              cheapest first
-    #   4. not featured       featured wins ties (False < True)
+    #   1. not featured       featured first, mirroring the homepage (False < True)
+    #   2. already-posted?    never-posted ahead of posted
+    #   3. last-posted-time   oldest repost first (only separates the posted group)
+    #   4. price              cheapest first
     candidates.sort(
         key=lambda p: (
+            not p.featured,
             last_posted.get(p.url) is not None,
             last_posted.get(p.url) or 0,
             p.price or 0,
-            not p.featured,
         )
     )
     return candidates[:limit] if limit else candidates
