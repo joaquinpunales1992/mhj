@@ -7,7 +7,9 @@
   <title>{% block title %}My Akiya in Japan{% endblock %}</title>
   <meta name="description" content="{% block description %}Affordable homes and akiya for sale in Japan.{% endblock %}">
   <link rel="canonical" href="{% block canonical %}https://akiyainjapan.com/{% endblock %}">
-  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}">
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
   <style>
     :root { --primary:#477535; --primary-dark:#3a5f2b; --bg:#faf8f4; --fg:#2b2b2b; --muted:#6f6f70; --border:rgba(71,117,53,.14); }

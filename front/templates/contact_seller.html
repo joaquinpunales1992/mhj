@@ -241,7 +241,9 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{{ property.title|default:"Akiya" }} — {{ property.get_location_for_front }} | My Akiya in Japan</title>
-  <link rel="icon" type="image/svg+xml" href="{% static 'favicon.svg' %}" />
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}" />
+  <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}" />
   <link rel="canonical" href="https://{{ request.get_host }}{{ request.get_full_path }}" />
 
   <!-- Open Graph / Twitter: rich preview when a property link is shared -->
