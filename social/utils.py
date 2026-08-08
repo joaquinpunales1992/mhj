@@ -41,6 +41,42 @@ logger = logging.getLogger(__name__)
 # Cap the attempts so a bad batch doesn't churn through many heavy encodes.
 MAX_REEL_ATTEMPTS = 3
 
+# A candidate whose source listing has been taken down costs only a few 404s —
+# nothing like an ffmpeg encode — so it must NOT consume a MAX_REEL_ATTEMPTS
+# slot. Without this the poster deadlocks: the queue orders never-posted
+# properties first, so a handful of delisted listings sit at the head and burn
+# every attempt on every run, forever. Bound the skipping anyway so one run
+# can't walk the whole table doing HTTP.
+MAX_DELISTED_SKIPS = 20
+
+
+class _NoLiveImages:
+    """Falsy sentinel: every photo on the source listing is gone (404).
+
+    Falsy so existing `if create_property_video(...)` truth-checks still read
+    as "no video was made", while callers that care can tell this cheap skip
+    apart from an expensive encode failure.
+    """
+
+    __slots__ = ()
+
+    def __bool__(self):
+        return False
+
+
+NO_LIVE_IMAGES = _NoLiveImages()
+
+
+def _is_permanently_gone(exc) -> bool:
+    """True only for a definitive "this image no longer exists" response.
+
+    Deliberately narrow: timeouts, connection errors, 403s and 5xx are all
+    transient or blocking, and treating them as "gone" would retire live
+    properties on a network blip. Only 404/410 count.
+    """
+    response = getattr(exc, "response", None)
+    return response is not None and response.status_code in (404, 410)
+
 
 def refresh_access_token():
     """Renew the stored Page token from the long-lived user token in .env.
@@ -120,6 +156,35 @@ def _download_image_to_tempfile(url):
         for chunk in response.iter_content(1024):
             f.write(chunk)
     return tmp_file.name
+
+
+def _all_images_gone(property_id: int, already_checked) -> bool:
+    """Confirm every photo of a property is a hard 404 before we retire it.
+
+    The reel builder only samples the first few images, so check the rest here.
+    Use GET, not HEAD: some sources (homes.jp's image.php) answer HEAD with a
+    404 for images they serve perfectly well on GET. Any photo that still
+    loads — or that fails for a transient reason — means "not confirmed dead",
+    and we leave the property visible.
+    """
+    remaining = PropertyImage.objects.filter(property_id=property_id).exclude(
+        pk__in=[img.pk for img in already_checked]
+    )
+    for img_obj in remaining:
+        img_url = prepare_image_url_for_facebook(img_obj.file.url)
+        try:
+            with requests.get(
+                img_url,
+                headers={"User-Agent": "Mozilla/5.0"},
+                stream=True,
+                timeout=30,
+            ) as response:
+                response.raise_for_status()
+            return False  # still serving a photo, so the listing is alive
+        except Exception as exc:
+            if not _is_permanently_gone(exc):
+                return False  # transient failure — never retire on a maybe
+    return True
 
 
 def _get_random_mp3_full_path(exclude: str) -> str:
@@ -568,15 +633,27 @@ def post_instagram_reel():
         # Try candidates until one produces a video. A failed encode logs and
         # moves on instead of aborting the whole run.
         property_to_post_instagram_reel = None
-        for candidate in candidates[:MAX_REEL_ATTEMPTS]:
-            if create_property_video(
+        encode_attempts = delisted_skips = 0
+        for candidate in candidates:
+            if encode_attempts >= MAX_REEL_ATTEMPTS or delisted_skips >= MAX_DELISTED_SKIPS:
+                break
+            result = create_property_video(
                 candidate.pk,
                 output_path="property_video.mp4",
                 audio_path=audio_path,
                 duration_per_image=3,
-            ):
+            )
+            if result:
                 property_to_post_instagram_reel = candidate
                 break
+            if result is NO_LIVE_IMAGES:
+                delisted_skips += 1
+                logger.warning(
+                    f"Skipping delisted property {candidate.url}; trying next "
+                    "(does not count as a video attempt)."
+                )
+                continue
+            encode_attempts += 1
             logger.warning(
                 f"Skipping property {candidate.url}: video creation failed, trying next."
             )
@@ -704,15 +781,27 @@ def post_facebook_reel():
         audio_path = _get_random_mp3_full_path(exclude=last_reel_posted_sound_track)
 
         property_to_post_facebook_reel = None
-        for candidate in candidates[:MAX_REEL_ATTEMPTS]:
-            if create_property_video(
+        encode_attempts = delisted_skips = 0
+        for candidate in candidates:
+            if encode_attempts >= MAX_REEL_ATTEMPTS or delisted_skips >= MAX_DELISTED_SKIPS:
+                break
+            result = create_property_video(
                 candidate.pk,
                 output_path="property_video.mp4",
                 audio_path=audio_path,
                 duration_per_image=3,
-            ):
+            )
+            if result:
                 property_to_post_facebook_reel = candidate
                 break
+            if result is NO_LIVE_IMAGES:
+                delisted_skips += 1
+                logger.warning(
+                    f"Skipping delisted property {candidate.url}; trying next "
+                    "(does not count as a video attempt)."
+                )
+                continue
+            encode_attempts += 1
             logger.warning(
                 f"Skipping property {candidate.url}: video creation failed, trying next."
             )
@@ -873,16 +962,30 @@ def create_property_video(
         return CompositeVideoClip([bg, img], size=(W, H))
 
     slides = []
+    gone = 0
     for img_obj in images:
         img_url = prepare_image_url_for_facebook(img_obj.file.url)
         logger.info(f"Preparing image URL: {img_url}")
         try:
             slides.append(_make_slide(_download_image_to_tempfile(img_url)))
         except Exception as e:
+            if _is_permanently_gone(e):
+                gone += 1
             logger.warning(f" Skipping image {img_url}: {e}")
 
     if not slides:
         logger.error("No valid images to create video.")
+        # Every photo we tried is a hard 404 — the listing has almost certainly
+        # been taken down. Confirm against the property's remaining photos
+        # (we only sample the first few above) before retiring it, so a
+        # property whose later images are still live is merely skipped.
+        if gone == len(images) and _all_images_gone(property_id, images):
+            Property.objects.filter(pk=property_id).update(show_in_front=False)
+            logger.warning(
+                f"Retired delisted property {property.url}: all images 404. "
+                "It no longer blocks the social queue or shows on the site."
+            )
+            return NO_LIVE_IMAGES
         return None
 
     # Concatenate with crossfades; fall back to hard cuts if the transition
