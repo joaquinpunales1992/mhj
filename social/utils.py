@@ -11,6 +11,7 @@ from ai.hugging import HuggingFaceAI
 from ai.cerebras import CerebrasAI
 from social.models import SocialPost, SocialComment
 from inventory.models import Property, PropertyImage
+from inventory.utils import all_images_gone, is_permanently_gone
 from django.db.models import Max
 import time
 from django.conf import settings
@@ -65,17 +66,6 @@ class _NoLiveImages:
 
 
 NO_LIVE_IMAGES = _NoLiveImages()
-
-
-def _is_permanently_gone(exc) -> bool:
-    """True only for a definitive "this image no longer exists" response.
-
-    Deliberately narrow: timeouts, connection errors, 403s and 5xx are all
-    transient or blocking, and treating them as "gone" would retire live
-    properties on a network blip. Only 404/410 count.
-    """
-    response = getattr(exc, "response", None)
-    return response is not None and response.status_code in (404, 410)
 
 
 def refresh_access_token():
@@ -158,33 +148,18 @@ def _download_image_to_tempfile(url):
     return tmp_file.name
 
 
-def _all_images_gone(property_id: int, already_checked) -> bool:
-    """Confirm every photo of a property is a hard 404 before we retire it.
+def _remaining_images_gone(property_id: int, already_checked) -> bool:
+    """Confirm the property's OTHER photos are gone before we retire it.
 
-    The reel builder only samples the first few images, so check the rest here.
-    Use GET, not HEAD: some sources (homes.jp's image.php) answer HEAD with a
-    404 for images they serve perfectly well on GET. Any photo that still
-    loads — or that fails for a transient reason — means "not confirmed dead",
-    and we leave the property visible.
+    The reel builder only samples the first few images, so check the rest
+    here — a property whose later photos still load is merely skipped.
     """
     remaining = PropertyImage.objects.filter(property_id=property_id).exclude(
         pk__in=[img.pk for img in already_checked]
     )
-    for img_obj in remaining:
-        img_url = prepare_image_url_for_facebook(img_obj.file.url)
-        try:
-            with requests.get(
-                img_url,
-                headers={"User-Agent": "Mozilla/5.0"},
-                stream=True,
-                timeout=30,
-            ) as response:
-                response.raise_for_status()
-            return False  # still serving a photo, so the listing is alive
-        except Exception as exc:
-            if not _is_permanently_gone(exc):
-                return False  # transient failure — never retire on a maybe
-    return True
+    return all_images_gone(
+        prepare_image_url_for_facebook(img_obj.file.url) for img_obj in remaining
+    )
 
 
 def _get_random_mp3_full_path(exclude: str) -> str:
@@ -969,7 +944,7 @@ def create_property_video(
         try:
             slides.append(_make_slide(_download_image_to_tempfile(img_url)))
         except Exception as e:
-            if _is_permanently_gone(e):
+            if is_permanently_gone(e):
                 gone += 1
             logger.warning(f" Skipping image {img_url}: {e}")
 
@@ -979,7 +954,7 @@ def create_property_video(
         # been taken down. Confirm against the property's remaining photos
         # (we only sample the first few above) before retiring it, so a
         # property whose later images are still live is merely skipped.
-        if gone == len(images) and _all_images_gone(property_id, images):
+        if gone == len(images) and _remaining_images_gone(property_id, images):
             Property.objects.filter(pk=property_id).update(show_in_front=False)
             logger.warning(
                 f"Retired delisted property {property.url}: all images 404. "

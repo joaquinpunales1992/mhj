@@ -141,7 +141,7 @@ def display_home(request):
                 PropertyImage.objects.filter(property=models.OuterRef("pk"))
             )
         )
-        .filter(show_in_front=True, price__lte=5000, price__gt=0)
+        .filter(show_in_front=True, price__lte=5000, price__gt=0, has_any_image=True)
     )
 
     base_queryset, selected_city, selected_price = _apply_browse_filters(
@@ -206,6 +206,7 @@ def region_listing(request, region):
             price__lte=5000,
             price__gt=0,
             location__icontains=region_name,
+            has_any_image=True,
         )
     )
 
@@ -500,6 +501,7 @@ def filter_properties(request, category):
                 PropertyImage.objects.filter(property=models.OuterRef("pk"))
             )
         )
+        .filter(has_any_image=True)
         .order_by("-featured", "price")
     )
 

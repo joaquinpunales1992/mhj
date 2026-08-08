@@ -1,7 +1,51 @@
 import locale
 import re
 
+import requests
+
 locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
+
+# Deliberately no model imports here: inventory.models imports this module.
+
+_LIVENESS_HEADERS = {"User-Agent": "Mozilla/5.0"}
+
+
+def is_permanently_gone(exc) -> bool:
+    """True only for a definitive "this image no longer exists" response.
+
+    Deliberately narrow. Timeouts, connection errors, 403s and 5xx are all
+    transient or blocking, and treating them as "gone" would retire live
+    properties on a network blip. Only 404/410 count.
+    """
+    response = getattr(exc, "response", None)
+    return response is not None and response.status_code in (404, 410)
+
+
+def all_images_gone(image_urls) -> bool:
+    """True when every given photo URL is a hard 404/410 — a delisted listing.
+
+    Returns False as soon as one photo loads, so the common case (a live
+    property) costs a single request.
+
+    Use GET, not HEAD: some sources — homes.jp's image.php in particular —
+    answer HEAD with a 404 for images they serve perfectly well on GET, which
+    would fake a site-wide outage.
+
+    Vacuously True for an empty sequence. Callers decide whether they have
+    enough evidence to retire a property; "no photos at all" is not proof the
+    source listing is gone.
+    """
+    for url in image_urls:
+        try:
+            with requests.get(
+                url, headers=_LIVENESS_HEADERS, stream=True, timeout=30
+            ) as response:
+                response.raise_for_status()
+            return False  # still serving a photo, so the listing is alive
+        except Exception as exc:
+            if not is_permanently_gone(exc):
+                return False  # transient failure — never retire on a maybe
+    return True
 
 
 def parse_area_to_m2(text):
