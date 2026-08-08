@@ -134,15 +134,16 @@ def _browse_filter_context(selected_city="", selected_price=""):
 
 @cache_page(60 * 60)
 def display_home(request):
-    base_queryset = (
-        Property.objects.prefetch_related("images")
-        .annotate(
-            has_any_image=models.Exists(
-                PropertyImage.objects.filter(property=models.OuterRef("pk"))
-            )
+    # No prefetch_related("images") here: the card template reads
+    # property.get_ordered_images, which calls .order_by() on the related
+    # manager and therefore ignores the prefetch cache and re-queries anyway.
+    # Prefetching just loaded ~36k PropertyImage rows per render and threw
+    # them away — the single biggest cost of a cache miss.
+    base_queryset = Property.objects.annotate(
+        has_any_image=models.Exists(
+            PropertyImage.objects.filter(property=models.OuterRef("pk"))
         )
-        .filter(show_in_front=True, price__lte=5000, price__gt=0, has_any_image=True)
-    )
+    ).filter(show_in_front=True, price__lte=5000, price__gt=0, has_any_image=True)
 
     base_queryset, selected_city, selected_price = _apply_browse_filters(
         base_queryset, request
@@ -194,20 +195,18 @@ def region_listing(request, region):
     if not region_name:
         return redirect("home")
 
-    base_queryset = (
-        Property.objects.prefetch_related("images")
-        .annotate(
-            has_any_image=models.Exists(
-                PropertyImage.objects.filter(property=models.OuterRef("pk"))
-            )
+    # See display_home: get_ordered_images bypasses the prefetch cache, so
+    # prefetch_related("images") is pure overhead here too.
+    base_queryset = Property.objects.annotate(
+        has_any_image=models.Exists(
+            PropertyImage.objects.filter(property=models.OuterRef("pk"))
         )
-        .filter(
-            show_in_front=True,
-            price__lte=5000,
-            price__gt=0,
-            location__icontains=region_name,
-            has_any_image=True,
-        )
+    ).filter(
+        show_in_front=True,
+        price__lte=5000,
+        price__gt=0,
+        location__icontains=region_name,
+        has_any_image=True,
     )
 
     featured = list(base_queryset.filter(featured=True))
