@@ -990,5 +990,28 @@
 			})();
 		</script>
 
+		<script>
+			// Source listings (SUUMO / homes.co.jp) get taken down at any time,
+			// which leaves us pointing at a dead photo URL. Without this the card
+			// still renders — as a black box with a working "Learn More" button
+			// that leads to a page full of broken images.
+			//
+			// retire_delisted_properties sweeps these out of the DB, but it only
+			// runs periodically, so anything delisted since the last sweep would
+			// show up here. Drop the card as soon as its photo fails to load.
+			//
+			// Capture phase: 'error' does not bubble, so a listener on document
+			// only sees it on the way down.
+			(function () {
+				document.addEventListener('error', function (event) {
+					var img = event.target;
+					if (!img || img.tagName !== 'IMG') return;
+
+					var card = img.closest('article.thumb');
+					if (card) card.style.display = 'none';
+				}, true);
+			})();
+		</script>
+
 	</body>
 </html>
