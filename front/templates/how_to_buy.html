@@ -7,7 +7,8 @@
   <p class="lead">These are the steps to owning your house in Japan.</p>
   <ol>
     <li>Express your interest in any of the available properties.</li>
-    <li>Have an initial conversation with our team.</li>
+    <li><a href="{% url 'consultation' %}">Have an initial consultation with our
+      team</a> — the real costs, the process, and whether your plan is realistic.</li>
     <li>Sign the service contract and choose a certified real estate agent from our available options.</li>
     <li>Define the properties you'd like to inspect (personally or virtually).</li>
     <li>Formalize your offer for the property you've chosen.</li>
@@ -16,4 +17,8 @@
   </ol>
   <p>Foreigners can buy property in Japan with no residency requirement and full ownership — you can complete the process remotely and visit whenever you choose.</p>
   <a class="cta" href="/">Start browsing homes</a>
+  <a class="cta" href="{% url 'consultation' %}"
+     style="background:transparent;color:var(--primary);box-shadow:inset 0 0 0 2px var(--primary);margin-left:.5rem;">
+    Book a consultation
+  </a>
 {% endblock %}

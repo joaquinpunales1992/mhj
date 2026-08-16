@@ -1,0 +1,12 @@
+{% extends "account/auth_base.html" %}
+{% block title %}Sign out — My Akiya in Japan{% endblock %}
+{% block auth_content %}
+  <h1>Sign out</h1>
+  <p class="auth-sub">Are you sure you want to sign out?</p>
+  <form method="post" action="{% url 'account_logout' %}">
+    {% csrf_token %}
+    {{ redirect_field }}
+    <button type="submit" class="auth-btn">Sign out</button>
+  </form>
+  <p class="auth-alt"><a href="{% url 'map' %}">Never mind, back to the map</a></p>
+{% endblock %}

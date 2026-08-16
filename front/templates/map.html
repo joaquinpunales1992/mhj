@@ -1,0 +1,617 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Map of Akiya &amp; Homes for Sale in Japan — My Akiya in Japan</title>
+  <meta name="description" content="Browse affordable homes and akiya for sale across Japan on an interactive map. Pan the map to see listings in any region, filter by price, and open any property.">
+  <link rel="canonical" href="https://akiyainjapan.com/map/">
+  <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}">
+  <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+
+  {% include "includes/analytics.html" %}
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+
+  <style>
+    :root {
+      --primary:#477535; --primary-dark:#3a5f2b;
+      --bg:#faf8f4; --fg:#2b2b2b; --muted:#6f6f70; --border:rgba(71,117,53,.16);
+      --card:#fff; --shade:#f1efe9;
+    }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    html, body { height:100%; }
+    body {
+      font-family:'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      background:var(--bg); color:var(--fg); line-height:1.5;
+      display:flex; flex-direction:column; overflow:hidden;
+      -webkit-font-smoothing:antialiased;
+    }
+
+    /* ---------- top bar ---------- */
+    .topbar {
+      display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
+      gap:.75rem; padding:.7rem 1.1rem; background:var(--card);
+      border-bottom:1px solid var(--border); flex:0 0 auto; z-index:1200;
+    }
+    .brand { font-family:'Noto Serif JP',serif; font-size:1.1rem; color:var(--primary);
+             text-decoration:none; font-weight:500; white-space:nowrap; }
+    .topnav a { margin-left:1rem; text-decoration:none; color:var(--fg); font-size:.9rem; }
+    .topnav a:hover { color:var(--primary); }
+    .topnav a.on { color:var(--primary); font-weight:600; }
+    .acct-link { color:var(--primary); font-weight:600; }
+    .acct-saved { display:inline-flex; align-items:center; gap:.3rem; }
+    .acct-saved svg { width:.95em; height:.95em; }
+    .acct-cta { background:var(--primary); color:#fff !important; border-radius:8px; padding:.32rem .65rem; }
+    .acct-cta:hover { background:var(--primary-dark); }
+    .controls { display:flex; align-items:center; gap:.5rem; flex-wrap:wrap; }
+    .controls label { font-size:.8rem; color:var(--muted); }
+    /* Mirrors the "Map view" button on the listing page. */
+    .viewtoggle {
+      display:inline-flex; align-items:center; gap:.4rem;
+      background:var(--primary); color:#fff; text-decoration:none;
+      font-size:.88rem; font-weight:600; padding:.4rem .8rem; border-radius:8px;
+      white-space:nowrap;
+    }
+    .viewtoggle:hover { background:var(--primary-dark); }
+    .viewtoggle svg { width:1em; height:1em; }
+    select {
+      font-family:inherit; font-size:.88rem; padding:.35rem .55rem; border-radius:8px;
+      border:1px solid var(--border); background:var(--card); color:var(--fg);
+      width:auto; height:auto;
+    }
+
+    /* ---------- split layout ---------- */
+    .split { flex:1 1 auto; display:flex; min-height:0; }
+    #map { flex:1 1 55%; min-width:0; background:#e8e6e1; }
+    .panel {
+      flex:0 0 45%; max-width:620px; display:flex; flex-direction:column;
+      background:var(--bg); border-left:1px solid var(--border); min-height:0;
+    }
+    .panel-head {
+      flex:0 0 auto; padding:.7rem 1rem; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+      background:var(--card);
+    }
+    .panel-count { font-size:.9rem; font-weight:600; font-variant-numeric:tabular-nums; }
+    .panel-count small { font-weight:400; color:var(--muted); }
+    .panel-body { flex:1 1 auto; overflow-y:auto; padding:.75rem; }
+
+    .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(210px,1fr)); gap:.75rem; }
+    .card {
+      background:var(--card); border:1px solid var(--border); border-radius:10px;
+      overflow:hidden; text-decoration:none; color:inherit; display:flex;
+      flex-direction:column; transition:box-shadow .15s ease, transform .05s ease;
+    }
+    .card:hover, .card.active {
+      box-shadow:0 3px 14px rgba(0,0,0,.14); border-color:var(--primary);
+    }
+    .card:active { transform:translateY(1px); }
+    .card-img { width:100%; aspect-ratio:4/3; object-fit:cover; background:var(--shade); display:block; }
+    .card-img.ph { display:flex; align-items:center; justify-content:center;
+                   color:var(--muted); font-size:.75rem; }
+    .card-body { padding:.55rem .65rem .7rem; display:flex; flex-direction:column; gap:.15rem; }
+    .card-price { color:var(--primary); font-weight:700; font-size:1rem; font-variant-numeric:tabular-nums; }
+
+    /* --- free-account features --- */
+    .card { position:relative; }
+    .fav {
+      position:absolute; top:8px; right:8px; z-index:2;
+      width:30px; height:30px; border-radius:999px; border:0; cursor:pointer;
+      background:rgba(255,255,255,.9); color:#8a8f8a;
+      display:flex; align-items:center; justify-content:center;
+      box-shadow:0 1px 4px rgba(0,0,0,.2); padding:0;
+    }
+    .fav svg { width:16px; height:16px; }
+    .fav:hover { color:var(--primary); }
+    .fav.on { color:#c0392b; }
+    .fav.on svg { fill:currentColor; }
+
+    .savesearch {
+      display:inline-flex; align-items:center; gap:.35rem; cursor:pointer;
+      background:none; border:1px solid var(--border); border-radius:8px;
+      color:var(--muted); font-family:inherit; font-size:.8rem; font-weight:500;
+      padding:.32rem .6rem; height:auto; white-space:nowrap;
+    }
+    .savesearch:hover { border-color:var(--primary); color:var(--primary); }
+    .savesearch.done { border-color:var(--primary); color:var(--primary); }
+    .savesearch svg { width:.95em; height:.95em; }
+
+    /* Prompt shown when an anonymous visitor uses a members-only control. */
+    .gate-toast {
+      position:fixed; left:50%; bottom:28px; transform:translateX(-50%);
+      z-index:2000; background:var(--card); color:var(--fg);
+      border:1px solid var(--border); border-radius:10px;
+      box-shadow:0 6px 24px rgba(0,0,0,.18); padding:.85rem 1.1rem;
+      display:flex; align-items:center; gap:.85rem; font-size:.9rem;
+      max-width:min(92vw, 460px);
+    }
+    .gate-toast a {
+      background:var(--primary); color:#fff; text-decoration:none;
+      padding:.42rem .85rem; border-radius:8px; font-weight:600;
+      font-size:.86rem; white-space:nowrap;
+    }
+    .gate-toast a:hover { background:var(--primary-dark); }
+    .gate-toast button {
+      background:none; border:0; color:var(--muted); cursor:pointer;
+      font-size:1.1rem; line-height:1; padding:0 .1rem; height:auto;
+    }
+    .card-loc { font-size:.85rem; }
+    .card-meta { font-size:.76rem; color:var(--muted); }
+
+    .panel-msg { padding:2rem 1rem; text-align:center; color:var(--muted); font-size:.9rem; }
+    .panel-more { padding:.9rem 1rem 1.5rem; text-align:center; color:var(--muted); font-size:.82rem; }
+
+    /* Region links: crawlable internal links, and a genuine way out of an
+       empty viewport. */
+    .panel-regions { margin-top:1.5rem; padding:1.1rem .25rem .5rem; border-top:1px solid var(--border); }
+    .panel-regions h2 { font-family:'Noto Serif JP',serif; font-weight:500;
+                        font-size:1.02rem; margin-bottom:.7rem; }
+    .region-pills { display:flex; flex-wrap:wrap; gap:.4rem .5rem; }
+    .region-pills a {
+      font-size:.82rem; text-decoration:none; color:var(--fg);
+      border:1px solid var(--border); border-radius:999px; padding:.25rem .7rem;
+      background:var(--card);
+    }
+    .region-pills a:hover { border-color:var(--primary); color:var(--primary); }
+
+    /* ---------- map bits ---------- */
+    .marker-pin {
+      background:var(--primary); color:#fff; border-radius:999px;
+      padding:3px 9px; font-size:11.5px; font-weight:600; white-space:nowrap;
+      box-shadow:0 1px 4px rgba(0,0,0,.35); border:1.5px solid #fff;
+      font-variant-numeric:tabular-nums; transition:transform .12s ease, background .12s ease;
+    }
+    .marker-pin.hot { background:#25401b; transform:scale(1.22); z-index:900; }
+    .leaflet-popup-content { margin:.7rem .9rem; font-family:inherit; }
+    .pop-title { font-weight:600; font-size:.95rem; margin-bottom:.2rem; }
+    .pop-meta { color:var(--muted); font-size:.85rem; margin-bottom:.4rem; }
+    .pop-price { color:var(--primary); font-weight:700; font-size:1.05rem; }
+    .pop-link { display:inline-block; margin-top:.5rem; background:var(--primary); color:#fff;
+                text-decoration:none; padding:.35rem .75rem; border-radius:7px;
+                font-size:.85rem; font-weight:600; }
+    .pop-link:hover { background:var(--primary-dark); }
+
+    .note {
+      position:absolute; left:10px; bottom:22px; z-index:600; max-width:250px;
+      background:rgba(255,255,255,.93); border:1px solid var(--border);
+      border-radius:8px; padding:.5rem .65rem; font-size:.72rem; color:var(--muted);
+      line-height:1.45; pointer-events:none;
+    }
+
+    /* ---------- responsive: stack, map on top ---------- */
+    @media (max-width:900px) {
+      body { overflow:auto; }
+      .split { flex-direction:column; }
+      #map { flex:0 0 55vh; min-height:300px; }
+      .panel { flex:1 1 auto; max-width:none; border-left:0; border-top:1px solid var(--border); }
+      .panel-body { overflow-y:visible; }
+      .topnav { display:none; }
+      .note { display:none; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/">My Akiya in Japan</a>
+    <div class="controls">
+      <select id="city" aria-label="Filter by prefecture">
+        <option value="">All prefectures</option>
+        {% for c in cities %}
+          <option value="{{ c.name }}" {% if c.name == selected_city %}selected{% endif %}>{{ c.name }} ({{ c.count }})</option>
+        {% endfor %}
+      </select>
+      <select id="price" aria-label="Filter by price">
+        <option value="">Any price</option>
+        {% for b in price_buckets %}
+          <option value="{{ b.key }}" {% if b.key == selected_price %}selected{% endif %}>{{ b.label }}</option>
+        {% endfor %}
+      </select>
+      <select id="sort" aria-label="Sort results">
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+      {% comment %}
+        The return half of the Map view / List view pair. href is kept in step
+        with the filters by syncUrl(), so switching views keeps your search.
+      {% endcomment %}
+      <a id="listview" class="viewtoggle" href="{% url 'home' %}{% if request.GET.urlencode %}?{{ request.GET.urlencode }}{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        List view
+      </a>
+    </div>
+    {% comment %}
+      No "Browse homes" here: the List view button in .controls is the single,
+      unambiguous way back to the listing page, and it carries the filters.
+    {% endcomment %}
+    <nav class="topnav">
+      <a href="{% url 'how_to_buy' %}">How to buy</a>
+      <a href="{% url 'consultation' %}">Book a consultation</a>
+      {% include "includes/account_nav.html" %}
+    </nav>
+  </header>
+
+  <div class="split">
+    <div id="map">
+      <div class="note">
+        Pins show the town, not the exact address — listings sit at their city
+        with a small offset so nearby homes stay separable.
+      </div>
+    </div>
+
+    <aside class="panel">
+      <div class="panel-head">
+        <div class="panel-count" id="count">Loading…</div>
+        <button type="button" id="savesearch" class="savesearch">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          Save this search
+        </button>
+      </div>
+      <div class="panel-body">
+        {% comment %}
+          Rendered server-side so the page has real listings before (and
+          without) JavaScript. The script replaces this the moment it knows
+          the map's viewport.
+        {% endcomment %}
+        <div class="cards" id="cards">
+          {% for p in initial_properties %}
+            {% with img=p.get_ordered_images.first %}
+            <a class="card" href="{{ p.get_public_url }}" data-id="{{ p.pk }}">
+              {% if img %}
+                <img class="card-img" src="{{ img.file }}" alt="{{ p.get_title_for_front }}" loading="lazy" decoding="async">
+              {% else %}
+                <div class="card-img ph">No photo</div>
+              {% endif %}
+              <div class="card-body">
+                <span class="card-price">{{ p.get_price_for_front }}</span>
+                <span class="card-loc">{{ p.get_location_for_front }}</span>
+                {% if p.floor_plan %}<span class="card-meta">{{ p.floor_plan|truncatechars:28 }}</span>{% endif %}
+              </div>
+            </a>
+            {% endwith %}
+          {% endfor %}
+        </div>
+        <div class="panel-msg" id="msg" hidden></div>
+        <div class="panel-more" id="more" hidden></div>
+
+        <nav class="panel-regions" aria-label="Browse homes by region">
+          <h2>Browse homes by region</h2>
+          <div class="region-pills">
+            {% for c in cities %}
+              <a href="{% url 'region_listing' region=c.name|lower %}">Houses in {{ c.name }} ({{ c.count }})</a>
+            {% endfor %}
+          </div>
+        </nav>
+      </div>
+    </aside>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script>
+  (function () {
+    var BATCH = {{ card_batch_limit }};
+
+    var map = L.map('map', { scrollWheelZoom: true }).setView([37.5, 137.5], 5);
+
+    // CARTO Voyager rather than standard OSM tiles: OSM renders Japan's place
+    // names in Japanese (北海道, 大分県…), which is unusable for an
+    // English-speaking audience. Voyager labels are romanised down to town
+    // level (Gero, Nakatsugawa) and it stays free with attribution, no API key.
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      subdomains: 'abcd',
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+                   '&copy; <a href="https://carto.com/attributions">CARTO</a>'
+    }).addTo(map);
+
+    var cluster = L.markerClusterGroup({
+      chunkedLoading: true,
+      spiderfyOnMaxZoom: true,
+      showCoverageOnHover: false,
+      maxClusterRadius: 55
+    });
+    map.addLayer(cluster);
+
+    var allPoints = [];        // every mappable property
+    var visiblePoints = [];    // those passing the price filter
+    var markersById = {};      // id -> marker, for hover sync
+    var cardRequest = 0;       // guards against out-of-order responses
+
+    var $cards = document.getElementById('cards');
+    var $count = document.getElementById('count');
+    var $msg   = document.getElementById('msg');
+    var $more  = document.getElementById('more');
+
+    function priceNumber(s) {
+      var n = parseInt(String(s).replace(/[^0-9]/g, ''), 10);
+      return isNaN(n) ? 0 : n;
+    }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c];
+      });
+    }
+
+    /* ---------- markers ---------- */
+    function buildMarkers(points) {
+      cluster.clearLayers();
+      markersById = {};
+      var markers = points.map(function (p) {
+        var m = L.marker([p.a, p.o], {
+          icon: L.divIcon({
+            className: '',
+            html: '<div class="marker-pin">' + esc(p.p) + '</div>',
+            iconSize: null
+          })
+        });
+        m.bindPopup(
+          '<div class="pop-title">' + esc(p.t) + '</div>' +
+          '<div class="pop-meta">' + esc(p.l) + (p.f ? ' · ' + esc(p.f) : '') + '</div>' +
+          '<div class="pop-price">' + esc(p.p) + '</div>' +
+          '<a class="pop-link" href="/japanese-houses/' + encodeURIComponent(p.i) + '/">View property</a>'
+        );
+        markersById[p.i] = m;
+        return m;
+      });
+      cluster.addLayers(markers);
+    }
+
+    function highlightMarker(id, on) {
+      var m = markersById[id];
+      if (!m) return;
+      var el = m.getElement();          // null while the marker sits inside a cluster
+      if (el) el.querySelector('.marker-pin').classList.toggle('hot', on);
+    }
+
+    /* ---------- list panel ---------- */
+    function pointsInView() {
+      var b = map.getBounds();
+      return visiblePoints.filter(function (p) { return b.contains([p.a, p.o]); });
+    }
+
+    function sortPoints(points) {
+      var dir = document.getElementById('sort').value === 'price-desc' ? -1 : 1;
+      return points.slice().sort(function (x, y) {
+        return dir * (priceNumber(x.p) - priceNumber(y.p));
+      });
+    }
+
+    function heartSvg() {
+      return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" ' +
+        'stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0' +
+        'L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+    }
+
+    function renderCards(cards) {
+      $cards.innerHTML = cards.map(function (c) {
+        var img = c.img
+          ? '<img class="card-img" src="' + esc(c.img) + '" alt="' + esc(c.t) +
+            '" loading="lazy" decoding="async">'
+          : '<div class="card-img ph">No photo</div>';
+        var meta = [c.f, c.b].filter(Boolean).map(esc).join(' · ');
+        var on = SAVED_IDS.indexOf(c.i) !== -1 ? ' on' : '';
+        return '<a class="card" href="' + esc(c.u) + '" data-id="' + c.i + '">' + img +
+          '<button type="button" class="fav' + on + '" data-id="' + c.i +
+            '" aria-label="Save this property">' + heartSvg() + '</button>' +
+          '<div class="card-body">' +
+            '<span class="card-price">' + esc(c.p) + '</span>' +
+            '<span class="card-loc">' + esc(c.l) + '</span>' +
+            (meta ? '<span class="card-meta">' + meta + '</span>' : '') +
+          '</div></a>';
+      }).join('');
+    }
+
+    /* ---------- free-account gating ---------- */
+    // Ids this user has already saved, so hearts render filled on first paint.
+    var SAVED_IDS = {{ saved_ids_json|safe }};
+    var LOGIN_URL  = '{% url "account_login" %}';
+    var SIGNUP_URL = '{% url "account_signup" %}';
+
+    function csrfToken() {
+      var m = document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/);
+      return m ? m[1] : '';
+    }
+
+    var toastTimer;
+    function gatePrompt(message) {
+      var existing = document.querySelector('.gate-toast');
+      if (existing) existing.remove();
+      var next = encodeURIComponent(location.pathname + location.search);
+      var el = document.createElement('div');
+      el.className = 'gate-toast';
+      el.innerHTML = '<span>' + esc(message) + '</span>' +
+        '<a href="' + SIGNUP_URL + '?next=' + next + '">Create a free account</a>' +
+        '<button type="button" aria-label="Dismiss">&times;</button>';
+      el.querySelector('button').addEventListener('click', function () { el.remove(); });
+      document.body.appendChild(el);
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { el.remove(); }, 9000);
+    }
+
+    function postJson(url, body) {
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken() },
+        credentials: 'same-origin',
+        body: JSON.stringify(body)
+      });
+    }
+
+    // Heart clicks: the button sits inside the card <a>, so stop the navigation.
+    $cards.addEventListener('click', function (e) {
+      var btn = e.target.closest('.fav');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      var id = Number(btn.dataset.id);
+      postJson('{% url "toggle_saved_property" %}', { property_id: id })
+        .then(function (r) {
+          if (r.status === 401) {
+            gatePrompt('Save properties to come back to them later.');
+            return null;
+          }
+          return r.ok ? r.json() : Promise.reject(r.status);
+        })
+        .then(function (data) {
+          if (!data) return;
+          btn.classList.toggle('on', data.saved);
+          var at = SAVED_IDS.indexOf(id);
+          if (data.saved && at === -1) SAVED_IDS.push(id);
+          if (!data.saved && at !== -1) SAVED_IDS.splice(at, 1);
+        })
+        .catch(function (err) { console.error('save failed', err); });
+    });
+
+    document.getElementById('savesearch').addEventListener('click', function () {
+      var btn = this;
+      postJson('{% url "save_search" %}', { city: $city.value, price: $price.value })
+        .then(function (r) {
+          if (r.status === 401) {
+            gatePrompt('Save this search and pick up where you left off.');
+            return null;
+          }
+          return r.ok ? r.json() : Promise.reject(r.status);
+        })
+        .then(function (data) {
+          if (!data) return;
+          btn.classList.add('done');
+          btn.lastChild.textContent = data.created ? ' Search saved' : ' Already saved';
+        })
+        .catch(function (err) { console.error('save search failed', err); });
+    });
+
+    function updatePanel() {
+      var inView = sortPoints(pointsInView());
+      var total = inView.length;
+
+      $count.innerHTML = total.toLocaleString() + ' propert' + (total === 1 ? 'y' : 'ies') +
+        ' <small>in view</small>';
+
+      if (!total) {
+        $cards.innerHTML = '';
+        $more.hidden = true;
+        $msg.hidden = false;
+        $msg.textContent = 'No properties in this area. Zoom out or pan the map.';
+        return;
+      }
+      $msg.hidden = true;
+
+      var batch = inView.slice(0, BATCH);
+      $more.hidden = total <= BATCH;
+      if (total > BATCH) {
+        $more.textContent = 'Showing the first ' + BATCH + ' of ' +
+          total.toLocaleString() + ' — zoom in to narrow it down.';
+      }
+
+      var token = ++cardRequest;
+      fetch('{% url "map_property_cards_json" %}?ids=' + batch.map(function (p) { return p.i; }).join(','))
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (data) {
+          if (token !== cardRequest) return;   // a newer pan already superseded this
+          renderCards(data.cards || []);
+        })
+        .catch(function (err) {
+          if (token !== cardRequest) return;
+          $cards.innerHTML = '';
+          $msg.hidden = false;
+          $msg.textContent = 'Could not load these listings. Move the map to retry.';
+          console.error('card load failed', err);
+        });
+    }
+
+    /* hover a card -> highlight its pin */
+    $cards.addEventListener('mouseover', function (e) {
+      var card = e.target.closest('.card');
+      if (card) highlightMarker(Number(card.dataset.id), true);
+    });
+    $cards.addEventListener('mouseout', function (e) {
+      var card = e.target.closest('.card');
+      if (card) highlightMarker(Number(card.dataset.id), false);
+    });
+
+    /* ---------- filters ---------- */
+    // Price bounds in USD for the selected bucket, handed over by the server so
+    // the client and the listing page agree on what "$50k – $100k" means.
+    var PRICE_RANGES = {
+      {% for b in price_buckets %}'{{ b.key }}': [{{ b.gt }} * 10000 * 0.007, {{ b.lte }} * 10000 * 0.007]{% if not forloop.last %},{% endif %}
+      {% endfor %}
+    };
+
+    var $city  = document.getElementById('city');
+    var $price = document.getElementById('price');
+
+    function applyFilter(fit) {
+      var city  = $city.value;
+      var range = PRICE_RANGES[$price.value];
+
+      visiblePoints = allPoints.filter(function (p) {
+        if (city && p.l !== city) return false;
+        if (range) {
+          var v = priceNumber(p.p);
+          if (v <= range[0] || v > range[1]) return false;
+        }
+        return true;
+      });
+
+      buildMarkers(visiblePoints);
+
+      // Frame the selection rather than leaving the user staring at all Japan.
+      if (fit && visiblePoints.length) {
+        map.fitBounds(
+          L.latLngBounds(visiblePoints.map(function (p) { return [p.a, p.o]; })),
+          { padding: [40, 40], maxZoom: 11 }
+        );
+      }
+      updatePanel();
+      syncUrl();
+    }
+
+    // Keep the address bar in step so a filtered map can be shared or reloaded,
+    // and point "List view" at the same search on the listing page.
+    function syncUrl() {
+      var q = [];
+      if ($city.value)  q.push('city='  + encodeURIComponent($city.value));
+      if ($price.value) q.push('price=' + encodeURIComponent($price.value));
+      var qs = q.length ? '?' + q.join('&') : '';
+      history.replaceState(null, '', location.pathname + qs);
+      document.getElementById('listview').href = '{% url "home" %}' + qs;
+    }
+
+    $city.addEventListener('change', function () { applyFilter(true); });
+    $price.addEventListener('change', function () { applyFilter(true); });
+    document.getElementById('sort').addEventListener('change', updatePanel);
+
+    // Debounced so a drag fires one update, not one per frame.
+    var moveTimer;
+    map.on('moveend zoomend', function () {
+      clearTimeout(moveTimer);
+      moveTimer = setTimeout(updatePanel, 180);
+    });
+
+    fetch('{% url "map_properties_json" %}')
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function (data) {
+        allPoints = data.points || [];
+        // Zoom to the selection when arriving with filters already applied
+        // (e.g. after searching from the listing page).
+        applyFilter(Boolean($city.value || $price.value));
+      })
+      .catch(function (err) {
+        $count.textContent = 'Could not load properties';
+        $msg.hidden = false;
+        $msg.textContent = 'Something went wrong loading the map. Please refresh.';
+        console.error('map load failed', err);
+      });
+  })();
+  </script>
+</body>
+</html>

@@ -1221,6 +1221,44 @@ document.addEventListener('DOMContentLoaded', () => {
   body { background: #faf8f4; }
 
   /* ===== Reusable info tooltip (hover / tap / keyboard) ===== */
+  /* Free-account gate shown in place of a locked analysis block. Styled as an
+     invitation, not an error — it names what's behind it so the signup has a
+     concrete reason. */
+  .mhj-gate {
+    background: #f6f7f4; border: 1px dashed #c3d2b8; border-left: 5px solid #477535;
+    border-radius: 10px; padding: 16px 20px; margin: 8px 0 16px;
+  }
+  .mhj-gate-label {
+    color: #477535; font-weight: bold; letter-spacing: 0.03em;
+    text-transform: uppercase; font-size: 0.8em; margin-bottom: 6px;
+  }
+  .mhj-gate-blurb { color: #555; font-size: 0.95em; margin: 0 0 12px; }
+  .mhj-gate-cta {
+    display: inline-block; background: #477535; color: #fff; text-decoration: none;
+    padding: 0.55em 1.1em; border-radius: 8px; font-weight: 600; font-size: 0.92em;
+  }
+  .mhj-gate-cta:hover { background: #3a5f2b; color: #fff; }
+  .mhj-gate-note { display: block; margin-top: 8px; color: #999; font-size: 0.82em; }
+  .mhj-gate-note a { color: #477535; }
+
+  /* Meter wall — shown once a visitor's property allowance is spent. */
+  .mhj-wall {
+    background: #f4f8f1; border: 1px solid #cfe0c4; border-left: 5px solid #477535;
+    border-radius: 10px; padding: 20px 22px; margin: 4px 0 18px;
+  }
+  .mhj-wall-title {
+    font-weight: 700; font-size: 1.15em; color: #1f2224; margin: 0 0 6px;
+  }
+  .mhj-wall-body { color: #555; font-size: 0.98em; margin: 0 0 14px; max-width: 52ch; }
+  .mhj-wall-cta {
+    display: inline-block; background: #477535; color: #fff; text-decoration: none;
+    padding: 0.65em 1.3em; border-radius: 9px; font-weight: 700; font-size: 0.98em;
+  }
+  .mhj-wall-cta:hover { background: #3a5f2b; color: #fff; }
+  .mhj-wall-note { display: block; margin-top: 10px; color: #8a8f8a; font-size: 0.86em; }
+  .mhj-wall-note a { color: #477535; }
+  .mhj-locked-inline { color: #a6a9a6; font-style: italic; }
+
   .mhj-tip { position: relative; display: inline-block; margin-left: 6px; vertical-align: middle; cursor: help; }
   .mhj-tip-icon {
     display: inline-flex; align-items: center; justify-content: center;
@@ -1485,6 +1523,16 @@ document.addEventListener('DOMContentLoaded', () => {
           <span class="transition-all group-hover:translate-x-1" style="font-size: 2rem;">Back to Listing</span>
         </a>
 
+        <a href="{% url 'map' %}" class="flex items-center space-x-3 text-primary group pp-back">
+          <div class="w-6 h-6 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
+              <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
+            </svg>
+          </div>
+          <span class="transition-all group-hover:translate-x-1" style="font-size: 2rem;">Browse the map</span>
+        </a>
+
         <div class="max-w-4xl mx-auto p-4 shadow rounded-2xl pp-details">
           <!-- Units / currency preference (remembered across the site) -->
           <div class="unit-prefs">
@@ -1513,7 +1561,16 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Location</p>
-                <p class="text-xll">{{ property.location }} | <a href="#" data-toggle="modal" data-target="#mapModal" class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
+                {% if access.locked %}
+                  {% comment %}
+                    Metered out: show the town so the page still means something
+                    (and still matches what search engines indexed), withhold the
+                    street address.
+                  {% endcomment %}
+                  <p class="text-xll">{{ property.get_location_for_front }} <span class="mhj-locked-inline">· full address locked</span></p>
+                {% else %}
+                  <p class="text-xll">{{ property.location }} | <a href="#" data-toggle="modal" data-target="#mapModal" class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
+                {% endif %}
                 <hr>
               </div>
               </div>
@@ -1525,12 +1582,69 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡) or square feet (ft²) per your unit setting. "(public book)" means the figure is from the official land register.</span></span></p>
-                <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
+                {% if access.locked %}
+                  <p class="text-xll mhj-locked-inline">Locked</p>
+                {% else %}
+                  <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
+                {% endif %}
               </div>
             </div>
 
+            {% if access.locked %}
+            {% comment %}
+              The meter wall. Everything above stays visible — photos, price,
+              building area, town — so the page keeps its value in search
+              results and to a first-time visitor.
+            {% endcomment %}
+            <div class="flex flex-row flex-2 gap-4 w-full">
+              <div class="flex-1 mhj-wall">
+                <p class="mhj-wall-title">
+                  {% if access.next_step == 'signup' %}
+                    You've viewed {{ access.limit }} homes
+                  {% else %}
+                    You've viewed {{ access.limit }} homes on your free account
+                  {% endif %}
+                </p>
+                <p class="mhj-wall-body">
+                  Unlock the full address, land area, land rights, zoning and how
+                  this price compares with other homes nearby — on this property
+                  and every other.
+                </p>
+                {% if access.next_step == 'signup' %}
+                  <a class="mhj-wall-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
+                  <span class="mhj-wall-note">
+                    Free, no card — {{ free_limit }} homes included.
+                    <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a>
+                  </span>
+                {% else %}
+                  <a class="mhj-wall-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Go Pro — {{ pro_price }}</a>
+                  <span class="mhj-wall-note">Unlimited properties. Cancel any time.</span>
+                {% endif %}
+              </div>
+            </div>
+            {% endif %}
+
+            {% comment %}
+              Free-account gate. The property's own facts (price, areas, photos,
+              description) stay public so this page keeps ranking — only the
+              derived analysis is gated, which is what a serious buyer wants and
+              a browser doesn't.
+            {% endcomment %}
             {% with cmp=property.price_per_sqm_comparison %}
-            {% if cmp %}
+            {% if cmp and not user.is_authenticated %}
+            <div class="flex flex-row flex-2 gap-4 w-full">
+              <div class="flex-1 mhj-gate">
+                <p class="mhj-gate-label">Price per m² vs the local market</p>
+                <p class="mhj-gate-blurb">
+                  See how this asking price compares with {{ cmp.sample_size }}
+                  other listings in {{ cmp.area }} — and whether it's good value.
+                </p>
+                <a class="mhj-gate-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
+                <span class="mhj-gate-note">Free, no card. <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a></span>
+              </div>
+            </div>
+            {% endif %}
+            {% if cmp and user.is_authenticated %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1" style="background:#f4f8f1; border:1px solid #d9e6d0; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
                 <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:4px;">Price per <span class="js-unit-label">m&sup2;</span> (building)<span class="mhj-tip" tabindex="0" role="img" aria-label="How is price per m² calculated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The asking price divided by the building floor area, shown in USD. The label compares it to every listing in {{ cmp.area }}: "Great value" means cheaper per m² than most nearby homes, "Around average" means mid-range. "Typical" is the middle 50% of listings in the area.</span></span></p>
@@ -1549,7 +1663,20 @@ document.addEventListener('DOMContentLoaded', () => {
             {% endwith %}
 
             {% with strp=property.short_term_rental_potential %}
-            {% if strp %}
+            {% if strp and not user.is_authenticated %}
+            <div class="flex flex-row flex-2 gap-4 w-full">
+              <div class="flex-1 mhj-gate">
+                <p class="mhj-gate-label">Short-term rental (Airbnb) potential</p>
+                <p class="mhj-gate-blurb">
+                  We've worked out from this property's zoning whether a
+                  short-term let is likely to be allowed here.
+                </p>
+                <a class="mhj-gate-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
+                <span class="mhj-gate-note">Free, no card. <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a></span>
+              </div>
+            </div>
+            {% endif %}
+            {% if strp and user.is_authenticated %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1" style="background:#f6f7f4; border:1px solid #e2e2dc; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
                 <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:6px;">Short-term rental (Airbnb) potential<span class="mhj-tip" tabindex="0" role="img" aria-label="How is this estimated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Indicative only, from this property's zoning (用途地域). Short-term lets in Japan run under the minpaku law (max 180 nights/yr) or a lodging licence, and each municipality sets its own limits — confirm with the local government. Not legal advice.</span></span></p>

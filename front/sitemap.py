@@ -10,6 +10,8 @@ def display_sitemaps(request):
     views = [
         {"url": reverse("home"), "priority": "1.0", "changefreq": "weekly"},
         {"url": reverse("upgrade_premium"), "priority": "0.8", "changefreq": "monthly"},
+        {"url": reverse("consultation"), "priority": "0.9", "changefreq": "monthly"},
+        {"url": reverse("map"), "priority": "0.9", "changefreq": "weekly"},
         {"url": reverse("how_to_buy"), "priority": "0.7", "changefreq": "monthly"},
         {"url": reverse("faqs"), "priority": "0.7", "changefreq": "monthly"},
         {"url": reverse("about"), "priority": "0.6", "changefreq": "monthly"},

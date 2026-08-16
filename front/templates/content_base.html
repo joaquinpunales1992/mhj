@@ -7,6 +7,24 @@
   <title>{% block title %}My Akiya in Japan{% endblock %}</title>
   <meta name="description" content="{% block description %}Affordable homes and akiya for sale in Japan.{% endblock %}">
   <link rel="canonical" href="{% block canonical %}https://akiyainjapan.com/{% endblock %}">
+
+  {% comment %}
+    Social preview. Without these, sharing any of these pages in WhatsApp or a
+    Facebook group — where akiya buyers actually gather — renders a bare URL.
+    Reuses the title/description blocks so a page only overrides them once.
+  {% endcomment %}
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="My Akiya in Japan">
+  {% comment %}
+    og:title gets its own block rather than reusing the title one — a block
+    name can only appear once per template.
+  {% endcomment %}
+  <meta property="og:title" content="{% block og_title %}My Akiya in Japan{% endblock %}">
+  <meta property="og:description" content="{% block og_description %}Affordable homes and akiya for sale across Japan — we guide you through the entire purchase process.{% endblock %}">
+  <meta property="og:url" content="{{ request.build_absolute_uri }}">
+  <meta property="og:image" content="https://akiyainjapan.com{% static 'apple-touch-icon.png' %}">
+  <meta name="twitter:card" content="summary">
+  {% include "includes/analytics.html" %}
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
@@ -20,6 +38,16 @@
     .brand { font-family:'Noto Serif JP',serif; font-size:1.25rem; color:var(--primary); text-decoration:none; font-weight:500; }
     .topnav a { margin-left:1.1rem; text-decoration:none; color:var(--fg); font-size:.95rem; }
     .topnav a:hover { color:var(--primary); }
+    /* Account controls sit at the end of the nav, visually separated so
+       "Sign in" doesn't read as another section link. */
+    .acct-link { color:var(--primary); font-weight:600; }
+    .acct-saved { display:inline-flex; align-items:center; gap:.3rem; }
+    .acct-saved svg { width:.95em; height:.95em; }
+    .acct-cta {
+      background:var(--primary); color:#fff !important; border-radius:8px;
+      padding:.35rem .7rem;
+    }
+    .acct-cta:hover { background:var(--primary-dark); }
     .wrap { max-width:820px; margin:0 auto; padding:1rem 1.5rem 4rem; }
     .wrap h1 { font-family:'Noto Serif JP',serif; font-weight:500; font-size:2.1rem; margin:1.25rem 0 1rem; line-height:1.2; }
     .wrap h2 { font-family:'Noto Serif JP',serif; font-weight:500; font-size:1.4rem; margin:2rem 0 .75rem; }
@@ -49,10 +77,12 @@
     <a class="brand" href="/">My Akiya in Japan</a>
     <nav class="topnav" aria-label="Primary">
       <a href="/">Browse homes</a>
+      <a href="{% url 'map' %}">Map</a>
       <a href="{% url 'how_to_buy' %}">How to buy</a>
       <a href="{% url 'faqs' %}">FAQs</a>
       <a href="{% url 'about' %}">About</a>
-      <a href="{% url 'upgrade_premium' %}">Pricing</a>
+      <a href="{% url 'consultation' %}">Book a consultation</a>
+      {% include "includes/account_nav.html" %}
     </nav>
   </header>
   <main class="wrap">
@@ -67,10 +97,12 @@
       <div class="site-footer-col">
         <h4>Explore</h4>
         <a href="/">Browse homes</a>
+        <a href="{% url 'map' %}">Map</a>
         <a href="{% url 'how_to_buy' %}">How to buy</a>
         <a href="{% url 'faqs' %}">FAQs</a>
         <a href="{% url 'about' %}">About</a>
-        <a href="{% url 'upgrade_premium' %}">Pricing</a>
+        <a href="{% url 'consultation' %}">Book a consultation</a>
+        <a href="{% url 'upgrade_pro' %}">Pro membership</a>
       </div>
       <div class="site-footer-col">
         <h4>Popular regions</h4>

@@ -1,0 +1,103 @@
+{% extends "content_base.html" %}
+{% block title %}Go Pro — My Akiya in Japan{% endblock %}
+{% block description %}Unlimited access to every property's full details on My Akiya in Japan.{% endblock %}
+{% block canonical %}https://akiyainjapan.com/pro/{% endblock %}
+{% block content %}
+
+{% if already_pro %}
+  <h1>You're on Pro</h1>
+  <p class="lead">Every property is unlocked, with no limit.</p>
+  <p>
+    Subscription status: <strong>{{ subscription.get_status_display }}</strong>.
+    {% if subscription.current_period_end %}
+      Renews {{ subscription.current_period_end|date:"j F Y" }}.
+    {% endif %}
+  </p>
+  <p style="font-size:.92rem;color:var(--muted);">
+    To cancel, do it from your PayPal account under Automatic Payments — your
+    access continues until the end of the period you've paid for.
+  </p>
+  <a class="cta" href="{% url 'map' %}">Back to the map</a>
+
+{% else %}
+  <h1>Go Pro</h1>
+  <p class="lead">
+    You've used your {{ free_limit }} free properties. Pro removes the limit.
+  </p>
+
+  <h2>What you get</h2>
+  <ul>
+    <li><b>Unlimited properties.</b> Full details on every listing, no counting.</li>
+    <li><b>The complete address</b> and exact land area on each one.</li>
+    <li><b>Land rights and zoning</b> — freehold or leasehold, and what you're allowed to build or run.</li>
+    <li><b>Price vs the local market</b>, so you can tell a bargain from a bad one.</li>
+    <li><b>Short-term rental potential</b> — whether an Airbnb is plausible there.</li>
+  </ul>
+
+  <p>
+    Everything you've already saved stays yours, and your favourites and saved
+    searches keep working whether or not you subscribe.
+  </p>
+
+  {% if billing_configured %}
+    <h2>{{ pro_price }}</h2>
+    <p>Cancel any time from PayPal. No card details ever touch this site.</p>
+    <div id="paypal-button-container" style="max-width:380px;margin:1.25rem 0;"></div>
+    <p id="pro-error" hidden style="color:#b91c1c;font-size:.92rem;">
+      Something went wrong setting up your subscription. Nothing has been
+      charged — please try again, or email hello@akiyainjapan.com.
+    </p>
+
+    <script src="https://www.paypal.com/sdk/js?client-id={{ paypal_client_id }}&vault=true&intent=subscription"></script>
+    <script>
+      paypal.Buttons({
+        style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
+        createSubscription: function (data, actions) {
+          return actions.subscription.create({ plan_id: '{{ paypal_plan_id }}' });
+        },
+        onApprove: function (data) {
+          // Register immediately so access starts now; the webhook is the
+          // authority and will correct this if PayPal says otherwise.
+          fetch('{% url "register_subscription" %}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+            },
+            credentials: 'same-origin',
+            body: JSON.stringify({ subscription_id: data.subscriptionID })
+          })
+            .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+            .then(function () {
+              window.location = {% if next_url %}'{{ next_url }}'{% else %}'{% url "upgrade_pro" %}'{% endif %};
+            })
+            .catch(function (err) {
+              // They have paid; failing silently here would be the worst
+              // outcome, so surface it and tell them how to reach a human.
+              document.getElementById('pro-error').hidden = false;
+              console.error('subscription registration failed', err);
+            });
+        },
+        onError: function (err) {
+          document.getElementById('pro-error').hidden = false;
+          console.error('paypal error', err);
+        }
+      }).render('#paypal-button-container');
+    </script>
+
+  {% else %}
+    {% comment %}
+      Billing isn't configured yet. Show the offer honestly rather than a dead
+      button — and record interest, which is the evidence for whether finishing
+      the PayPal integration is worth doing.
+    {% endcomment %}
+    <h2>{{ pro_price }}</h2>
+    <p>
+      Pro is opening shortly. Tell us you want it and we'll let you know the
+      moment it's live — and you'll get the first month free for being early.
+    </p>
+    <a class="cta" href="mailto:hello@akiyainjapan.com?subject=I%20want%20Pro">Tell us you want Pro</a>
+  {% endif %}
+{% endif %}
+
+{% endblock %}

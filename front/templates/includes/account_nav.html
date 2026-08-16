@@ -1,0 +1,20 @@
+{% comment %}
+  The account control, for every page.
+
+  Before this existed, sign-in was reachable only from /map/ and /pro/, so
+  anyone who created a free account and returned to the home page had no way
+  back into it — and no route to their saved homes. That made the whole
+  free-account model unusable.
+
+  Expects nothing from the view; reads `user` from the auth context processor.
+{% endcomment %}
+{% if user.is_authenticated %}
+  <a href="{% url 'saved' %}" class="acct-link acct-saved">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
+    Saved
+  </a>
+  <a href="{% url 'account_logout' %}" class="acct-link">Log out</a>
+{% else %}
+  <a href="{% url 'account_login' %}?next={{ request.get_full_path|urlencode }}" class="acct-link">Sign in</a>
+  <a href="{% url 'account_signup' %}?next={{ request.get_full_path|urlencode }}" class="acct-link acct-cta">Sign up free</a>
+{% endif %}

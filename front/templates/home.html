@@ -317,6 +317,26 @@
 								transition: background 0.2s ease;
 							}
 							.browse-clear:hover { background: rgba(255, 255, 255, 0.14); text-decoration: none; }
+							/* The map link sits in the same row as the filters but is a
+							   destination, not a reset — give it the accent fill so it
+							   doesn't read as another "Clear filters". */
+							/* Rendered as a <button>, so undo the theme's fixed button
+							   height/appearance (HTML5UP main.css) or the icon+label
+							   overflows the box. */
+							.browse-map-link {
+								gap: 0.45rem;
+								background: rgba(71, 117, 53, 0.9);
+								border-color: rgba(71, 117, 53, 0.9);
+								font-weight: 600;
+								height: auto;
+								line-height: 1.4;
+								font-family: inherit;
+								cursor: pointer;
+								appearance: none;
+								-webkit-appearance: none;
+							}
+							.browse-map-link:hover { background: #477535; }
+							.browse-map-link .browse-ico { width: 1em; height: 1em; opacity: 0.95; }
 
 							/* Per-card "Share" button */
 							/* Match the theme's .primary button box exactly so it lines up
@@ -465,6 +485,15 @@
 						{% if selected_city or selected_price %}
 							<a href="{{ request.path }}" class="browse-clear">Clear filters</a>
 						{% endif %}
+						{% comment %}
+							formaction retargets this form at the map, so whatever is
+							selected here carries over. Pairs with the "List view"
+							button on the map, which comes back the other way.
+						{% endcomment %}
+						<button type="submit" formaction="{% url 'map' %}" class="browse-clear browse-map-link">
+							<svg class="browse-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+							Map view
+						</button>
 					</form>
 				</div>
 
@@ -473,6 +502,9 @@
 						<h1><strong>My Akiya in Japan</strong><span class="site-tagline">Choose your house in Japan &mdash; we help you through the entire purchase process</span></h1>
 						<nav>
 							<ul>
+								<li class="responsive-icon">
+									<a href="{% url 'map' %}" class="icon solid fa-map-marked-alt"><span class="responsive-text">Map</span></a>
+								</li>
 								<li class="responsive-icon">
 									<a href="{% url 'how_to_buy' %}" class="icon solid fa-home"><span class="responsive-text">How to Buy?</span></a>
 								</li>
@@ -483,6 +515,22 @@
 								<li class="responsive-icon">
 									<a href="{% url 'about' %}" class="icon solid fa-info-circle"><span class="responsive-text">About</span></a>
 								</li>
+								{% comment %}
+									Account entry point. Its absence here meant a member who
+									landed on the home page had no way back into their account.
+								{% endcomment %}
+								{% if user.is_authenticated %}
+								<li class="responsive-icon">
+									<a href="{% url 'saved' %}" class="icon solid fa-heart"><span class="responsive-text">Saved</span></a>
+								</li>
+								<li class="responsive-icon">
+									<a href="{% url 'account_logout' %}" class="icon solid fa-sign-out-alt"><span class="responsive-text">Log out</span></a>
+								</li>
+								{% else %}
+								<li class="responsive-icon">
+									<a href="{% url 'account_login' %}?next=/" class="icon solid fa-user"><span class="responsive-text">Sign in</span></a>
+								</li>
+								{% endif %}
 
 								<style>
 									@media (max-width: 768px) {

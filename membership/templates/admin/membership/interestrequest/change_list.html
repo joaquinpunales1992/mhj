@@ -1,0 +1,51 @@
+{% extends "admin/change_list.html" %}
+
+{% comment %}
+  Funnel counts above the list. The point of the whole lifecycle model is to
+  make the drop-off point visible without running a query, so it goes here
+  rather than on a separate dashboard page nobody opens.
+{% endcomment %}
+
+{% block content_title %}
+  {{ block.super }}
+
+  <div style="margin: 12px 0 20px; padding: 14px 16px; background: #fff;
+              border: 1px solid #e0e0e0; border-radius: 6px;">
+    <div style="font-weight: 600; margin-bottom: 10px; font-size: 13px;
+                text-transform: uppercase; letter-spacing: .05em; color: #666;">
+      Funnel
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch;">
+      {% for label, count in funnel_summary %}
+        <div style="flex: 1 1 110px; min-width: 110px; padding: 10px 12px;
+                    background: {% if count %}#f5f7fa{% else %}#fafafa{% endif %};
+                    border: 1px solid #e6e6e6; border-radius: 5px;">
+          <div style="font-size: 22px; font-weight: 600; line-height: 1.1;
+                      color: {% if count %}#1f2937{% else %}#c0c0c0{% endif %};">
+            {{ count }}
+          </div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">
+            {{ label }}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    {% if lost_breakdown %}
+      <div style="margin-top: 14px; padding-top: 12px; border-top: 1px solid #eee;">
+        <div style="font-weight: 600; margin-bottom: 6px; font-size: 13px;
+                    text-transform: uppercase; letter-spacing: .05em; color: #666;">
+          Why leads died
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+          {% for label, count in lost_breakdown %}
+            <span style="font-size: 12px; padding: 4px 9px; background: #f3f4f6;
+                         border-radius: 999px; color: #374151;">
+              {{ label }} · <b>{{ count }}</b>
+            </span>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

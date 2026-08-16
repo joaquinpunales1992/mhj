@@ -2,6 +2,7 @@ from django.contrib import admin
 from front import views as front_views
 from membership.utils import notify_user_expressed_interest
 from membership import views as membership_views
+from membership.paypal import webhook as paypal_webhook
 from django.urls import path, include
 from front import sitemap
 from django.conf import settings
@@ -19,6 +20,18 @@ urlpatterns = [
     path("about/", front_views.about, name="about"),
     path("how-to-buy/", front_views.how_to_buy, name="how_to_buy"),
     path("faqs/", front_views.faqs, name="faqs"),
+    path("consultation/", front_views.consultation, name="consultation"),
+    path("map/", front_views.map_view, name="map"),
+    path(
+        "api/map-properties.json",
+        front_views.map_properties_json,
+        name="map_properties_json",
+    ),
+    path(
+        "api/map-cards.json",
+        front_views.map_property_cards_json,
+        name="map_property_cards_json",
+    ),
     path(
         "filter/<str:category>/",
         front_views.filter_properties,
@@ -65,6 +78,20 @@ urlpatterns = [
         membership_views.approved_membership_payment,
         name="approved_membership_payment",
     ),
+    path("saved/", membership_views.saved_view, name="saved"),
+    path("pro/", membership_views.upgrade_pro, name="upgrade_pro"),
+    path(
+        "api/register-subscription",
+        membership_views.register_subscription,
+        name="register_subscription",
+    ),
+    path("api/paypal-webhook", paypal_webhook, name="paypal_webhook"),
+    path(
+        "api/toggle-saved-property",
+        membership_views.toggle_saved_property,
+        name="toggle_saved_property",
+    ),
+    path("api/save-search", membership_views.save_search, name="save_search"),
     path("admin/", admin.site.urls),
     path("accounts/", include("allauth.urls")),
     path(

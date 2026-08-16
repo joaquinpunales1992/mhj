@@ -1,7 +1,21 @@
 from django.contrib import admin
-from inventory.models import Property, PropertyImage
+from inventory.models import GeocodedPlace, Property, PropertyImage
 from django.db import models
 from django.utils.html import format_html
+
+
+@admin.register(GeocodedPlace)
+class GeocodedPlaceAdmin(admin.ModelAdmin):
+    """Mostly for spotting bad matches — `display_name` shows what the geocoder
+    actually thought the key meant, which is how you catch a pin in the wrong
+    prefecture."""
+
+    list_display = ("key", "latitude", "longitude", "display_name", "attempts",
+                    "checked_at")
+    list_filter = ("attempts",)
+    search_fields = ("key", "display_name")
+    readonly_fields = ("checked_at",)
+    ordering = ("key",)
 
 
 class PropertyImageInline(admin.TabularInline):

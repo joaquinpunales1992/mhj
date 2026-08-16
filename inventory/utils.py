@@ -179,3 +179,71 @@ def infer_location(location):
         return "Mie"
     else:
         return location
+
+
+def city_key(location):
+    """Collapse a scraped address to a 'City, Prefecture' key for geocoding.
+
+    Scraped addresses run from bare "Fukuroi City, Shizuoka Prefecture" to
+    "1418-20 Nishiyamacho, Chuo-ku, Hamamatsu City, Shizuoka Prefecture". The
+    last two comma-separated segments are reliably city + prefecture across
+    both shapes, which is the granularity the map plots at.
+
+    Returns "" when there's nothing usable, so callers can skip the row.
+    """
+    if not location:
+        return ""
+
+    # SUUMO injects UI junk like "[ ■ Surrounding environment]". Strip the
+    # bracketed span itself rather than everything after it — the junk is
+    # sometimes mid-string, and truncating there would throw away the city and
+    # prefecture that follow. An unclosed bracket has no reliable end, so in
+    # that case fall back to dropping the tail.
+    cleaned = re.sub(r"\[[^\]]*\]", " ", location)
+    cleaned = cleaned.split("[", 1)[0]
+    parts = [p.strip() for p in cleaned.split(",") if p.strip()]
+    if not parts:
+        return ""
+    if len(parts) == 1:
+        return _strip_house_number(parts[0])
+    city, prefecture = parts[-2], parts[-1]
+    return f"{_strip_house_number(city)}, {prefecture}"
+
+
+def _strip_house_number(segment):
+    """Drop a leading lot/house number from an address segment.
+
+    Two-segment addresses like "1-257-4 Oita City, Oita Prefecture" would
+    otherwise carry the lot number into the geocoding key, splitting one city
+    into many near-duplicate keys and giving the geocoder a string it is more
+    likely to miss.
+    """
+    stripped = re.sub(r"^[\d\-‐-―]+\s+", "", segment).strip()
+    # Guard against a segment that is *only* a number: keep the original rather
+    # than returning an empty string.
+    return stripped or segment
+
+
+def scatter_offset(seed, spread=0.045):
+    """Deterministic (dlat, dlng) jitter so properties sharing a city centroid
+    don't stack into one unclickable pin.
+
+    Deterministic on purpose: a pin must not hop to a new spot on every page
+    load. Spread is roughly a few km — small enough to stay inside the right
+    city, large enough to separate markers at neighbourhood zoom. The offset is
+    presentational only; it is never a claim about where the house actually is.
+    """
+    # Golden-angle spiral off a hashed seed: spreads points evenly instead of
+    # clumping the way independent random offsets do.
+    import math
+
+    # Spiral resolution: distinct positions before two properties can land on
+    # the same point. Comfortably above the biggest single-city count (~300
+    # locally, and headroom for production) so collisions stay rare.
+    positions = 9973
+
+    h = (seed * 2654435761) % 4294967296
+    idx = h % positions
+    angle = idx * 2.399963229728653  # golden angle in radians
+    radius = spread * math.sqrt((idx + 0.5) / positions)
+    return radius * math.cos(angle), radius * math.sin(angle)

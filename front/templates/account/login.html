@@ -1,0 +1,71 @@
+{% extends "account/auth_base.html" %}
+{% load socialaccount %}
+
+{% block title %}Sign in — My Akiya in Japan{% endblock %}
+{% block description %}Sign in to My Akiya in Japan to see your saved homes and searches.{% endblock %}
+
+{% block auth_content %}
+  <h1>Welcome back</h1>
+  <p class="auth-sub">Sign in to pick up where you left off.</p>
+
+  {% comment %}
+    Google first here too — most accounts will have been created that way, and
+    offering the email form first invites people to guess a password they never
+    set.
+  {% endcomment %}
+  <a class="auth-google auth-google-primary" href="{% provider_login_url 'google' process='login' next=redirect_field_value %}">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.27-4.74 3.27-8.1z"/>
+      <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.65l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84A11 11 0 0 0 12 23z"/>
+      <path fill="#FBBC05" d="M5.84 14.11a6.6 6.6 0 0 1 0-4.22V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.84z"/>
+      <path fill="#EA4335" d="M12 4.75c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 1.46 14.97.5 12 .5A11 11 0 0 0 2.18 7.05l3.66 2.84c.87-2.6 3.3-4.14 6.16-4.14z"/>
+    </svg>
+    Continue with Google
+  </a>
+
+  <div class="auth-divider">or</div>
+
+  <details class="auth-email" {% if form.errors %}open{% endif %}>
+    <summary>Sign in with email instead</summary>
+
+  {% if form.non_field_errors %}
+    <div class="auth-errors">
+      <ul>{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    </div>
+  {% endif %}
+
+  <form method="post" action="{% url 'account_login' %}">
+    {% csrf_token %}
+
+    {% for field in form.visible_fields %}
+      {% comment %}
+        "Remember me" is a checkbox — it needs the control beside the label,
+        not the block layout the text inputs use.
+      {% endcomment %}
+      {% if field.field.widget.input_type == 'checkbox' %}
+        <label class="auth-field" style="display:flex;align-items:center;gap:.5rem;">
+          {{ field }}
+          <span style="margin:0;font-weight:400;">{{ field.label }}</span>
+        </label>
+      {% else %}
+        <label class="auth-field">
+          <span>{{ field.label }}</span>
+          {{ field }}
+          {% for e in field.errors %}<div class="auth-field-error">{{ e }}</div>{% endfor %}
+        </label>
+      {% endif %}
+    {% endfor %}
+    {% for field in form.hidden_fields %}{{ field }}{% endfor %}
+
+    {{ redirect_field }}
+    <button type="submit" class="auth-btn">Sign in</button>
+  </form>
+  </details>
+
+  <p class="auth-alt">
+    New here? <a href="{{ signup_url }}">Create a free account</a>
+  </p>
+  <p class="auth-fine">
+    <a href="{% url 'account_reset_password' %}">Forgotten your password?</a>
+  </p>
+{% endblock %}

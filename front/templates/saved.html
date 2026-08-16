@@ -1,0 +1,58 @@
+{% extends "content_base.html" %}
+{% block title %}Your saved homes — My Akiya in Japan{% endblock %}
+{% block description %}Properties and searches you've saved on My Akiya in Japan.{% endblock %}
+{% block canonical %}https://akiyainjapan.com/saved/{% endblock %}
+{% block content %}
+  <h1>Your saved homes</h1>
+
+  <h2>Properties</h2>
+  {% if saved_properties %}
+    <ul class="saved-list">
+      {% for s in saved_properties %}
+        <li>
+          <a href="{{ s.property.get_public_url }}">
+            <strong>{{ s.property.get_price_for_front }}</strong>
+            — {{ s.property.get_location_for_front }}
+            {% if s.property.floor_plan %}<span class="saved-meta">{{ s.property.floor_plan|truncatechars:30 }}</span>{% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="lead">
+      Nothing saved yet. Tap the heart on any property to keep it here.
+    </p>
+    <a class="cta" href="{% url 'map' %}">Browse the map</a>
+  {% endif %}
+
+  <h2>Saved searches</h2>
+  {% if saved_searches %}
+    <ul class="saved-list">
+      {% for s in saved_searches %}
+        <li>
+          <a href="{% url 'map' %}?{% if s.city %}city={{ s.city|urlencode }}{% endif %}{% if s.city and s.price %}&amp;{% endif %}{% if s.price %}price={{ s.price|urlencode }}{% endif %}">
+            {{ s.label }}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+    <p style="font-size:.9rem;color:var(--muted);">
+      We'll email you about new matches once alerts are switched on.
+    </p>
+  {% else %}
+    <p>No saved searches yet. Set a prefecture and price on the map, then
+      choose “Save this search”.</p>
+  {% endif %}
+
+  <style>
+    .saved-list { list-style:none; padding:0; margin:0 0 1.25rem; }
+    .saved-list li { border-bottom:1px solid var(--border); }
+    .saved-list li:last-child { border-bottom:0; }
+    .saved-list a {
+      display:block; padding:.75rem .25rem; text-decoration:none; color:var(--fg);
+    }
+    .saved-list a:hover { color:var(--primary); }
+    .saved-list strong { color:var(--primary); }
+    .saved-meta { display:block; font-size:.85rem; color:var(--muted); }
+  </style>
+{% endblock %}

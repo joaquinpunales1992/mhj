@@ -1,0 +1,15 @@
+{% comment %}
+  Google Analytics, in one place.
+
+  Previously the snippet was pasted into home.html and contact_seller.html only,
+  so /map/, /consultation/, /how-to-buy/, /faqs/ and /about/ recorded nothing —
+  including the two pages the current funnel depends on. Include this from every
+  base template instead of copying the tag again.
+{% endcomment %}
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-QBY9Y9CMPS');
+</script>

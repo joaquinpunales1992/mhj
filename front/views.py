@@ -5,7 +5,15 @@ from django.db.models import Q, F
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.views import View
-from inventory.models import Property, PropertyImage
+from inventory.models import GeocodedPlace, Property, PropertyImage
+from membership.metering import check_access
+from inventory.utils import (
+    city_key,
+    convert_price_string,
+    convert_yen_to_usd,
+    infer_location,
+    scatter_offset,
+)
 from django.core.mail import EmailMessage
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -170,6 +178,185 @@ def display_home(request):
     )
 
 
+# How many property cards the map's list panel may request at once. Caps both
+# the query and the number of image URLs travelling over the wire.
+MAP_CARD_BATCH_LIMIT = 60
+
+
+# Cards rendered into the panel server-side on first load. The map is a JS
+# application, so without these the site's most important page would serve
+# Google an empty shell — these keep real listings in the HTML. JS replaces
+# them as soon as the viewport is known.
+MAP_INITIAL_CARDS = 24
+
+
+def map_view(request):
+    """Split browse view: map on the left, listings for the current viewport
+    on the right.
+
+    NOT cache_page'd: the response embeds the signed-in user's saved property
+    ids, and a shared per-URL cache would hand one account's favourites to
+    everyone. The expensive part (all map points) is cached at
+    map_properties_json instead, which is identical for every visitor.
+
+    Deliberately NOT the site's landing page: "/" is indexed and ranks, and a
+    JS-driven map would serve crawlers an empty shell. The map is promoted
+    heavily from "/" instead, so it is the main experience without disturbing
+    the indexed URL.
+
+    The panel's initial contents and the region links are still rendered
+    server-side — see MAP_INITIAL_CARDS — so this page has real content of its
+    own. JS takes over as soon as the viewport is known.
+    """
+    base = (
+        Property.objects.annotate(
+            has_any_image=models.Exists(
+                PropertyImage.objects.filter(property=models.OuterRef("pk"))
+            )
+        )
+        .filter(show_in_front=True, price__gt=0, has_any_image=True)
+        .exclude(location="")
+    )
+    # Same ?city / ?price params the listing page uses, so a search started on
+    # "/" carries straight through to the map instead of being dropped.
+    base, selected_city, selected_price = _apply_browse_filters(base, request)
+    initial = base.order_by("-featured", "-created_at")[:MAP_INITIAL_CARDS]
+
+    # Ids this user has favourited, so hearts render filled on first paint
+    # rather than flickering on after a second request.
+    saved_ids = (
+        list(request.user.saved_properties.values_list("property_id", flat=True))
+        if request.user.is_authenticated
+        else []
+    )
+
+    bucket = PRICE_BUCKETS_BY_KEY.get(selected_price)
+    return render(
+        request,
+        "map.html",
+        context={
+            "nav": "map",
+            "saved_ids_json": json.dumps(saved_ids),
+            "card_batch_limit": MAP_CARD_BATCH_LIMIT,
+            "initial_properties": initial,
+            "cities": _available_cities(),
+            "selected_city": selected_city,
+            "selected_price": selected_price,
+            "price_buckets": PRICE_BUCKETS,
+            # Bucket bounds are in 万; the map filters on the USD strings it
+            # already has, so hand the client plain USD limits.
+            "price_min_usd": int(bucket["gt"] * 10000 * 0.007) if bucket else "",
+            "price_max_usd": int(bucket["lte"] * 10000 * 0.007) if bucket else "",
+        },
+    )
+
+
+@cache_page(60 * 30)
+def map_properties_json(request):
+    """Every mappable property as one compact JSON payload.
+
+    Served whole rather than per-viewport: ~10k points is a few hundred KB
+    before gzip, and shipping it once lets the client cluster and filter with
+    no further round trips. A bbox endpoint would mean a query per pan on a
+    low-RAM box, which is the worse trade here. Cached for 30 minutes since the
+    scraper only refreshes periodically.
+
+    Keys are deliberately one character — at 10k rows the field names are a
+    large fraction of the payload.
+    """
+    places = {
+        p.key: (p.latitude, p.longitude)
+        for p in GeocodedPlace.objects.exclude(latitude__isnull=True)
+    }
+
+    rows = (
+        Property.objects.filter(show_in_front=True, price__gt=0)
+        .exclude(location="")
+        .annotate(
+            has_any_image=models.Exists(
+                PropertyImage.objects.filter(property=models.OuterRef("pk"))
+            )
+        )
+        .filter(has_any_image=True)
+        .values_list("pk", "title", "price", "location", "floor_plan")
+    )
+
+    points = []
+    for pk, title, price, location, floor_plan in rows:
+        coords = places.get(city_key(location))
+        if not coords:
+            continue
+        dlat, dlng = scatter_offset(pk)
+        points.append(
+            {
+                "i": pk,
+                "a": round(coords[0] + dlat, 5),
+                "o": round(coords[1] + dlng, 5),
+                "p": convert_yen_to_usd(convert_price_string(price)),
+                "t": (title or "")[:70],
+                "l": infer_location(location),
+                "f": (floor_plan or "")[:20],
+            }
+        )
+
+    return JsonResponse(
+        {"count": len(points), "points": points},
+        json_dumps_params={"separators": (",", ":")},
+    )
+
+
+@cache_page(60 * 30)
+def map_property_cards_json(request):
+    """Card details for a specific batch of property ids.
+
+    Split from map_properties_json because image URLs are ~137 characters each
+    — carrying them for every property would add well over a megabyte to a
+    payload that exists to place markers. The list panel only ever shows a
+    screenful, so it asks for just those ids.
+    """
+    raw = (request.GET.get("ids") or "").split(",")
+    ids = []
+    for value in raw[:MAP_CARD_BATCH_LIMIT]:
+        value = value.strip()
+        if value.isdigit():
+            ids.append(int(value))
+
+    if not ids:
+        return JsonResponse({"cards": []})
+
+    def short(value, limit):
+        """Card fields are one line each; scraped values are often a paragraph.
+
+        floor_plan in particular can run to a full room-by-room description
+        ("3SLDK (living and dining kitchen, 18 tatami mats...)"), which would
+        blow the card layout apart.
+        """
+        text = (value or "").strip()
+        return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
+
+    properties = Property.objects.filter(pk__in=ids, show_in_front=True)
+    cards = {}
+    for prop in properties:
+        image = prop.get_ordered_images().first()
+        # str(), not .url: image.file holds a full external URL (homes.jp /
+        # SUUMO), and FileField.url would prepend MEDIA_URL and percent-encode
+        # it into a broken /media/https%3A/... path. The listing templates
+        # render {{ image.file }} directly for the same reason.
+        cards[prop.pk] = {
+            "i": prop.pk,
+            "t": prop.get_title_for_front(),
+            "p": prop.get_price_for_front,
+            "l": prop.get_location_for_front(),
+            "f": short(prop.floor_plan, 28),
+            "b": short(prop.building_area, 18),
+            "u": prop.get_public_url,
+            "img": str(image.file) if image and image.file else "",
+        }
+
+    # Preserve the caller's ordering — the panel has already sorted the ids.
+    return JsonResponse({"cards": [cards[i] for i in ids if i in cards]})
+
+
 def about(request):
     return render(request, "about.html")
 
@@ -180,6 +367,24 @@ def how_to_buy(request):
 
 def faqs(request):
     return render(request, "faqs.html")
+
+
+def consultation(request):
+    """Landing page for the paid orientation call.
+
+    Booking and payment are handled by the scheduling provider (Cal.com +
+    PayPal) rather than in Django: a broken checkout costs a lead at the exact
+    moment of peak intent, and card/scheduling edge cases — timezones,
+    reschedules, refunds, webhook retries — are not worth owning here.
+    """
+    return render(
+        request,
+        "consultation.html",
+        {
+            "booking_url": settings.CONSULT_BOOKING_URL,
+            "consult_price": settings.CONSULT_PRICE_LABEL,
+        },
+    )
 
 
 @cache_page(60 * 60)
@@ -359,10 +564,17 @@ def submit_interest_request(request):
         source=source,
     )
 
-    # Confirmation email to the requester.
+    # Confirmation email to the requester. This is the highest-intent moment in
+    # the whole funnel — they've just raised their hand — so it carries the
+    # booking call-to-action rather than only promising that someone will call.
     html_message = render_to_string(
         "emails/interest_request.html",
-        {"name": name, "property_url": property_url},
+        {
+            "name": name,
+            "property_url": property_url,
+            "booking_url": settings.CONSULT_BOOKING_URL,
+            "consult_price": settings.CONSULT_PRICE_LABEL,
+        },
     )
     confirmation = EmailMessage(
         subject="Your Akiya in Japan - We received your enquiry",
@@ -390,7 +602,9 @@ def submit_interest_request(request):
             f"<p><b>Visited Japan:</b> {visited_japan or '(not provided)'}</p>"
             f"<p><b>Message:</b> {message or '(none)'}</p>"
             f"<p><b>Property:</b> {property_url or '(from home page)'}</p>"
-            f"<p>Review and mark as contacted in "
+            f"<p>They've been sent the booking link automatically. Set the "
+            f"status as it moves — and set it to Dead with a reason the moment "
+            f"it stops, in "
             f"<a href='https://akiyainjapan.com/admin/membership/interestrequest/'>"
             f"the admin panel</a>.</p>"
         ),
@@ -460,6 +674,9 @@ def property_detail(request, pk, user_just_registered=0):
         if request.user.is_authenticated
         else request.COOKIES.get("email")
     )
+    # Metered access: records this view and decides whether the detail is
+    # locked. Photos, price, floor plan and location render regardless.
+    access = check_access(request, property.pk)
     return render(
         request,
         "contact_seller.html",
@@ -468,6 +685,9 @@ def property_detail(request, pk, user_just_registered=0):
             "property_title": "Akiya in" if pk % 2 == 0 else "Japanese House in",
             "user_email": user_email,
             "user_just_registered": user_just_registered,
+            "access": access,
+            "pro_price": settings.PRO_PRICE_LABEL,
+            "free_limit": settings.VIEW_LIMIT_FREE,
         },
     )
 

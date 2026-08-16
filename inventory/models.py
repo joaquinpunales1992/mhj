@@ -277,3 +277,48 @@ class PropertyImage(models.Model):
 
     def __str__(self):
         return f"{self.property.title} - Image"
+
+
+class GeocodedPlace(models.Model):
+    """Cached coordinates for a 'City, Prefecture' key.
+
+    Properties are geocoded at city level, not street level, for three reasons:
+    only ~half of the scraped addresses carry a street number, the ~10k
+    properties collapse to a few hundred distinct cities (so this stays inside
+    a free geocoder's fair-use limits), and pinning a scraped address to an
+    exact house would claim a precision the data doesn't have — the pin would
+    often land on a neighbour's roof.
+    """
+
+    key = models.CharField(
+        max_length=255,
+        unique=True,
+        help_text="Normalised 'City, Prefecture' string, e.g. 'Kitami City, Hokkaido'.",
+    )
+    latitude = models.FloatField(null=True, blank=True)
+    longitude = models.FloatField(null=True, blank=True)
+    display_name = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="What the geocoder matched — useful for spotting bad matches.",
+    )
+    attempts = models.IntegerField(
+        default=0,
+        help_text="Lookup attempts so far; lets the command skip hopeless keys.",
+    )
+    checked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Geocoded place"
+        verbose_name_plural = "Geocoded places"
+        ordering = ["key"]
+
+    def __str__(self):
+        if self.latitude is None:
+            return f"{self.key} (not located)"
+        return f"{self.key} ({self.latitude:.4f}, {self.longitude:.4f})"
+
+    @property
+    def located(self):
+        return self.latitude is not None and self.longitude is not None

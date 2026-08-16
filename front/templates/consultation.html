@@ -1,0 +1,97 @@
+{% extends "content_base.html" %}
+{% block title %}Book a Consultation — Buying a House in Japan | My Akiya in Japan{% endblock %}
+{% block description %}A paid 30-minute call about buying an akiya in Japan as a foreigner — real costs, paperwork, timelines and whether your plan is realistic. Honest answers, including when the answer is no.{% endblock %}
+{% block canonical %}https://akiyainjapan.com/consultation/{% endblock %}
+{% block content %}
+  <h1>Book a consultation</h1>
+  <p class="lead">
+    Thirty minutes, one-to-one, on what buying a house in Japan actually
+    involves — before you spend anything that matters.
+  </p>
+
+  <p>
+    Most people arrive here having seen a $20,000 house and wondering what the
+    catch is. There usually is one, and it is usually not the price. This call
+    is where you find out what yours would be.
+  </p>
+
+  <h2>What we cover</h2>
+  <ul>
+    <li><b>The real total cost.</b> Acquisition tax, registration, judicial
+      scrivener, agency commission, annual fixed-asset tax — the asking price is
+      rarely more than two-thirds of what you actually pay.</li>
+    <li><b>Renovation reality.</b> What an akiya at that price typically needs,
+      and roughly what it costs in that region.</li>
+    <li><b>The process end to end</b>, and which parts of it need you in Japan.</li>
+    <li><b>Your specific plan.</b> Holiday home, relocation, rental income —
+      each has very different answers, and one of them is often "this won't work".</li>
+    <li><b>Where you're likely to get stuck</b>, given your budget, timeline and
+      the region you're drawn to.</li>
+  </ul>
+
+  <h2>What this isn't</h2>
+  <p>
+    This is an orientation call, not a brokerage service. We don't value a
+    specific property, negotiate on your behalf, or advise you to buy any
+    particular house — that's regulated work in Japan, and it belongs with a
+    licensed agent. When you're ready for that step, we introduce you to one.
+  </p>
+  <p>
+    It also isn't a sales call. If the honest answer is that your budget doesn't
+    match your plan, you'll hear that. It's the most useful thing we can tell
+    some people, and it's cheaper to hear now.
+  </p>
+
+  <h2>Who it's for</h2>
+  <p>
+    People seriously considering a purchase in the next year or so. If you're
+    browsing for enjoyment, keep browsing — the listings are free and always
+    will be.
+  </p>
+
+  {% if booking_url %}
+    <h2>Book</h2>
+    <p>
+      <b>{{ consult_price }}</b> for 30 minutes, paid when you book. Pick a time
+      that suits you — slots are shown in your own timezone.
+    </p>
+    <a class="cta" href="{{ booking_url }}" rel="noopener">Book your consultation — {{ consult_price }}</a>
+    <p style="font-size:.9rem;color:var(--muted);margin-top:1rem;">
+      Need to move it? Reschedule from your confirmation email. Can't make it
+      work at all? Reply to that email and we'll refund you.
+    </p>
+  {% else %}
+    {% comment %}
+      No booking URL configured yet — never render a dead button. Fall back to
+      the enquiry form so the page still captures intent.
+    {% endcomment %}
+    <h2>Get in touch</h2>
+    <p>
+      Consultation booking is opening shortly. In the meantime, tell us what
+      you're looking for and we'll come back to you.
+    </p>
+    <a class="cta" href="/">Browse homes and enquire</a>
+  {% endif %}
+
+  <h2>Questions</h2>
+  <div class="faq">
+    <strong>Can foreigners really buy property in Japan?</strong>
+    Yes — freehold, no residency requirement, no special permission. The
+    difficulty is never eligibility; it's everything downstream of it.
+  </div>
+  <div class="faq">
+    <strong>Do I need to be in Japan?</strong>
+    Not for most of it. Some steps are far easier in person, and we'll tell you
+    which ones on the call.
+  </div>
+  <div class="faq">
+    <strong>What if I book and then decide not to buy anything?</strong>
+    That's a perfectly good outcome. Deciding not to spend $80,000 on the wrong
+    house is worth more than {{ consult_price }}.
+  </div>
+  <div class="faq">
+    <strong>Is the {{ consult_price }} deducted if I go ahead?</strong>
+    No — it covers the call itself. Any later support is quoted separately once
+    we both know what you actually need.
+  </div>
+{% endblock %}
