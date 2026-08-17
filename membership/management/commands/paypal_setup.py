@@ -154,15 +154,54 @@ class Command(BaseCommand):
         self.stdout.write(self.style.ERROR(
             f"  {payload.get('error', '?')}: {payload.get('error_description', r.text[:160])}"
         ))
-        if payload.get("error") == "invalid_client":
-            other = "live" if settings.PAYPAL_ENVIRONMENT != "live" else "sandbox"
-            self.stdout.write(self.style.WARNING(
-                f"\n  'invalid_client' almost always means the credentials belong to the\n"
-                f"  other environment. You have PAYPAL_ENVIRONMENT="
-                f"{settings.PAYPAL_ENVIRONMENT}; these look like {other} credentials.\n"
-                f"  Either set PAYPAL_ENVIRONMENT={other}, or copy the credentials from\n"
-                f"  the {settings.PAYPAL_ENVIRONMENT.upper()} tab of the PayPal dashboard.\n"
-                f"  (Also check .env has no quotes around the values.)"
+
+        if payload.get("error") != "invalid_client":
+            return
+
+        # Don't guess which environment they came from — ask the other host.
+        # Fetching a token is read-only and moves no money, so this is safe
+        # even against live.
+        other = "live" if settings.PAYPAL_ENVIRONMENT != "live" else "sandbox"
+        other_base = API_BASE[other]
+        self.stdout.write(f"\nTrying the {other} host to identify them ...")
+        try:
+            r2 = requests.post(
+                f"{other_base}/v1/oauth2/token",
+                auth=(cid.strip(), secret.strip()),
+                data={"grant_type": "client_credentials"},
+                timeout=20,
+            )
+        except Exception as e:
+            self.stdout.write(self.style.WARNING(f"  could not reach {other_base}: {e}"))
+            return
+
+        if r2.status_code == 200:
+            self.stdout.write(self.style.SUCCESS(
+                f"  These are {other.upper()} credentials — they authenticate fine "
+                f"against {other_base}."
+            ))
+            if other == "live":
+                self.stdout.write(self.style.WARNING(
+                    "\n  Decide which you want:\n"
+                    "   • To test safely first (recommended): create a SANDBOX app at\n"
+                    "     developer.paypal.com → Apps & Credentials → Sandbox tab,\n"
+                    "     and put those credentials in .env instead.\n"
+                    "   • To go live now: set PAYPAL_ENVIRONMENT=live in .env, then\n"
+                    "     re-run --create-plan and --create-webhook. Real cards will\n"
+                    "     be charged, and the subscribe flow has never been exercised\n"
+                    "     end to end, so test with your own card and cancel."
+                ))
+            else:
+                self.stdout.write(self.style.WARNING(
+                    f"\n  Set PAYPAL_ENVIRONMENT={other} in .env, then re-run "
+                    f"--create-plan and --create-webhook."
+                ))
+        else:
+            self.stdout.write(self.style.ERROR(
+                f"  Rejected by {other} too (HTTP {r2.status_code}). The pair is not a\n"
+                f"  valid PayPal client id + secret. Re-copy both from the same app in\n"
+                f"  the dashboard — mixing the id from one app with the secret of\n"
+                f"  another gives exactly this error."
             ))
 
     def handle(self, *args, **options):
