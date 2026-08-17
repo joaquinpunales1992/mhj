@@ -594,11 +594,11 @@
 											<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
 												{% if property.premium %}
 													{% if user.is_authenticated or request.COOKIES.email %}
-														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=property'">
+														<button class="primary" onclick="window.location.href='{% url "pricing" %}'">
 															Upgrade to Learn More
 														</button>
 													{% else %}
-														<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=property'">
+														<button class="primary" onclick="window.location.href='{% url "pricing" %}'">
 															Upgrade to Learn More
 														</button>
 													{% endif %}
@@ -662,11 +662,11 @@
 									<!-- Info on the left -->
 									<div style="display: flex; flex-direction: column; justify-content: space-between; width: 100%;">
 										{% if user.is_authenticated or request.COOKIES.email %}
-											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=listing'">
+											<button class="primary" onclick="window.location.href='{% url "pricing" %}'">
 												Upgrade to Access Full Listing
 											</button>
 										{% else %}
-											<button class="primary" onclick="window.location.href='{% url "upgrade_premium" %}?unlock=listing'">
+											<button class="primary" onclick="window.location.href='{% url "pricing" %}'">
 												Upgrade to Access Full Listing
 											</button>
 										{% endif %}

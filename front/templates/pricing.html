@@ -1,0 +1,130 @@
+{% extends "content_base.html" %}
+{% block title %}Pricing — My Akiya in Japan{% endblock %}
+{% block og_title %}Pricing — My Akiya in Japan{% endblock %}
+{% block description %}Browse Japanese property listings free. Pro removes the limit for {{ pro_price }}. A {{ consult_price }} consultation answers your specific questions about buying.{% endblock %}
+{% block canonical %}https://akiyainjapan.com/pricing/{% endblock %}
+{% block content %}
+  <h1>Pricing</h1>
+  <p class="lead">
+    Browsing is free. Two things cost money, and they do different jobs — you
+    can buy either, in any order, or neither.
+  </p>
+
+  <div class="tiers">
+    {% comment %}
+      Ordered by how far along the buyer is, not by price. Free and Pro serve
+      someone still looking; the consultation serves someone ready to act.
+    {% endcomment %}
+
+    <div class="tier">
+      <p class="tier-name">Free account</p>
+      <p class="tier-price">$0</p>
+      <p class="tier-for">While you're looking around</p>
+      <ul>
+        <li>Every listing, and the whole map</li>
+        <li>Full details on {{ free_limit }} properties</li>
+        <li>Save homes and searches</li>
+        <li>Price vs the local market, and short-term-rental potential</li>
+      </ul>
+      {% if user.is_authenticated %}
+        <span class="tier-have">You have this</span>
+      {% else %}
+        <a class="tier-cta" href="{% url 'account_signup' %}">Create a free account</a>
+        <span class="tier-note">Without an account you can open {{ anon_limit }} properties.</span>
+      {% endif %}
+    </div>
+
+    <div class="tier tier-featured">
+      <p class="tier-name">Pro</p>
+      <p class="tier-price">{{ pro_price }}</p>
+      <p class="tier-for">When you're comparing seriously</p>
+      <ul>
+        <li><b>Unlimited properties</b> — no counting</li>
+        <li>Full address and exact land area on each</li>
+        <li>Land rights and zoning</li>
+        <li>Everything in the free account</li>
+      </ul>
+      {% if already_pro %}
+        <span class="tier-have">You're on Pro</span>
+      {% else %}
+        <a class="tier-cta" href="{% url 'upgrade_pro' %}">Go Pro</a>
+        <span class="tier-note">Cancel any time from PayPal.</span>
+      {% endif %}
+    </div>
+
+    <div class="tier">
+      <p class="tier-name">Consultation</p>
+      <p class="tier-price">{{ consult_price }}</p>
+      <p class="tier-for">When you're ready to act</p>
+      <ul>
+        <li>30 minutes, one to one</li>
+        <li>The real total cost, not just the asking price</li>
+        <li>What renovation actually runs to in that region</li>
+        <li>Whether your budget and plan match — honestly</li>
+      </ul>
+      <a class="tier-cta" href="{% url 'consultation' %}">Book a consultation</a>
+      <span class="tier-note">One-off. Not a subscription.</span>
+    </div>
+  </div>
+
+  <h2>Which do I need?</h2>
+  <div class="faq">
+    <strong>I'm still browsing and enjoying it</strong>
+    The free account. Genuinely — don't pay us anything yet.
+  </div>
+  <div class="faq">
+    <strong>I've shortlisted a dozen houses and keep hitting the limit</strong>
+    Pro. It exists for exactly that, and it's the cheaper of the two.
+  </div>
+  <div class="faq">
+    <strong>I've found one I might actually buy</strong>
+    The consultation. Pro tells you more about a house; the call tells you
+    whether buying it is realistic for you.
+  </div>
+  <div class="faq">
+    <strong>Do I need Pro before booking a call?</strong>
+    No. They're independent, and neither is a prerequisite for the other.
+  </div>
+  <div class="faq">
+    <strong>What does it cost to actually buy a house through you?</strong>
+    We'll quote that after the consultation, once we both know what you need.
+    Purchases in Japan are brokered by a licensed agent, whose commission is
+    regulated and separate from anything you pay us.
+  </div>
+
+  <style>
+    .tiers {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem; margin: 2rem 0 1rem;
+    }
+    .tier {
+      background: #fff; border: 1px solid var(--border); border-radius: 12px;
+      padding: 1.4rem 1.3rem; display: flex; flex-direction: column;
+    }
+    /* Pro is the middle rung and the one most people want; give it the accent
+       without making the others look unavailable. */
+    .tier-featured { border-color: var(--primary); box-shadow: 0 2px 12px rgba(71,117,53,.10); }
+    .tier-name {
+      font-family: 'Noto Serif JP', serif; font-size: 1.15rem; margin: 0 0 .2rem;
+    }
+    .tier-price {
+      font-size: 1.7rem; font-weight: 700; color: var(--primary);
+      margin: 0 0 .1rem; line-height: 1.1;
+    }
+    .tier-for { font-size: .87rem; color: var(--muted); margin: 0 0 .9rem; }
+    .tier ul { padding-left: 1.15rem; margin: 0 0 1.1rem; font-size: .93rem; }
+    .tier li { margin-bottom: .4rem; }
+    .tier-cta {
+      margin-top: auto; display: block; text-align: center;
+      background: var(--primary); color: #fff; text-decoration: none;
+      border-radius: 9px; padding: .7rem 1rem; font-weight: 600; font-size: .95rem;
+    }
+    .tier-cta:hover { background: var(--primary-dark); color: #fff; }
+    .tier-note { display: block; text-align: center; font-size: .78rem;
+                 color: var(--muted); margin-top: .5rem; }
+    .tier-have {
+      margin-top: auto; text-align: center; font-size: .9rem; font-weight: 600;
+      color: var(--primary); padding: .7rem 0;
+    }
+  </style>
+{% endblock %}

@@ -144,12 +144,12 @@ function landRightsInterest(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "upgrade_pro" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "upgrade_pro" %}';
     });
 }
 
@@ -169,12 +169,12 @@ function landRightsInterestAuthenticated(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "upgrade_pro" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=land-rights';
+        window.location.href = '{% url "upgrade_pro" %}';
     });
 }
 
@@ -195,12 +195,12 @@ function riskInformationInterest(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "upgrade_pro" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "upgrade_pro" %}';
     });
 }
 
@@ -220,12 +220,12 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "upgrade_pro" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=risk';
+        window.location.href = '{% url "upgrade_pro" %}';
     });
 }
 </script>
@@ -1972,7 +1972,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <a href="{% url 'how_to_buy' %}">How to buy</a>
         <a href="{% url 'faqs' %}">FAQs</a>
         <a href="{% url 'about' %}">About</a>
-        <a href="{% url 'upgrade_premium' %}">Pricing</a>
+        <a href="{% url 'pricing' %}">Pricing</a>
       </div>
       <div class="site-footer-col">
         <h4>Popular regions</h4>

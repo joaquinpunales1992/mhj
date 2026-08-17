@@ -369,6 +369,39 @@ def faqs(request):
     return render(request, "faqs.html")
 
 
+def pricing(request):
+    """One page showing every tier in order.
+
+    Replaces the situation where the site advertised three prices for two
+    products — a $4.99 tier that could not be bought, a $10/mo subscription and
+    a $25 call — with nothing explaining which a visitor needed.
+
+    Pro and the consultation are deliberately independent: one is a research
+    tool, the other is advice. Neither is a prerequisite for the other.
+    """
+    subscription = getattr(request.user, "subscription", None)
+    return render(
+        request,
+        "pricing.html",
+        {
+            "nav": "pricing",
+            "anon_limit": settings.VIEW_LIMIT_ANONYMOUS,
+            "free_limit": settings.VIEW_LIMIT_FREE,
+            "pro_price": settings.PRO_PRICE_LABEL,
+            "consult_price": settings.CONSULT_PRICE_LABEL,
+            "booking_url": settings.CONSULT_BOOKING_URL,
+            "already_pro": bool(subscription and subscription.is_active),
+        },
+    )
+
+
+def legacy_premium_redirect(request):
+    """The old $4.99 page. Permanent redirect rather than a delete: it is in the
+    sitemap, so anything it has accumulated in search should point at the real
+    prices instead of 404ing."""
+    return redirect("pricing", permanent=True)
+
+
 def consultation(request):
     """Landing page for the paid orientation call.
 

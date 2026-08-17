@@ -21,6 +21,7 @@ urlpatterns = [
     path("how-to-buy/", front_views.how_to_buy, name="how_to_buy"),
     path("faqs/", front_views.faqs, name="faqs"),
     path("consultation/", front_views.consultation, name="consultation"),
+    path("pricing/", front_views.pricing, name="pricing"),
     path("map/", front_views.map_view, name="map"),
     path(
         "api/map-properties.json",
@@ -72,7 +73,13 @@ urlpatterns = [
         membership_views.register_via_email,
         name="register_via_email",
     ),
-    path("upgrade-premium/", membership_views.upgrade_premium, name="upgrade_premium"),
+    # Legacy $4.99 page. Kept as a permanent redirect because it is in the
+    # sitemap; the template and view are gone.
+    path(
+        "upgrade-premium/",
+        front_views.legacy_premium_redirect,
+        name="upgrade_premium",
+    ),
     path(
         "approved-membership-payment/",
         membership_views.approved_membership_payment,
