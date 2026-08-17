@@ -93,12 +93,12 @@ function subscribeToNewsletter(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "upgrade_pro" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "upgrade_pro" %}';
     });
 }
 
@@ -119,12 +119,12 @@ function subscribeToNewsletterAuthenticated(userEmail = "", propertyId) {
     })
     .then(response => {
         // Redirect regardless of response
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "upgrade_pro" %}';
     })
     .catch(error => {
         console.error('Error:', error);
         // Still redirect even if notification fails
-        window.location.href = '{% url "upgrade_premium" %}?unlock=newsletter';
+        window.location.href = '{% url "upgrade_pro" %}';
     });
 }
 
@@ -1736,7 +1736,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="flex flex-row flex-5 gap-6 w-full">
               <div class="flex-1">
                 <h3>Subscribe to our Newsletter</h3>
-                <p class="text-xll" style="color: black;">Get exclusive access to 20 new properties each week, unavailable to other accounts.</p>
+                <p class="text-xll" style="color: black;">A weekly email of the newest listings, hand-picked. Included with Pro.</p>
                 {% if user.is_authenticated or request.COOKIES.email %}
                   <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="subscribeToNewsletterAuthenticated('{{ user_email }}', '{{ property.pk }}')">
                       <span class="icon solid fa-lock" style="color: #477535;"></span><span style="color: #477535;"> SUBSCRIBE</span>
