@@ -1376,10 +1376,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* The theme sets white-space:nowrap on all buttons, which clips the long
      CTA label on narrow screens. Let these wrap to multiple lines instead. */
-  #book-button, #interestSubmit {
+  #interestSubmit {
     white-space: normal;
     height: auto;
     line-height: 1.3;
+  }
+  /* The primary action on the page. It is an <a>, so it needs its own box:
+     .primary only sets colour and radius, and previously the surrounding
+     <button> supplied the padding and font size. */
+  a#book-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 1rem 1.5rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.35;
+    text-align: center;
+    text-decoration: none;
+    white-space: normal;
+    height: auto;
+    color: #fff;
+  }
+  a#book-button:hover { color: #fff; text-decoration: none; }
+
+  /* Body copy inside the CTA block. Was an <h5> inheriting heading styles. */
+  .buying-details .step .cta-blurb {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--mhj-foreground);
+    margin: 0 0 1.1rem;
+    max-width: 60ch;
   }
 
   /* --- Mobile (<lg) property-page reorder: gallery-first --------------------
@@ -1895,7 +1925,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </summary>
 
               <div class="step" data-step="1">
-                <h5>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.</h5>
+                <p class="cta-blurb">Talk it through with our English-speaking team: what this house would really cost you, what the process looks like, and whether your plan is realistic.</p>
                 <div>
                     {% comment %}
                       Same CTA as everywhere else, but carrying ?property= so the
@@ -1903,7 +1933,14 @@ document.addEventListener('DOMContentLoaded', () => {
                       about a specific $30k house in Oita is a much stronger
                       signal than a generic booking.
                     {% endcomment %}
-                    <a id="book-button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg"
+                    {% comment %}
+                      Tailwind is not loaded on this page, so the w-full/py-6/
+                      text-sm/hover: classes this element used to carry did
+                      nothing — its size came entirely from the browser's
+                      default <button> box, which is why it collapsed when it
+                      became a link. Sizing now lives in a#book-button.
+                    {% endcomment %}
+                    <a id="book-button" class="primary"
                        href="{% url 'consultation' %}?property={{ property.pk }}">
                       Book a consultation
                     </a>
