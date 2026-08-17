@@ -9,6 +9,38 @@
     involves — before you spend anything that matters.
   </p>
 
+  {% if property %}
+    {% comment %}
+      Arrived from a specific listing. Echo it back so it's obvious the context
+      carried over — the booking's notes field is prefilled with it too.
+    {% endcomment %}
+    <div class="consult-context">
+      <span class="consult-context-label">You're asking about</span>
+      <a href="{{ property.get_public_url }}">
+        <b>{{ property.get_price_for_front }}</b> — {{ property.get_location_for_front }}
+        {% if property.floor_plan %}· {{ property.floor_plan|truncatechars:26 }}{% endif %}
+      </a>
+      <span class="consult-context-note">We'll have this listing open on the call.</span>
+    </div>
+    <style>
+      .consult-context {
+        background: #f3ece2; border-radius: 10px; padding: .9rem 1.1rem;
+        margin: 0 0 1.5rem;
+      }
+      .consult-context-label {
+        display: block; font-size: .74rem; letter-spacing: .1em;
+        text-transform: uppercase; color: var(--primary); font-weight: 600;
+        margin-bottom: .25rem;
+      }
+      .consult-context a { text-decoration: none; color: var(--fg); font-size: 1.02rem; }
+      .consult-context a:hover { text-decoration: underline; }
+      .consult-context b { color: var(--primary); }
+      .consult-context-note {
+        display: block; font-size: .82rem; color: var(--muted); margin-top: .3rem;
+      }
+    </style>
+  {% endif %}
+
   <p>
     Most people arrive here having seen a $20,000 house and wondering what the
     catch is. There usually is one, and it is usually not the price. This call

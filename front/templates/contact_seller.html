@@ -1692,7 +1692,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   {% endif %}
                 </p>
                 <p class="text-xll" style="color:#666666; margin:8px 0 0; font-size:0.92em;">{{ strp.note }}</p>
-                <p class="text-xll" style="color:#999999; margin:4px 0 0; font-size:0.85em;">Zoning: {{ strp.zoning }} · <a href="#" data-toggle="modal" data-target="#interestModal" style="color:#477535; font-weight:600;">Ask us to verify</a></p>
+                <p class="text-xll" style="color:#999999; margin:4px 0 0; font-size:0.85em;">Zoning: {{ strp.zoning }} · <a href="{% url 'consultation' %}?property={{ property.pk }}" style="color:#477535; font-weight:600;">Ask us on a call</a></p>
               </div>
             </div>
             {% endif %}
@@ -1897,9 +1897,16 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="step" data-step="1">
                 <h5>Connect with our English-speaking team in a personal session. We’ll guide you through the entire home-buying journey in Japan—from property types and locations to taxes and beyond.</h5>
                 <div>
-                    <button id="book-button" type="button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg" data-toggle="modal" data-target="#interestModal">
-                      Get help finding the right property
-                    </button>
+                    {% comment %}
+                      Same CTA as everywhere else, but carrying ?property= so the
+                      booking arrives knowing which house prompted it — a call
+                      about a specific $30k house in Oita is a much stronger
+                      signal than a generic booking.
+                    {% endcomment %}
+                    <a id="book-button" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors text-sm md:text-base lg:text-lg"
+                       href="{% url 'consultation' %}?property={{ property.pk }}">
+                      Book a consultation
+                    </a>
                 </div>
               </div>
 

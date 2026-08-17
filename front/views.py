@@ -1,5 +1,6 @@
 import json
 import random
+import urllib.parse
 from django.db import models
 from django.db.models import Q, F
 from django.conf import settings
@@ -410,12 +411,32 @@ def consultation(request):
     moment of peak intent, and card/scheduling edge cases — timezones,
     reschedules, refunds, webhook retries — are not worth owning here.
     """
+    # A booking that came from a property page carries ?property=<pk>. Prefill
+    # the scheduler's notes field with it so the call arrives already knowing
+    # which house prompted it — otherwise that context is lost at the click and
+    # has to be re-established on the call.
+    prop = None
+    raw_pk = (request.GET.get("property") or "").strip()
+    if raw_pk.isdigit():
+        prop = Property.objects.filter(pk=raw_pk, show_in_front=True).first()
+
+    booking_url = settings.CONSULT_BOOKING_URL
+    if booking_url and prop:
+        note = (
+            f"Interested in: {prop.get_title_for_front()} — "
+            f"{prop.get_location_for_front()}, {prop.get_price_for_front} — "
+            f"https://akiyainjapan.com{prop.get_public_url}"
+        )
+        separator = "&" if "?" in booking_url else "?"
+        booking_url = f"{booking_url}{separator}notes={urllib.parse.quote(note)}"
+
     return render(
         request,
         "consultation.html",
         {
-            "booking_url": settings.CONSULT_BOOKING_URL,
+            "booking_url": booking_url,
             "consult_price": settings.CONSULT_PRICE_LABEL,
+            "property": prop,
         },
     )
 
