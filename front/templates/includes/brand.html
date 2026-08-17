@@ -1,0 +1,40 @@
+{% comment %}
+  The single source of truth for type and colour.
+
+  Every template previously declared its own palette and font link, which is how
+  the site ended up with a stray teal on the home page, three different
+  font-weight sets, and 46 distinct hex values on the property page. Include
+  this in <head> and use the custom properties below instead of literals.
+
+  Templates that predate this (home.html via the HTML5UP theme,
+  contact_seller.html) still carry their own rules; the tokens here are
+  deliberately identical to the values those files already use, so including it
+  changes nothing visually and new work can reference tokens instead of
+  copying hexes.
+{% endcomment %}
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    /* Brand */
+    --primary:      #477535;  /* the one green — never substitute another */
+    --primary-dark: #3a5f2b;  /* hover/active only */
+    --accent:       #d6b58f;
+    --accent-soft:  #f3ece2;
+
+    /* Surfaces and text */
+    --bg:      #faf8f4;
+    --card:    #ffffff;
+    --fg:      #2b2b2b;
+    --muted:   #6f6f70;
+    --border:  rgba(71, 117, 53, 0.14);
+
+    /* Feedback */
+    --danger:     #b3341f;
+    --danger-soft:#fbeae6;
+    --success:    #4f9d5b;
+
+    /* Type */
+    --font-display: 'Noto Serif JP', Georgia, serif;
+    --font-body: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+</style>

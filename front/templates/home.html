@@ -168,6 +168,7 @@
 		  }
 		}
 		</script>
+		{% include "includes/brand.html" %}
 		<link rel="icon" href="{% static 'favicon.ico' %}" sizes="any" />
 		<link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}" />
 		<link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}" />
@@ -506,7 +507,7 @@
 									<a href="{% url 'map' %}" class="icon solid fa-map-marked-alt"><span class="responsive-text">Map</span></a>
 								</li>
 								<li class="responsive-icon">
-									<a href="{% url 'how_to_buy' %}" class="icon solid fa-home"><span class="responsive-text">How to Buy?</span></a>
+									<a href="{% url 'how_to_buy' %}" class="icon solid fa-home"><span class="responsive-text">How to buy</span></a>
 								</li>
 								<li class="responsive-icon">
 									<a href="{% url 'faqs' %}" class="icon solid fa-question-circle"><span class="responsive-text">FAQs</span></a>
@@ -514,6 +515,9 @@
 								</li>
 								<li class="responsive-icon">
 									<a href="{% url 'about' %}" class="icon solid fa-info-circle"><span class="responsive-text">About</span></a>
+								</li>
+								<li class="responsive-icon">
+									<a href="{% url 'pricing' %}" class="icon solid fa-tag"><span class="responsive-text">Pricing</span></a>
 								</li>
 								{% comment %}
 									Account entry point. Its absence here meant a member who
@@ -869,6 +873,7 @@
 			   reset the site template's global button/input styling (uppercase,
 			   letter-spacing, fixed 3em height, box-shadow, white !important
 			   color) so the widget renders as its own self-contained component. */
+			#header h1 strong, .site-tagline { font-family: var(--font-display); }
 			#eoi-fab {
 				/* z-index above the site's fixed bottom nav bar (#header, z-index 10002)
 				   and panels (10001); bottom offset clears the ~8.5em-tall bar. */
@@ -880,8 +885,9 @@
 				letter-spacing: normal; text-transform: none; white-space: nowrap; cursor: pointer;
 				box-shadow: 0 4px 14px rgba(0,0,0,0.3);
 			}
+			#header h1 strong, .site-tagline { font-family: var(--font-display); }
 			#eoi-fab { text-decoration: none; display: inline-flex; align-items: center; height: auto; line-height: 1.4; }
-			#eoi-fab:hover { background-color: #2c8f7b; color: #fff !important; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
+			#eoi-fab:hover { background-color: var(--primary-dark); color: #fff !important; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
 			#eoi-overlay {
 				display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10011;
 				background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 16px;
@@ -932,7 +938,7 @@
 				font-family: inherit; font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: normal;
 				box-shadow: none; cursor: pointer;
 			}
-			#eoi-submit:hover { background-color: #2c8f7b; color: #fff !important; box-shadow: none; }
+			#eoi-submit:hover { background-color: var(--primary-dark); color: #fff !important; box-shadow: none; }
 			#eoi-submit:disabled { opacity: 0.6; cursor: default; }
 			#eoi-error { color: #c0392b; display: none; margin-bottom: 12px; font-size: 14px; }
 			#eoi-success { display: none; text-align: center; padding: 8px 0; }
@@ -942,7 +948,8 @@
 			@media (max-width: 736px) {
 				/* white-space:normal + max-width so the long label wraps instead of
 				   running off-screen / being clipped; center the wrapped lines. */
-				#eoi-fab {
+				#header h1 strong, .site-tagline { font-family: var(--font-display); }
+			#eoi-fab {
 					bottom: 1.25em; right: 1em; padding: 12px 18px; font-size: 14px;
 					white-space: normal; max-width: 72vw; text-align: center; line-height: 1.3;
 				}

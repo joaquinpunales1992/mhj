@@ -1,0 +1,25 @@
+{% comment %}
+  The canonical navigation, in canonical order.
+
+  This list is the source of truth. Before it existed the three page types
+  carried three different sets — the home page had no Pricing or Browse homes,
+  the map had neither Browse homes nor FAQs nor About — so the site appeared to
+  gain and lose sections as you moved through it.
+
+  Order is deliberate and reflects what a visitor wants soonest:
+    Browse homes → Map   (find something)
+    How to buy → FAQs    (understand the process)
+    About                (who are you)
+    Pricing              (what does it cost)
+    account controls     (always last, visually separated)
+
+  The home page renders the same items in its own bottom bar markup; keep the
+  labels and order in step with this file when either changes.
+{% endcomment %}
+<a href="/"{% if nav == 'home' %} class="on"{% endif %}>Browse homes</a>
+<a href="{% url 'map' %}"{% if nav == 'map' %} class="on"{% endif %}>Map</a>
+<a href="{% url 'how_to_buy' %}"{% if nav == 'how_to_buy' %} class="on"{% endif %}>How to buy</a>
+<a href="{% url 'faqs' %}"{% if nav == 'faqs' %} class="on"{% endif %}>FAQs</a>
+<a href="{% url 'about' %}"{% if nav == 'about' %} class="on"{% endif %}>About</a>
+<a href="{% url 'pricing' %}"{% if nav == 'pricing' %} class="on"{% endif %}>Pricing</a>
+{% include "includes/account_nav.html" %}

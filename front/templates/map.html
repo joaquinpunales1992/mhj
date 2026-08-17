@@ -10,7 +10,7 @@
   <link rel="icon" href="{% static 'favicon.ico' %}" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}">
   <link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}">
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  {% include "includes/brand.html" %}
 
   {% include "includes/analytics.html" %}
 
@@ -20,27 +20,31 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
 
   <style>
-    :root {
-      --primary:#477535; --primary-dark:#3a5f2b;
-      --bg:#faf8f4; --fg:#2b2b2b; --muted:#6f6f70; --border:rgba(71,117,53,.16);
-      --card:#fff; --shade:#f1efe9;
-    }
+    :root { --shade:#f1efe9; }  /* map-only; brand tokens come from includes/brand.html */
     * { box-sizing:border-box; margin:0; padding:0; }
     html, body { height:100%; }
     body {
-      font-family:'Work Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+      font-family:var(--font-body);
       background:var(--bg); color:var(--fg); line-height:1.5;
       display:flex; flex-direction:column; overflow:hidden;
       -webkit-font-smoothing:antialiased;
     }
 
-    /* ---------- top bar ---------- */
-    .topbar {
+    /* ---------- header rows ----------
+       Row 1: site identity + navigation, same position as every other page.
+       Row 2: the map's own controls, which are unique to this screen. Keeping
+       them separate stops the nav wrapping unpredictably. */
+    .site-header {
       display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap;
-      gap:.75rem; padding:.7rem 1.1rem; background:var(--card);
+      gap:.5rem 1rem; padding:.7rem 1.1rem; background:var(--card);
       border-bottom:1px solid var(--border); flex:0 0 auto; z-index:1200;
     }
-    .brand { font-family:'Noto Serif JP',serif; font-size:1.1rem; color:var(--primary);
+    .toolbar {
+      display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap;
+      gap:.5rem; padding:.55rem 1.1rem; background:var(--card);
+      border-bottom:1px solid var(--border); flex:0 0 auto; z-index:1100;
+    }
+    .brand { font-family:var(--font-display); font-size:1.1rem; color:var(--primary);
              text-decoration:none; font-weight:500; white-space:nowrap; }
     .topnav a { margin-left:1rem; text-decoration:none; color:var(--fg); font-size:.9rem; }
     .topnav a:hover { color:var(--primary); }
@@ -151,7 +155,7 @@
     /* Region links: crawlable internal links, and a genuine way out of an
        empty viewport. */
     .panel-regions { margin-top:1.5rem; padding:1.1rem .25rem .5rem; border-top:1px solid var(--border); }
-    .panel-regions h2 { font-family:'Noto Serif JP',serif; font-weight:500;
+    .panel-regions h2 { font-family:var(--font-display); font-weight:500;
                         font-size:1.02rem; margin-bottom:.7rem; }
     .region-pills { display:flex; flex-wrap:wrap; gap:.4rem .5rem; }
     .region-pills a {
@@ -198,8 +202,14 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
+  <header class="site-header">
     <a class="brand" href="/">My Akiya in Japan</a>
+    <nav class="topnav">
+      {% include "includes/main_nav.html" %}
+    </nav>
+  </header>
+
+  <div class="toolbar">
     <div class="controls">
       <select id="city" aria-label="Filter by prefecture">
         <option value="">All prefectures</option>
@@ -226,16 +236,7 @@
         List view
       </a>
     </div>
-    {% comment %}
-      No "Browse homes" here: the List view button in .controls is the single,
-      unambiguous way back to the listing page, and it carries the filters.
-    {% endcomment %}
-    <nav class="topnav">
-      <a href="{% url 'how_to_buy' %}">How to buy</a>
-      <a href="{% url 'consultation' %}">Book a consultation</a>
-      {% include "includes/account_nav.html" %}
-    </nav>
-  </header>
+  </div>
 
   <div class="split">
     <div id="map">
