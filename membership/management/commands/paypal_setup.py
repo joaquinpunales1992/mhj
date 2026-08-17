@@ -51,6 +51,9 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--check", action="store_true",
                             help="Verify the credentials work.")
+        parser.add_argument("--diagnose", action="store_true",
+                            help="Inspect the credentials without revealing "
+                                 "them, and show PayPal's own error message.")
         parser.add_argument("--status", action="store_true",
                             help="List existing products, plans and webhooks.")
         parser.add_argument("--create-plan", action="store_true",
@@ -100,8 +103,72 @@ class Command(BaseCommand):
 
     # -- commands ----------------------------------------------------------
 
+    def diagnose(self):
+        """Report on the credentials without printing them.
+
+        A 401 from PayPal has a handful of causes that look identical from the
+        outside; this distinguishes them. By far the most common is sandbox
+        credentials used against live, or live against sandbox — the two are
+        separate accounts and the ids are not interchangeable.
+        """
+        cid = settings.PAYPAL_CLIENT_ID or ""
+        secret = settings.PAYPAL_CLIENT_SECRET or ""
+
+        self.stdout.write("\nCredential inspection (values not shown):")
+        for label, value in (("CLIENT_ID", cid), ("CLIENT_SECRET", secret)):
+            if not value:
+                self.stdout.write(self.style.ERROR(f"  {label}: EMPTY"))
+                continue
+            issues = []
+            if value != value.strip():
+                issues.append("has leading/trailing whitespace")
+            if '"' in value or "'" in value:
+                issues.append("contains a quote character — remove quotes in .env")
+            if len(value) < 50:
+                issues.append(f"only {len(value)} chars, PayPal's are usually 80+")
+            if " " in value.strip():
+                issues.append("contains a space — likely truncated on paste")
+            self.stdout.write(
+                f"  {label}: {len(value)} chars, starts {value[:6]!r}, ends {value[-4:]!r}"
+            )
+            for i in issues:
+                self.stdout.write(self.style.WARNING(f"      ! {i}"))
+
+        self.stdout.write(f"\nCalling {self.base()}/v1/oauth2/token ...")
+        r = requests.post(
+            f"{self.base()}/v1/oauth2/token",
+            auth=(cid.strip(), secret.strip()),
+            data={"grant_type": "client_credentials"},
+            timeout=20,
+        )
+        self.stdout.write(f"  HTTP {r.status_code}")
+        try:
+            payload = r.json()
+        except ValueError:
+            payload = {}
+        if r.status_code == 200:
+            self.stdout.write(self.style.SUCCESS(
+                "  Credentials are valid for this environment."
+            ))
+            return
+        self.stdout.write(self.style.ERROR(
+            f"  {payload.get('error', '?')}: {payload.get('error_description', r.text[:160])}"
+        ))
+        if payload.get("error") == "invalid_client":
+            other = "live" if settings.PAYPAL_ENVIRONMENT != "live" else "sandbox"
+            self.stdout.write(self.style.WARNING(
+                f"\n  'invalid_client' almost always means the credentials belong to the\n"
+                f"  other environment. You have PAYPAL_ENVIRONMENT="
+                f"{settings.PAYPAL_ENVIRONMENT}; these look like {other} credentials.\n"
+                f"  Either set PAYPAL_ENVIRONMENT={other}, or copy the credentials from\n"
+                f"  the {settings.PAYPAL_ENVIRONMENT.upper()} tab of the PayPal dashboard.\n"
+                f"  (Also check .env has no quotes around the values.)"
+            ))
+
     def handle(self, *args, **options):
         self.stdout.write(f"PayPal environment: {settings.PAYPAL_ENVIRONMENT}")
+        if options["diagnose"]:
+            return self.diagnose()
         token = self.token()
         if not token:
             return

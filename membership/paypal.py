@@ -40,7 +40,14 @@ def _api_base():
 
 
 def _access_token():
-    """OAuth token for server-to-server calls. None if unconfigured."""
+    """OAuth token for server-to-server calls. None if unconfigured.
+
+    On failure this logs PayPal's own error body, not just the HTTP status.
+    A bare "401 Unauthorized" is indistinguishable between wrong credentials,
+    a typo, and — much the commonest cause — live credentials being used
+    against the sandbox host or vice versa, which PayPal reports as
+    "invalid_client".
+    """
     if not (settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET):
         return None
     try:
@@ -50,11 +57,26 @@ def _access_token():
             data={"grant_type": "client_credentials"},
             timeout=15,
         )
-        response.raise_for_status()
-        return response.json().get("access_token")
     except Exception as e:
-        logger.error("PayPal token request failed: %s", e)
+        logger.error("PayPal token request could not be sent: %s", e)
         return None
+
+    if response.status_code != 200:
+        detail = ""
+        try:
+            payload = response.json()
+            detail = f"{payload.get('error')}: {payload.get('error_description')}"
+        except ValueError:
+            detail = response.text[:200]
+        logger.error(
+            "PayPal rejected the credentials (HTTP %s) against %s — %s",
+            response.status_code,
+            _api_base(),
+            detail,
+        )
+        return None
+
+    return response.json().get("access_token")
 
 
 def _verify(request, body):
