@@ -903,22 +903,33 @@
 				float: none;
 				flex: 0 0 auto;
 			}
+			/* Five items on one line made a long, thin row. The bar is ~125px tall
+			   because the wordmark and tagline stack, so there is vertical room to
+			   spare — cap the nav's width and let the items flow onto two lines,
+			   right-aligned. The container itself stays nowrap so the brand and the
+			   nav can never occupy the same space. */
+			#header nav { max-width: 24em; }
 			#header nav ul {
 				display: flex;
 				align-items: center;
 				flex-wrap: wrap;
 				justify-content: flex-end;
-				gap: 0 0.1rem;
+				gap: 0.15em 0.2em;
 			}
-			/* The theme pads each nav link 0 1.15em at 1em, which was fine for the
-			   original three items. Six of them measured 1158px — wider than the
-			   viewport — so the h1 collapsed to zero and the nowrap wordmark
-			   painted over the nav. Tighten these to fit. */
+			/* With two lines there is room to keep these closer to the theme's own
+			   size than the single-line version allowed. */
 			#header nav ul li a {
-				font-size: 0.82em;
-				padding: 0 0.5em;
+				font-size: 0.9em;
+				padding: 0 0.6em;
 				letter-spacing: 0.04em;
+				/* The theme sets line-height to the full bar height (~125px) so a
+				   single row of links sits vertically centred. That makes every
+				   wrapped row 125px tall, which is why two lines overflowed the bar
+				   upward over the listings. A normal line-height lets both rows fit
+				   inside it. */
+				line-height: 2.3;
 			}
+			#header nav ul li { line-height: normal; }
 			/* Set the account controls apart from the section links. */
 			#header nav li.acct-item { margin-left: 0.75rem; }
 			#header nav li.acct-item + li.acct-item { margin-left: 0; }
