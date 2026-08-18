@@ -3,6 +3,14 @@
 <!DOCTYPE HTML>
 <html>
 	<head>
+		{% comment %}
+		  Every card photo is hotlinked from suumo.jp, so the first image cannot
+		  start downloading until DNS + TCP + TLS to a brand-new origin finishes —
+		  roughly two extra round trips on the critical path, and the LCP element
+		  is one of those photos. Warm the connection while the HTML parses.
+		{% endcomment %}
+		<link rel="preconnect" href="https://suumo.jp" crossorigin>
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<script>
         (function () {
             var pztt = 3;
@@ -566,7 +574,21 @@
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
 										{% else %}
 											{% if first_image.show_in_front %}
-												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}" loading="lazy" decoding="async"/></a>
+												{% comment %}
+													The first cards are the LCP candidate, and loading="lazy"
+													on them is self-defeating: the browser waits for layout
+													before even queueing the request, which is how LCP ended
+													up at 14s+ while FCP was under 4s. So the first screenful
+													loads eagerly and the rest stays lazy.
+
+													Deliberately NOT fetchpriority="high": measured over three
+													runs each on throttled 4G, high priority moved LCP -18% but
+													pushed FCP +29% (3.5s to 4.5s) because the photos then
+													compete with CSS and fonts for the pipe. Eager at normal
+													priority keeps the LCP gain without paying for it at first
+													paint, which is the one a bouncing visitor judges.
+												{% endcomment %}
+												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}"{% if forloop.counter > 3 %} loading="lazy"{% endif %} decoding="async"/></a>
 											{% endif %}
 											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>

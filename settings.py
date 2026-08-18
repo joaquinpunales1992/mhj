@@ -316,7 +316,11 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 
 PROPERTIES_TO_DISPLAY = 60          # legacy — kept for filter_properties/404 view
-PROPERTIES_PER_PAGE = 24            # new — per-page count for the paginated home grid
+# 12 rather than 24: each card pulls a full-size original from suumo.jp
+# (130-250KB each), so the per-page count is the single biggest lever on how many
+# bytes the home page costs — 24 cards was ~2.8MB of images. Halving it halves
+# that. Once thumbnails are served instead of originals this can go back up.
+PROPERTIES_PER_PAGE = 12            # per-page count for the paginated home grid
 
 HUGGING_FACE_AI_ENDPOINT_URL = ""
 HUGGING_FACE_AI_TOKEN = ""
