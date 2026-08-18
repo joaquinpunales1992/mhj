@@ -1436,6 +1436,85 @@ document.addEventListener('DOMContentLoaded', () => {
   /* The <hr> that used to divide these is redundant once each is a card. */
   .pp-newsletter hr, .pp-section-rule { display: none; }
 
+  /* --- Newsletter: the one card meant to catch the eye ---------------------
+     Every other block below the gallery is a white .pp-panel, so the strongest
+     lever here is the ground rather than more weight or size: a warm accent
+     fill and accent border make this read as an offer instead of one more
+     details section, without shouting.
+
+     The button matters as much. It was a ghost outline (inline
+     background:transparent) sitting on a page whose every other primary action
+     is filled, so it read as the least important control on the screen. */
+  .pp-newsletter.pp-panel {
+    background: linear-gradient(180deg, #fdfaf5 0%, var(--mhj-accent-soft) 100%);
+    border: 1px solid var(--mhj-accent);
+    box-shadow: 0 2px 14px rgba(214, 181, 143, 0.22);
+  }
+  .pp-newsletter .pp-nl-eyebrow {
+    margin: 0 0 0.45em;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--mhj-primary);
+  }
+  .pp-newsletter h3 {
+    display: flex;
+    align-items: center;
+    gap: 0.45em;
+    font-size: 1.32em;
+  }
+  .pp-nl-icon {
+    flex: 0 0 auto;
+    width: 1.05em;
+    height: 1.05em;
+    fill: none;
+    stroke: var(--mhj-primary);
+    stroke-width: 1.7;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .pp-newsletter .pp-nl-copy { margin: 0 0 1.25em; max-width: 52ch; }
+  /* Not .primary: main.css styles that class teal (#34a58e) at a higher
+     specificity than this page's override, which is where the site's stray
+     teal came from. A class of its own avoids the fight entirely. */
+  .pp-newsletter .pp-nl-btn {
+    display: inline-block;
+    border: 0;
+    cursor: pointer;
+    background-color: var(--mhj-primary);
+    color: #fff;
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95em;
+    line-height: 1.2;
+    padding: 0.85em 1.6em;
+    border-radius: 10px;
+    box-shadow: none;
+  }
+  /* main.css sets `button:hover { color: #34a58e !important }` plus a teal
+     inset ring, so plain-button hover on this page goes teal. Both need an
+     explicit answer, and the colour needs !important to beat theirs. */
+  .pp-newsletter .pp-nl-btn:hover {
+    background-color: var(--mhj-primary-dark);
+    color: #fff !important;
+    box-shadow: none;
+  }
+  .pp-newsletter .pp-nl-btn:hover:active {
+    background-color: var(--mhj-primary-dark);
+    color: #fff !important;
+    transform: translateY(1px);
+  }
+  .pp-newsletter .pp-nl-btn:focus-visible {
+    outline: 2px solid var(--mhj-primary-dark);
+    outline-offset: 3px;
+  }
+  .pp-newsletter .pp-nl-note {
+    margin: 0.75em 0 0;
+    font-size: 0.8em;
+    color: var(--mhj-secondary);
+  }
+
   /* "Discover other homes" is a different kind of content — separate it more
      firmly than the cards are separated from each other. */
   .related-properties-container {
@@ -1988,17 +2067,40 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="pp-newsletter pp-panel">
           <div class="flex flex-row flex-5 gap-6 w-full">
               <div class="flex-1">
-                <h3>Subscribe to our Newsletter</h3>
-                <p class="text-xll" style="color: black;">A weekly email of the newest listings, hand-picked. Included with Pro.</p>
-                {% if user.is_authenticated or request.COOKIES.email %}
-                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="subscribeToNewsletterAuthenticated('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"></span><span style="color: #477535;"> SUBSCRIBE</span>
-                  </button>
-                {% else %}
-                  <button id="subscribe" class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="subscribeToNewsletter('{{ user_email }}', '{{ property.pk }}')">
-                    <span class="icon solid fa-lock" style="color: #477535;"></span> <span style="color: #477535;"> SUBSCRIBE</span>
-                  </button>
-                {% endif %}
+                <p class="pp-nl-eyebrow">Weekly email &middot; included with Pro</p>
+                <h3>
+                  {% comment %}
+                    Inline SVG rather than <span class="icon solid fa-envelope">:
+                    fontawesome-all.min.css is on disk but linked by no template,
+                    and no stylesheet this page loads defines a single .fa-*
+                    selector, so every fa- icon here renders as an empty span.
+                    That is why the old lock never appeared.
+                  {% endcomment %}
+                  <svg class="pp-nl-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                    <rect x="3" y="5" width="18" height="14" rx="2"/>
+                    <path d="m3.7 7 8.3 6 8.3-6"/>
+                  </svg>
+                  The newest listings, every week
+                </h3>
+                <p class="pp-nl-copy">
+                  Hand-picked homes like this one, in your inbox before you have
+                  to go looking for them.
+                </p>
+                {% comment %}
+                  Both handlers ping notify_user_expressed_interest and then send
+                  the visitor to /pro/ — they differ only in name. One button with
+                  a conditional handler keeps both analytics paths without
+                  duplicating the markup (and without emitting id="subscribe"
+                  twice).
+
+                  The label says where the button goes. It leads to the Pro page,
+                  so "SUBSCRIBE" was promising a signup and delivering a paywall.
+                {% endcomment %}
+                <button id="subscribe" class="pp-nl-btn"
+                        onclick="{% if user.is_authenticated or request.COOKIES.email %}subscribeToNewsletterAuthenticated{% else %}subscribeToNewsletter{% endif %}('{{ user_email }}', '{{ property.pk }}')">
+                  Get the weekly email
+                </button>
+                <p class="pp-nl-note">Included with Pro &middot; {{ pro_price }} &middot; cancel any time.</p>
                 <hr>
               </div>
             </div>
