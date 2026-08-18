@@ -18,31 +18,12 @@
     {% endcomment %}
 
     <div class="tier">
-      <p class="tier-name">No account</p>
-      <p class="tier-price">$0</p>
-      <p class="tier-for">Just looking</p>
-      <ul>
-        <li><b>{{ anon_limit }} properties</b></li>
-        <li>Photos, title, price and location</li>
-        <li class="tier-no">Building and land area</li>
-        <li class="tier-no">Price per m² vs the local market</li>
-        <li class="tier-no">Short-term rental potential</li>
-        <li class="tier-no">Land rights and risk information</li>
-      </ul>
-      {% if user.is_authenticated %}
-        <span class="tier-have">You're signed in</span>
-      {% else %}
-        <span class="tier-have">This is you now</span>
-      {% endif %}
-    </div>
-
-    <div class="tier">
       <p class="tier-name">Free account</p>
       <p class="tier-price">$0</p>
       <p class="tier-for">While you're shortlisting</p>
       <ul>
         <li><b>{{ free_limit }} properties</b></li>
-        <li>Everything above, plus:</li>
+        <li>Photos, title, price and location</li>
         <li>Building and land area</li>
         <li>Save homes and searches</li>
         <li class="tier-no">Price per m² vs the local market</li>
@@ -53,7 +34,7 @@
         <span class="tier-have">Your current plan</span>
       {% elif not user.is_authenticated %}
         <a class="tier-cta" href="{% url 'account_signup' %}">Create a free account</a>
-        <span class="tier-note">No card needed.</span>
+        <span class="tier-note">No card needed. Without an account you can open {{ anon_limit }}.</span>
       {% else %}
         <span class="tier-have">Included with Pro</span>
       {% endif %}
