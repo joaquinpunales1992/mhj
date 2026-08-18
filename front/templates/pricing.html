@@ -6,8 +6,9 @@
 {% block content %}
   <h1>Pricing</h1>
   <p class="lead">
-    Browsing is free. Two things cost money, and they do different jobs — you
-    can buy either, in any order, or neither.
+    Browsing is free. An account raises how many properties you can open and
+    what you see on each; Pro removes the limit and adds the analysis. The
+    consultation is separate — advice rather than access.
   </p>
 
   <div class="tiers">
@@ -17,33 +18,59 @@
     {% endcomment %}
 
     <div class="tier">
-      <p class="tier-name">Free account</p>
+      <p class="tier-name">No account</p>
       <p class="tier-price">$0</p>
-      <p class="tier-for">While you're looking around</p>
+      <p class="tier-for">Just looking</p>
       <ul>
-        <li>Every listing, and the whole map</li>
-        <li>Full details on {{ free_limit }} properties</li>
-        <li>Save homes and searches</li>
-        <li>Price vs the local market, and short-term-rental potential</li>
+        <li><b>{{ anon_limit }} properties</b></li>
+        <li>Photos, title, price and location</li>
+        <li class="tier-no">Building and land area</li>
+        <li class="tier-no">Price per m² vs the local market</li>
+        <li class="tier-no">Short-term rental potential</li>
+        <li class="tier-no">Land rights and risk information</li>
       </ul>
       {% if user.is_authenticated %}
-        <span class="tier-have">You have this</span>
+        <span class="tier-have">You're signed in</span>
       {% else %}
+        <span class="tier-have">This is you now</span>
+      {% endif %}
+    </div>
+
+    <div class="tier">
+      <p class="tier-name">Free account</p>
+      <p class="tier-price">$0</p>
+      <p class="tier-for">While you're shortlisting</p>
+      <ul>
+        <li><b>{{ free_limit }} properties</b></li>
+        <li>Everything above, plus:</li>
+        <li>Building and land area</li>
+        <li>Save homes and searches</li>
+        <li class="tier-no">Price per m² vs the local market</li>
+        <li class="tier-no">Short-term rental potential</li>
+        <li class="tier-no">Land rights and risk information</li>
+      </ul>
+      {% if user.is_authenticated and not already_pro %}
+        <span class="tier-have">Your current plan</span>
+      {% elif not user.is_authenticated %}
         <a class="tier-cta" href="{% url 'account_signup' %}">Create a free account</a>
-        <span class="tier-note">Without an account you can open {{ anon_limit }} properties.</span>
+        <span class="tier-note">No card needed.</span>
+      {% else %}
+        <span class="tier-have">Included with Pro</span>
       {% endif %}
     </div>
 
     <div class="tier tier-featured">
       <p class="tier-name">Pro</p>
       <p class="tier-price">{{ pro_price }}</p>
-      <p class="tier-for">When you're comparing seriously</p>
+      <p class="tier-for">When you're serious about buying</p>
       <ul>
-        <li><b>Unlimited properties</b> — no counting</li>
-        <li>Full address and exact land area on each</li>
-        <li>Land rights and zoning</li>
+        <li><b>Unlimited properties</b></li>
+        <li>Everything above, plus:</li>
+        <li><b>Price per m²</b> vs comparable homes nearby</li>
+        <li><b>Short-term rental potential</b> from the zoning</li>
+        <li><b>Land rights</b> — freehold or leasehold</li>
+        <li><b>Risk information</b> — flood, landslide, zoning</li>
         <li>Weekly email of the newest listings</li>
-        <li>Everything in the free account</li>
       </ul>
       {% if already_pro %}
         <span class="tier-have">You're on Pro</span>
@@ -71,11 +98,13 @@
   <h2>Which do I need?</h2>
   <div class="faq">
     <strong>I'm still browsing and enjoying it</strong>
-    The free account. Genuinely — don't pay us anything yet.
+    The free account. Genuinely — don't pay us anything yet. It takes you from
+    {{ anon_limit }} properties to {{ free_limit }} and adds the areas.
   </div>
   <div class="faq">
-    <strong>I've shortlisted a dozen houses and keep hitting the limit</strong>
-    Pro. It exists for exactly that, and it's the cheaper of the two.
+    <strong>I've shortlisted a dozen houses and want to compare them properly</strong>
+    Pro. Price per m² against local comparables is the thing that tells a
+    bargain from a bad one, and it's Pro-only.
   </div>
   <div class="faq">
     <strong>I've found one I might actually buy</strong>
@@ -115,6 +144,10 @@
     .tier-for { font-size: .87rem; color: var(--muted); margin: 0 0 .9rem; }
     .tier ul { padding-left: 1.15rem; margin: 0 0 1.1rem; font-size: .93rem; }
     .tier li { margin-bottom: .4rem; }
+    /* Saying plainly what a tier does NOT include is more useful than listing
+       only the positives and leaving people to infer the gaps. */
+    .tier-no { color: var(--muted); list-style: none; margin-left: -1.15rem; }
+    .tier-no::before { content: "\00d7"; margin-right: .45rem; color: #b9b9b9; }
     .tier-cta {
       margin-top: auto; display: block; text-align: center;
       background: var(--primary); color: #fff; text-decoration: none;

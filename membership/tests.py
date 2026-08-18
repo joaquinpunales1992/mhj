@@ -145,6 +145,74 @@ class WebhookTests(TestCase):
 @override_settings(
     ALLOWED_HOSTS=["testserver"], VIEW_LIMIT_ANONYMOUS=2, VIEW_LIMIT_FREE=3
 )
+class FieldTierTests(TestCase):
+    """Quota and field access are separate axes; these cover the field axis.
+
+    Anonymous sees only the basic fields, a free account adds the standard ones,
+    and the premium analysis is Pro-only. Getting this wrong either gives away
+    the reason to subscribe or hides fields a tier paid for.
+    """
+
+    def _request(self, user=None):
+        from django.test import RequestFactory
+        from django.contrib.auth.models import AnonymousUser
+        from django.contrib.sessions.middleware import SessionMiddleware
+
+        request = RequestFactory().get("/", HTTP_USER_AGENT="Mozilla/5.0")
+        SessionMiddleware(lambda r: None).process_request(request)
+        request.session.save()
+        request.user = user or AnonymousUser()
+        return request
+
+    def setUp(self):
+        self.prop = Property.objects.create(
+            url="http://x/tier", price=1000, show_in_front=True,
+            location="Oita City, Oita Prefecture",
+        )
+
+    def test_anonymous_gets_basic_only(self):
+        access = check_access(self._request(), self.prop.pk)
+        self.assertFalse(access["standard"])
+        self.assertFalse(access["premium"])
+
+    def test_free_account_gets_standard_not_premium(self):
+        user = User.objects.create_user("t@example.com", email="t@example.com")
+        access = check_access(self._request(user), self.prop.pk)
+        self.assertTrue(access["standard"])
+        self.assertFalse(access["premium"], "price/m², rental, land rights are Pro-only")
+
+    def test_pro_gets_everything(self):
+        user = User.objects.create_user("p@example.com", email="p@example.com")
+        Subscription.objects.create(
+            user=user, paypal_subscription_id="I-TIER",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=30),
+        )
+        user.refresh_from_db()
+        access = check_access(self._request(user), self.prop.pk)
+        self.assertTrue(access["standard"])
+        self.assertTrue(access["premium"])
+
+    def test_spending_the_quota_does_not_remove_field_access(self):
+        """A free account that runs out of views keeps the standard fields."""
+        user = User.objects.create_user("q@example.com", email="q@example.com")
+        request = self._request(user)
+        others = [
+            Property.objects.create(url=f"http://x/q{i}", price=1000,
+                                    show_in_front=True, location="Oita City, Oita Prefecture")
+            for i in range(4)
+        ]
+        for p in others:
+            check_access(request, p.pk)
+        access = check_access(request, self.prop.pk)
+        self.assertTrue(access["locked"], "quota should be spent")
+        self.assertTrue(access["standard"], "but the tier's fields remain")
+        self.assertFalse(access["premium"])
+
+
+@override_settings(
+    ALLOWED_HOSTS=["testserver"], VIEW_LIMIT_ANONYMOUS=2, VIEW_LIMIT_FREE=3
+)
 class MeteringTests(TestCase):
     """The meter and the subscription meet here: an active subscription must
     lift the cap, and an inactive one must not."""

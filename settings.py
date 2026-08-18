@@ -216,7 +216,7 @@ AGENT_NOTIFICATION_EMAILS = env.list("AGENT_NOTIFICATION_EMAILS", default=[])
 # Googlebot would cost the search traffic these pages exist to earn.
 # Set VIEW_LIMIT_FREE to 0 to give members unlimited views.
 VIEW_LIMIT_ANONYMOUS = env.int("VIEW_LIMIT_ANONYMOUS", default=5)
-VIEW_LIMIT_FREE = env.int("VIEW_LIMIT_FREE", default=50)
+VIEW_LIMIT_FREE = env.int("VIEW_LIMIT_FREE", default=25)
 
 # PRO SUBSCRIPTION (PayPal)
 # Create a Product and a Plan in the PayPal dashboard, then put the plan id

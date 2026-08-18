@@ -2,13 +2,17 @@
 
 Three tiers, all configurable in settings:
 
-    anonymous    VIEW_LIMIT_ANONYMOUS (5) properties, then the detail locks
-    free account VIEW_LIMIT_FREE (50) properties, then it locks
-    pro          unlimited
+    anonymous    VIEW_LIMIT_ANONYMOUS (5) properties, basic fields only
+    free account VIEW_LIMIT_FREE (25) properties, basic + standard fields
+    pro          unlimited properties, every field
 
-Only the *detail* locks — photos, price, floor plan and location always render,
-so every property page stays useful to a first-time visitor and keeps its
-value in search results. See `LOCKED_FIELDS` for exactly what's withheld.
+Two independent axes: how many properties a tier may open, and how much of each
+it may see. Running out of views never removes fields the tier was entitled to;
+it shows a wall on the next new property instead.
+
+The basic fields — photos, title, price, location — are never withheld from
+anyone. They are what search engines index and what makes a property page worth
+arriving on.
 
 Two rules protect search traffic and must not be weakened:
 
@@ -37,17 +41,20 @@ CRAWLER_PATTERN = re.compile(
     re.IGNORECASE,
 )
 
-# Property fields withheld once the meter is spent. Photos, price, floor plan
-# and location are deliberately absent — they stay visible to everyone.
-LOCKED_FIELDS = (
-    "description",
-    "land_area",
+# What each tier may see, independent of how many properties it may open.
+#
+#   BASIC     everyone, including anonymous visitors within their allowance.
+#             These are also the fields search engines index, so they are never
+#             withheld.
+#   STANDARD  free accounts and above.
+#   PREMIUM   Pro only — the derived analysis that is the reason to subscribe.
+FIELDS_BASIC = ("photos", "title", "price", "location")
+FIELDS_STANDARD = ("building_area", "land_area", "description")
+FIELDS_PREMIUM = (
+    "price_per_sqm",
+    "short_term_rental_potential",
     "land_rights",
-    "zoning",
-    "city_planning",
-    "building_structure",
-    "construction_date",
-    "traffic",
+    "risk_information",
 )
 
 TIER_ANONYMOUS = "anonymous"
@@ -129,58 +136,58 @@ def check_access(request, property_id):
 
     Returns a dict the template renders directly:
 
-        locked     bool  — withhold LOCKED_FIELDS and show the wall
+        locked     bool  — the allowance is spent; show the wall
         tier       str   — anonymous | free | pro
         viewed     int   — properties opened so far (after this one)
         limit      int   — allowance for the tier, None when unlimited
         remaining  int   — views left, None when unlimited
         next_step  str   — 'signup' or 'upgrade', which wall to show
+        standard   bool  — may see FIELDS_STANDARD (free and above)
+        premium    bool  — may see FIELDS_PREMIUM (Pro only)
+
+    Quota and field access are separate axes. An anonymous visitor inside their
+    allowance still sees only the basic fields; a free account sees the standard
+    ones too but never the premium analysis.
     """
     tier = tier_for(request)
     limit = limit_for(tier)
 
+    # Field access depends only on the tier, never on the quota: running out of
+    # views does not take away fields you were already entitled to.
+    fields = {
+        "standard": tier in (TIER_FREE, TIER_PRO),
+        "premium": tier == TIER_PRO,
+    }
+
+    def result(locked, viewed, remaining, next_step):
+        return dict(
+            locked=locked,
+            tier=tier,
+            viewed=viewed,
+            limit=limit,
+            remaining=remaining,
+            next_step=next_step,
+            **fields,
+        )
+
     if limit is None or is_crawler(request):
-        return {
-            "locked": False,
-            "tier": tier,
-            "viewed": 0,
-            "limit": None,
-            "remaining": None,
-            "next_step": None,
-        }
+        return result(False, 0, None, None)
 
     seen = _seen_ids(request)
-    already_seen = property_id in seen
 
     # Re-opening a property never costs a view, and never locks: if they could
     # read it once, taking it away later is just annoying.
-    if already_seen:
-        return {
-            "locked": False,
-            "tier": tier,
-            "viewed": len(seen),
-            "limit": limit,
-            "remaining": max(0, limit - len(seen)),
-            "next_step": None,
-        }
+    if property_id in seen:
+        return result(False, len(seen), max(0, limit - len(seen)), None)
 
     if len(seen) >= limit:
-        return {
-            "locked": True,
-            "tier": tier,
-            "viewed": len(seen),
-            "limit": limit,
-            "remaining": 0,
-            "next_step": "signup" if tier == TIER_ANONYMOUS else "upgrade",
-        }
+        return result(
+            True,
+            len(seen),
+            0,
+            "signup" if tier == TIER_ANONYMOUS else "upgrade",
+        )
 
     _remember(request, property_id)
     viewed = len(seen) + 1
-    return {
-        "locked": False,
-        "tier": tier,
-        "viewed": viewed,
-        "limit": limit,
-        "remaining": max(0, limit - viewed),
-        "next_step": None,
-    }
+    return result(False, viewed, max(0, limit - viewed), None)

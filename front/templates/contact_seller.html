@@ -1281,6 +1281,41 @@ document.addEventListener('DOMContentLoaded', () => {
   .mhj-wall-note a { color: #477535; }
   .mhj-locked-inline { color: #a6a9a6; font-style: italic; }
 
+  /* Small inline gate used where a field is Pro-only but the label stays. */
+  .mhj-mini-gate {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    border: 1px solid rgba(71, 117, 53, 0.4);
+    border-radius: 999px;
+    padding: 0.35em 0.85em;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.78em;
+    font-weight: 600;
+    color: var(--mhj-primary);
+    text-decoration: none;
+    background: #fff;
+  }
+  .mhj-mini-gate:hover {
+    background: var(--mhj-primary);
+    border-color: var(--mhj-primary);
+    color: #fff;
+  }
+  /* A button that should read as a link. */
+  .mhj-linkish {
+    background: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    height: auto !important;
+    font: inherit !important;
+    color: var(--mhj-primary) !important;
+    text-decoration: underline;
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+  }
+
   /* ===== Desktop two-column layout ======================================
      This page's columns were expressed entirely in Tailwind — flex,
      lg:flex-row, lg:w-120, flex-1, max-w-8xl — and Tailwind is not loaded
@@ -1775,31 +1810,31 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Location</p>
-                {% if access.locked %}
-                  {% comment %}
-                    Metered out: show the town so the page still means something
-                    (and still matches what search engines indexed), withhold the
-                    street address.
-                  {% endcomment %}
-                  <p class="text-xll">{{ property.get_location_for_front }} <span class="mhj-locked-inline">· full address locked</span></p>
-                {% else %}
-                  <p class="text-xll">{{ property.location }} | <a href="#" data-open-map class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
-                {% endif %}
+                {% comment %}
+                  Location is a basic field: shown to everyone, including
+                  anonymous visitors, because it is part of what makes the page
+                  worth arriving on from search.
+                {% endcomment %}
+                <p class="text-xll">{{ property.location }} | <a href="#" data-open-map class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
                 <hr>
               </div>
               </div>
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Building Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Building Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The total floor area of the building (建物面積), as reported by the listing source. Shown in square meters (㎡) or square feet (ft²) per your unit setting.</span></span></p>
-                <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
+                {% if access.standard %}
+                  <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
+                {% else %}
+                  <p class="text-xll mhj-locked-inline">Free account</p>
+                {% endif %}
                 <hr>
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡) or square feet (ft²) per your unit setting. "(public book)" means the figure is from the official land register.</span></span></p>
-                {% if access.locked %}
-                  <p class="text-xll mhj-locked-inline">Locked</p>
-                {% else %}
+                {% if access.standard %}
                   <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
+                {% else %}
+                  <p class="text-xll mhj-locked-inline">Free account</p>
                 {% endif %}
               </div>
             </div>
@@ -1845,7 +1880,7 @@ document.addEventListener('DOMContentLoaded', () => {
               a browser doesn't.
             {% endcomment %}
             {% with cmp=property.price_per_sqm_comparison %}
-            {% if cmp and not user.is_authenticated %}
+            {% if cmp and not access.premium %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1 mhj-gate">
                 <p class="mhj-gate-label">Price per m² vs the local market</p>
@@ -1853,12 +1888,12 @@ document.addEventListener('DOMContentLoaded', () => {
                   See how this asking price compares with {{ cmp.sample_size }}
                   other listings in {{ cmp.area }} — and whether it's good value.
                 </p>
-                <a class="mhj-gate-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
-                <span class="mhj-gate-note">Free, no card. <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a></span>
+                <a class="mhj-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Unlock with Pro</a>
+                <span class="mhj-gate-note">{{ pro_price }} · cancel any time. <a href="{% url 'pricing' %}">Compare plans</a></span>
               </div>
             </div>
             {% endif %}
-            {% if cmp and user.is_authenticated %}
+            {% if cmp and access.premium %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1" style="background:#f4f8f1; border:1px solid #d9e6d0; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
                 <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:4px;">Price per <span class="js-unit-label">m&sup2;</span> (building)<span class="mhj-tip" tabindex="0" role="img" aria-label="How is price per m² calculated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The asking price divided by the building floor area, shown in USD. The label compares it to every listing in {{ cmp.area }}: "Great value" means cheaper per m² than most nearby homes, "Around average" means mid-range. "Typical" is the middle 50% of listings in the area.</span></span></p>
@@ -1877,7 +1912,7 @@ document.addEventListener('DOMContentLoaded', () => {
             {% endwith %}
 
             {% with strp=property.short_term_rental_potential %}
-            {% if strp and not user.is_authenticated %}
+            {% if strp and not access.premium %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1 mhj-gate">
                 <p class="mhj-gate-label">Short-term rental (Airbnb) potential</p>
@@ -1885,12 +1920,12 @@ document.addEventListener('DOMContentLoaded', () => {
                   We've worked out from this property's zoning whether a
                   short-term let is likely to be allowed here.
                 </p>
-                <a class="mhj-gate-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
-                <span class="mhj-gate-note">Free, no card. <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a></span>
+                <a class="mhj-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Unlock with Pro</a>
+                <span class="mhj-gate-note">{{ pro_price }} · cancel any time. <a href="{% url 'pricing' %}">Compare plans</a></span>
               </div>
             </div>
             {% endif %}
-            {% if strp and user.is_authenticated %}
+            {% if strp and access.premium %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1" style="background:#f6f7f4; border:1px solid #e2e2dc; border-left:5px solid #477535; border-radius:10px; padding:16px 20px; margin:8px 0 16px;">
                 <p class="text-xll" style="color:#477535; font-weight:bold; letter-spacing:0.03em; text-transform:uppercase; font-size:0.8em; margin-bottom:6px;">Short-term rental (Airbnb) potential<span class="mhj-tip" tabindex="0" role="img" aria-label="How is this estimated?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Indicative only, from this property's zoning (用途地域). Short-term lets in Japan run under the minpaku law (max 180 nights/yr) or a lodging licence, and each municipality sets its own limits — confirm with the local government. Not legal advice.</span></span></p>
@@ -1915,27 +1950,32 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Rights<span class="mhj-tip" tabindex="0" role="img" aria-label="What are Land Rights?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Whether the land is owned outright (freehold, 所有権) or leased from another owner (leasehold, 借地権). This affects ongoing costs, financing and resale. Unlock the full details for this property.</span></span></p>
-                {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="landRightsInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"></span><span style="color: #477535;"> Upgrade</span>
-                  </button>
+                {% if access.premium %}
+                  <p class="text-xll">{{ property.land_rights|default:"Not stated in the source listing" }}</p>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="landRightsInterest('{{ user_email }}', '{{ property.pk }}')">
-                    <span class="icon solid fa-lock" style="color: #477535;"></span> <span style="color: #477535;"> Upgrade</span>
-                  </button>
+                  <a class="mhj-mini-gate" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
+                    <span class="icon solid fa-lock" aria-hidden="true"></span> Unlock with Pro
+                  </a>
                 {% endif %}
                 <hr>
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Risk Information<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Risk Information?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">Known risks affecting the property — such as flood or landslide hazard zones, legal/zoning restrictions, or building limitations. Unlock the full risk report for this property.</span></span></p>
-                {% if user.is_authenticated or request.COOKIES.email %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="riskInformationInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"> </span><span style="color: #477535;"> Upgrade</span>
-                  </button>
+                {% comment %}
+                  There is no risk field on the model yet, so for Pro members
+                  this offers a lookup rather than pretending to have data. Say
+                  what actually happens instead of showing an empty value.
+                {% endcomment %}
+                {% if access.premium %}
+                  <p class="text-xll" style="font-size: 0.92em;">
+                    Flood, landslide and zoning checks for this address —
+                    <button type="button" class="mhj-linkish" onclick="riskInformationInterestAuthenticated('{{ user_email }}', '{{ property.pk }}')">request the report</button>
+                    and we'll email it to you.
+                  </p>
                 {% else %}
-                  <button class="primary" style="background: transparent; border: 2px solid #477535; color: #477535;" onclick="riskInformationInterest('{{ user_email }}', '{{ property.pk }}')">
-                      <span class="icon solid fa-lock" style="color: #477535;"> </span><span style="color: #477535;"> Upgrade</span>
-                  </button>
+                  <a class="mhj-mini-gate" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
+                    <span class="icon solid fa-lock" aria-hidden="true"></span> Unlock with Pro
+                  </a>
                 {% endif %}
               </div>
             </div>
