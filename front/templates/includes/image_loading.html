@@ -1,0 +1,80 @@
+{% comment %}
+  Loading placeholder for photographs, site-wide.
+
+  Property photos are served from the source listing sites (homes.jp, SUUMO) and
+  can be slow, so on a poor connection the grids and galleries render as a
+  scatter of empty boxes. This gives every photo a shimmering placeholder that
+  its own pixels cover once decoded.
+
+  Two deliberate choices:
+
+  - The shimmer is painted as the <img>'s own background, so no wrapper markup
+    is needed and there is no layout shift. A loading <img> has no content, so
+    its background shows; once the image paints it sits on top.
+  - Applied by absence of a class rather than presence, so images injected by
+    JavaScript (the map's card list and marker popups) are covered too without
+    each call site remembering to opt in.
+
+  Excluded: anything under STATIC_URL. Those are local UI assets — social icons,
+  placeholder art — which load instantly and are often small or transparent,
+  where a shimmer would look like a bug.
+{% endcomment %}
+<style>
+  @keyframes mhj-img-shimmer {
+    0%   { background-position: 120% 0; }
+    100% { background-position: -20% 0; }
+  }
+
+  img:not(.is-loaded):not(.is-error):not([src*="/static/"]):not([src^="data:"]) {
+    background-color: #e9e6df;
+    background-image: linear-gradient(
+      100deg,
+      rgba(255, 255, 255, 0) 20%,
+      rgba(255, 255, 255, 0.55) 45%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    background-size: 220% 100%;
+    background-repeat: no-repeat;
+    animation: mhj-img-shimmer 1.3s ease-in-out infinite;
+  }
+
+  /* Once decoded, drop the placeholder entirely so the animation stops rather
+     than running forever behind an opaque photo. */
+  img.is-loaded { background-image: none; animation: none; }
+
+  /* A photo that 404s keeps a flat tone instead of shimmering indefinitely.
+     Existing JS elsewhere hides cards whose photo fails; this covers the rest. */
+  img.is-error {
+    background-color: #e9e6df;
+    background-image: none;
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    img:not(.is-loaded):not(.is-error) { animation: none; }
+  }
+</style>
+<script>
+  (function () {
+    function mark(img, cls) {
+      if (img && img.tagName === 'IMG') img.classList.add(cls);
+    }
+    // Capture phase: `load` does not bubble, but it can be caught on the way
+    // down. One listener therefore covers images added later by JS as well.
+    document.addEventListener('load', function (e) { mark(e.target, 'is-loaded'); }, true);
+    document.addEventListener('error', function (e) { mark(e.target, 'is-error'); }, true);
+
+    // Anything already decoded before this ran (cache hits) never fires load.
+    function sweep() {
+      document.querySelectorAll('img').forEach(function (img) {
+        if (img.complete && img.naturalWidth > 0) mark(img, 'is-loaded');
+      });
+    }
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', sweep);
+    } else {
+      sweep();
+    }
+    window.addEventListener('load', sweep);
+  })();
+</script>

@@ -261,6 +261,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
   {% if share_img %}<meta name="twitter:image" content="{{ share_img.file }}" />{% endif %}
   {% endwith %}
   <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  {% include "includes/image_loading.html" %}
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
 
