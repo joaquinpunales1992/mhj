@@ -6,10 +6,29 @@
   including the two pages the current funnel depends on. Include this from every
   base template instead of copying the tag again.
 {% endcomment %}
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS"></script>
+{% comment %}
+  Loaded after the load event rather than as an async tag in <head>.
+
+  gtag.js is 166KB. `async` keeps it from blocking parsing but not from competing
+  for bandwidth, which on a 1.6Mbps phone is ~0.8s of the pipe that the card
+  photos need. dataLayer is a plain array and gtag() only pushes to it, so every
+  call made before the script arrives is queued and replayed once it loads — no
+  events are lost, they are just reported a moment later. The page_view still
+  fires, so sessions and traffic sources are unaffected.
+{% endcomment %}
 <script>
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-QBY9Y9CMPS');
+  (function () {
+    var load = function () {
+      var s = document.createElement('script');
+      s.async = true;
+      s.src = 'https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS';
+      document.head.appendChild(s);
+    };
+    if (document.readyState === 'complete') load();
+    else window.addEventListener('load', load);
+  })();
 </script>

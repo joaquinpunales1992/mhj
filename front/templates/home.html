@@ -1,15 +1,19 @@
-{% load static compress %}
+{% load static compress inventory_tags %}
 
 <!DOCTYPE HTML>
 <html>
 	<head>
 		{% comment %}
-		  Every card photo is hotlinked from suumo.jp, so the first image cannot
-		  start downloading until DNS + TCP + TLS to a brand-new origin finishes —
-		  roughly two extra round trips on the critical path, and the LCP element
-		  is one of those photos. Warm the connection while the HTML parses.
+		  Card photos are served by the resizing proxy, so that is the origin whose
+		  connection is on the critical path — the first image cannot start
+		  downloading until DNS + TCP + TLS to a cold origin completes, roughly two
+		  extra round trips, and the LCP element is one of those photos. Warm it
+		  while the HTML parses.
+
+		  Not suumo.jp / homes.jp: those are now only reached by the lightbox href,
+		  which nobody hits before the page has painted.
 		{% endcomment %}
-		<link rel="preconnect" href="https://suumo.jp" crossorigin>
+		<link rel="preconnect" href="https://wsrv.nl" crossorigin>
 		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 		<script>
         (function () {
@@ -101,15 +105,26 @@
         })();
     </script>
 	
+		{% comment %}
+		  Hotjar is 171KB and the heaviest thing on the main thread here. Queued
+		  until after load so it stops competing with the card photos and CSS for
+		  bandwidth — the c.hj stub is installed immediately, so any hj() call made
+		  before the script arrives is buffered in c.hj.q and replayed, which is
+		  what the stub exists for. Cost: the first moment of a session recording.
+		{% endcomment %}
 		<script>
-			(function (c, s, q, u, a, r, e) {
+			(function (c, s, q, u, a) {
 				c.hj=c.hj||function(){(c.hj.q=c.hj.q||[]).push(arguments)};
 				c._hjSettings = { hjid: a };
-				r = s.getElementsByTagName('head')[0];
-				e = s.createElement('script');
-				e.async = true;
-				e.src = q + c._hjSettings.hjid + u;
-				r.appendChild(e);
+				var load = function () {
+					var r = s.getElementsByTagName('head')[0];
+					var e = s.createElement('script');
+					e.async = true;
+					e.src = q + c._hjSettings.hjid + u;
+					r.appendChild(e);
+				};
+				if (c.document.readyState === 'complete') load();
+				else c.addEventListener('load', load);
 			})(window, document, 'https://static.hj.contentsquare.net/c/csq-', '.js', 6396007);
 		</script>
 		<!-- Meta Pixel Code -->
@@ -575,20 +590,32 @@
 										{% else %}
 											{% if first_image.show_in_front %}
 												{% comment %}
-													The first cards are the LCP candidate, and loading="lazy"
-													on them is self-defeating: the browser waits for layout
-													before even queueing the request, which is how LCP ended
-													up at 14s+ while FCP was under 4s. So the first screenful
-													loads eagerly and the rest stays lazy.
+													Every photo stays lazy. Three variants were measured on
+													throttled 4G, medians of three runs (FCP / LCP / load):
 
-													Deliberately NOT fetchpriority="high": measured over three
-													runs each on throttled 4G, high priority moved LCP -18% but
-													pushed FCP +29% (3.5s to 4.5s) because the photos then
-													compete with CSS and fonts for the pipe. Eager at normal
-													priority keeps the LCP gain without paying for it at first
-													paint, which is the one a bouncing visitor judges.
+													  all lazy, originals    3514 / 14062 / 12002
+													  eager first 3 + proxy  4248 /  9908 /  7869
+													  all lazy + proxy       3548 / 10416 /  8365
+
+													Loading the first cards eagerly buys ~500ms of LCP and
+													costs ~700ms of FCP, because the photos then compete with
+													CSS and fonts for a narrow pipe. FCP is the moment a
+													visitor decides the page is alive, so the trade is not
+													worth taking: shrinking the images did the real work, and
+													all-lazy matches the old FCP exactly while still cutting
+													LCP by a quarter.
+
+													(loading="lazy" does less than it looks here anyway —
+													poptrox promotes each photo to a CSS background-image on
+													the <a>, and CSS backgrounds are never lazy.)
 												{% endcomment %}
-												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file }}" alt="{{ first_image.alt }}"{% if forloop.counter > 3 %} loading="lazy"{% endif %} decoding="async"/></a>
+												{% comment %}
+													src is a proxied ~700px WebP; href stays the original because
+													poptrox opens it full-size in its lightbox. onerror falls back
+													to the original so a proxy outage degrades to today's
+													behaviour (heavy but correct) rather than a broken card.
+												{% endcomment %}
+												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file|thumb:700 }}" data-full="{{ first_image.file }}" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}" alt="{{ first_image.alt }}" loading="lazy" decoding="async"/></a>
 											{% endif %}
 											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
