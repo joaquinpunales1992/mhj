@@ -8,6 +8,7 @@ from django.shortcuts import render, redirect
 from django.views import View
 from inventory.models import GeocodedPlace, Property, PropertyImage
 from membership.metering import check_access
+from inventory.images import thumb_url
 from inventory.utils import (
     city_key,
     convert_price_string,
@@ -351,7 +352,11 @@ def map_property_cards_json(request):
             "f": short(prop.floor_plan, 28),
             "b": short(prop.building_area, 18),
             "u": prop.get_public_url,
-            "img": str(image.file) if image and image.file else "",
+            # Two URLs: the proxied thumbnail the card actually displays, and the
+            # original as an onerror fallback so a proxy outage degrades to a
+            # heavy card rather than a broken one. The popup reuses both.
+            "img": thumb_url(str(image.file)) if image and image.file else "",
+            "imgf": str(image.file) if image and image.file else "",
         }
 
     # Preserve the caller's ordering — the panel has already sorted the ids.

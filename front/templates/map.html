@@ -1,4 +1,4 @@
-{% load static %}
+{% load static inventory_tags %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -294,7 +294,9 @@
             {% with img=p.get_ordered_images.first %}
             <a class="card" href="{{ p.get_public_url }}" data-id="{{ p.pk }}">
               {% if img %}
-                <img class="card-img" src="{{ img.file }}" alt="{{ p.get_title_for_front }}" loading="lazy" decoding="async">
+                <img class="card-img" src="{{ img.file|thumb }}" data-full="{{ img.file }}"
+                     onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}"
+                     alt="{{ p.get_title_for_front }}" loading="lazy" decoding="async">
               {% else %}
                 <div class="card-img ph">No photo</div>
               {% endif %}
@@ -431,8 +433,9 @@
     function renderCards(cards) {
       $cards.innerHTML = cards.map(function (c) {
         var img = c.img
-          ? '<img class="card-img" src="' + esc(c.img) + '" alt="' + esc(c.t) +
-            '" loading="lazy" decoding="async">'
+          ? '<img class="card-img" src="' + esc(c.img) + '" data-full="' + esc(c.imgf || '') +
+            '" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}" alt="' +
+            esc(c.t) + '" loading="lazy" decoding="async">'
           : '<div class="card-img ph">No photo</div>';
         var meta = [c.f, c.b].filter(Boolean).map(esc).join(' · ');
         var on = SAVED_IDS.indexOf(c.i) !== -1 ? ' on' : '';
@@ -456,32 +459,42 @@
       if (!slot || slot.dataset.loaded) return;
       var id = slot.getAttribute('data-pop-img');
 
-      function paint(url) {
+      // url is the proxied thumbnail, full the original. Try the proxy, fall
+      // back to the original, and only then admit there is no photo — a proxy
+      // outage should cost bytes, not the picture.
+      function paint(url, full) {
         slot.dataset.loaded = '1';
-        if (!url) { slot.classList.add('pop-img-none'); slot.textContent = 'No photo'; return; }
+        var giveUp = function () {
+          slot.classList.add('pop-img-none');
+          slot.textContent = 'No photo';
+        };
+        if (!url && !full) { giveUp(); return; }
         var img = document.createElement('img');
-        img.src = url;
         img.alt = '';
         img.loading = 'lazy';
         img.decoding = 'async';
-        // A dead source would otherwise leave a broken-image icon.
-        img.onerror = function () { slot.classList.add('pop-img-none'); slot.textContent = 'No photo'; };
+        img.onerror = function () {
+          if (full && img.src !== full) { img.src = full; return; }
+          if (img.parentNode) img.parentNode.removeChild(img);
+          giveUp();
+        };
+        img.src = url || full;
         slot.appendChild(img);
       }
 
-      if (id in popImgCache) return paint(popImgCache[id]);
+      if (id in popImgCache) return paint(popImgCache[id].u, popImgCache[id].f);
 
       fetch('{% url "map_property_cards_json" %}?ids=' + encodeURIComponent(id))
         .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
         .then(function (data) {
           var card = (data.cards || [])[0];
-          var url = card && card.img ? card.img : '';
-          popImgCache[id] = url;
-          paint(url);
+          var entry = { u: (card && card.img) || '', f: (card && card.imgf) || '' };
+          popImgCache[id] = entry;
+          paint(entry.u, entry.f);
         })
         .catch(function (err) {
-          popImgCache[id] = '';
-          paint('');
+          popImgCache[id] = { u: '', f: '' };
+          paint('', '');
           console.error('popup image failed', err);
         });
     });

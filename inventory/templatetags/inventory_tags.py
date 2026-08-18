@@ -1,50 +1,41 @@
 from django import template
 import random
-from urllib.parse import quote
 from inventory.models import Property
+from inventory.images import (  # noqa: F401
+    thumb_url,
+    WIDTH_CARD,
+    WIDTH_GALLERY,
+    QUALITY_CARD,
+    QUALITY_GALLERY,
+)
 from inventory.constants import MAX_RELATED_PROPERTIES
 from django.db.models import QuerySet
 
 register = template.Library()
 
 
-# Listing photos are hotlinked from the source sites (suumo.jp, homes.jp) at
-# whatever size they were published — routinely 1000x750 and 130-250KB — to fill
-# a card that renders about 480px wide. On the home page that was 2.8MB of
-# images, 74% of the page, and the reason LCP measured 23s on a throttled phone.
-#
-# Rather than store our own copies (a 10k-property backfill on a low-RAM box),
-# route the URL through a resizing proxy that fetches, resizes and re-encodes to
-# WebP on demand. Measured on a real listing photo: 259KB JPEG -> 48KB WebP.
-#
-# Callers must keep the ORIGINAL url for any full-size use — poptrox opens the
-# <a href> in its lightbox, and that should stay full quality.
-THUMB_PROXY = "https://wsrv.nl/"
-
-
 @register.filter
-def thumb(url, width=700):
-    """A resized WebP version of a remote image URL.
+def thumb(url, spec=WIDTH_CARD):
+    """A resized WebP version of a remote listing photo.
 
-    Returns the input unchanged for anything that is not a remote http(s) URL,
-    so local {% static %} paths and empty values pass straight through.
+    `spec` is a width, or "width,quality" — the second form exists because the
+    right quality depends on how far the image is being downscaled, and asking
+    for too high a quality at near-native width produces a file bigger than the
+    original. See inventory/images.py for the measurements.
 
-    `we` prevents the proxy enlarging a source that is already smaller than the
-    requested width — some listings ship 300px photos and upscaling them would
-    add bytes to make them blurrier.
+        {{ image.file|thumb }}            600w, card quality
+        {{ image.file|thumb:1000 }}       1000w, card quality
+        {{ image.file|thumb:"1000,70" }}  1000w, gallery quality
+
+    Callers must keep the ORIGINAL url for full-size use — poptrox opens the
+    <a href> in its lightbox, and structured data / og:image must point at the
+    real file, not a thumbnail.
     """
-    if not url:
-        return url
-    url = str(url)
-    if not url.startswith(("http://", "https://")):
-        return url
-    try:
-        width = int(width)
-    except (TypeError, ValueError):
-        width = 700
-    return (
-        f"{THUMB_PROXY}?url={quote(url, safe='')}"
-        f"&w={width}&output=webp&q=80&we"
+    width, _, quality = str(spec).partition(",")
+    return thumb_url(
+        url,
+        width.strip() or WIDTH_CARD,
+        quality.strip() or QUALITY_CARD,
     )
 
 

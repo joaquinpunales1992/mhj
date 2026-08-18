@@ -2259,7 +2259,35 @@ document.addEventListener('DOMContentLoaded', () => {
                       <div class="carousel-track">
                         {% for image in property.images.all %}
                           <div class="carousel-slide" data-index="0">
-                              <img src="{{ image.file }}" alt="Beautiful mountainous landscape with colorful sky" loading="lazy">
+                              {% comment %}
+                                31 photos on a typical listing, so this is the
+                                heaviest page on the site.
+
+                                srcset because the same slide is 1010px wide on
+                                desktop and ~390px on a phone — without it every
+                                phone downloads the desktop-sized file. On a
+                                1000x750 source the phone's candidate is 88KB
+                                against the original's 252KB.
+
+                                No 1400w candidate on purpose: the proxy caps at
+                                the source width, so for these listings 1400w
+                                returns exactly what 1000w does, and asking for a
+                                width the source cannot fill produced a re-encode
+                                LARGER than the original JPEG (270KB vs 252KB).
+                                Quality is 70 here rather than the card's 75 for
+                                the same reason — near native width there is no
+                                downscale to pay for the codec.
+
+                                onerror drops srcset before falling back, or the
+                                browser would just re-pick a proxied candidate
+                                and fail again.
+                              {% endcomment %}
+                              <img src="{{ image.file|thumb:'1000,70' }}"
+                                   srcset="{{ image.file|thumb:'600,70' }} 600w, {{ image.file|thumb:'1000,70' }} 1000w"
+                                   sizes="(max-width: 1023px) 100vw, 1010px"
+                                   data-full="{{ image.file }}"
+                                   onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.removeAttribute('srcset');this.src=this.dataset.full}"
+                                   alt="{{ image.alt|default:property.get_title_for_front }}" loading="lazy">
                               {% if image.alt %}
                               <div class="slide-caption">
                                   <h2>{{ image.alt}}</h2>
@@ -2370,7 +2398,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     {% with property.get_ordered_images.first as first_image %}
                       {% if first_image.show_in_front %}
                         <a href="{% url 'property_detail' property.pk 0 %}" class="property-image-link">
-                          <img src="{{ first_image.file }}" alt="{{ first_image.alt }}" class="property-image">
+                          <img src="{{ first_image.file|thumb }}" data-full="{{ first_image.file }}"
+                               onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}"
+                               alt="{{ first_image.alt }}" class="property-image" loading="lazy" decoding="async">
                         </a>
                       {% endif %}
                     {% endwith %}
