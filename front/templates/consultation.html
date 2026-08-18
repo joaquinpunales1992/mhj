@@ -262,30 +262,41 @@
         // If the browser is somewhere else, reload once with the real zone so the
         // times shown are the visitor's own. Once only — the guard is the query
         // string already carrying a tz.
-        // Reconcile on every load, not only when ?tz= is absent.
+        // Which zone the page SHOULD be in: an explicit choice if the visitor
+        // has made one, otherwise whatever the browser reports.
         //
-        // The old guard meant a URL that already carried ?tz= was never
-        // re-checked — so a shared or bookmarked link, or a laptop that changed
-        // timezone, rendered its slots in the OLD zone while the label below was
-        // still overwritten with the browser's current one. Wrong times under a
-        // correct-looking label, which is worse than either alone.
+        // The stored choice is what makes a manual selection stick. Comparing the
+        // browser's zone against the URL alone cannot tell "detected" from
+        // "chosen", so picking Asia/Tokyo on a machine set to America/Bogota
+        // reloaded with tz=Asia/Tokyo and was then immediately corrected back to
+        // Bogota — the picker appeared to do nothing.
         //
-        // This cannot loop: after the reload the server renders display_zone as
-        // `zone`, so the condition is false.
+        // localStorage, and this key naming, follows units.js (mhj_currency,
+        // mhj_unit) so the site remembers preferences one way.
+        var TZ_KEY = 'mhj_tz';
+        var stored = null;
+        try { stored = localStorage.getItem(TZ_KEY); } catch (e) {}
+
+        var want = stored || zone;
         var params = new URLSearchParams(location.search);
-        if (zone && zone !== '{{ display_zone }}') {
-          params.set('tz', zone);
+        if (want && want !== '{{ display_zone }}') {
+          params.set('tz', want);
           location.replace(location.pathname + '?' + params.toString() + '#book');
           return;
         }
         var field = document.getElementById('tzField');
         if (field) field.value = '{{ display_zone }}';
 
-        // A manual choice wins over detection: reloading with ?tz=<chosen> makes
-        // the condition above false on the next load, so it sticks.
         var picker = document.getElementById('tzSelect');
         if (picker) {
           picker.addEventListener('change', function () {
+            try {
+              // Choosing the zone the browser already reports means "just follow
+              // my machine" — clear the override rather than pinning it, so a
+              // later change of machine timezone is picked up again.
+              if (picker.value === zone) localStorage.removeItem(TZ_KEY);
+              else localStorage.setItem(TZ_KEY, picker.value);
+            } catch (e) {}
             var p = new URLSearchParams(location.search);
             p.set('tz', picker.value);
             location.href = location.pathname + '?' + p.toString() + '#book';
