@@ -1376,11 +1376,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* The theme sets white-space:nowrap on all buttons, which clips the long
      CTA label on narrow screens. Let these wrap to multiple lines instead. */
-  #interestSubmit {
-    white-space: normal;
-    height: auto;
-    line-height: 1.3;
-  }
   /* The primary action on the page. It is an <a>, so it needs its own box:
      .primary only sets colour and radius, and previously the surrounding
      <button> supplied the padding and font size. */
@@ -1633,7 +1628,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   {% endcomment %}
                   <p class="text-xll">{{ property.get_location_for_front }} <span class="mhj-locked-inline">· full address locked</span></p>
                 {% else %}
-                  <p class="text-xll">{{ property.location }} | <a href="#" data-toggle="modal" data-target="#mapModal" class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
+                  <p class="text-xll">{{ property.location }} | <a href="#" data-open-map class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
                 {% endif %}
                 <hr>
               </div>
@@ -2089,138 +2084,142 @@ document.addEventListener('DOMContentLoaded', () => {
   </style>
 
   <!-- Map modal: lazy-loads Google Maps embed when opened -->
-  <div class="modal fade" id="mapModal" tabindex="-1" role="dialog" aria-labelledby="mapModalLabel">
-    <div class="modal-dialog modal-lg" role="document" style="max-width: 900px;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-          <h4 class="modal-title" id="mapModalLabel">{{ property.location }}</h4>
-        </div>
-        <div class="modal-body" style="padding:0;">
-          <iframe
-            id="mapIframe"
-            src="https://www.google.com/maps?q={{ property.get_location_for_map|urlencode }}&output=embed"
-            width="100%"
-            height="500"
-            frameborder="0"
-            style="border:0; display:block;"
-            allowfullscreen
-            loading="lazy"
-            referrerpolicy="no-referrer-when-downgrade">
-          </iframe>
-        </div>
-      </div>
-    </div>
-  </div>
+  {% comment %}
+    Native <dialog> rather than a Bootstrap modal. This was the only component
+    on the page that still needed Bootstrap's CSS and JS — and jQuery, which was
+    loaded for the single $(modal).on('shown.bs.modal') call below. <dialog>
+    gives Esc-to-close, focus trapping and the backdrop for free.
+
+    The old deferral was also dead code: it checked `!iframe.src` while the
+    iframe had a real src set inline and no data-src, so Google Maps was
+    requested on page load regardless of whether anyone opened the map. The
+    src now genuinely lives in data-src and is set on first open.
+  {% endcomment %}
+  <dialog id="mapModal" class="map-dialog" aria-labelledby="mapModalLabel">
+    <header class="map-dialog-head">
+      <h4 id="mapModalLabel">{{ property.location }}</h4>
+      <button type="button" class="map-dialog-close" data-close-map aria-label="Close">&times;</button>
+    </header>
+    <iframe
+      id="mapIframe"
+      data-src="https://www.google.com/maps?q={{ property.get_location_for_map|urlencode }}&output=embed"
+      width="100%"
+      height="500"
+      frameborder="0"
+      style="border:0; display:block;"
+      allowfullscreen
+      referrerpolicy="no-referrer-when-downgrade">
+    </iframe>
+  </dialog>
+
+  <style>
+    .map-dialog {
+      padding: 0;
+      border: 0;
+      border-radius: 12px;
+      max-width: 900px;
+      width: calc(100% - 2rem);
+      /* main.css resets margins site-wide, which cancels the browser's default
+         `dialog { margin: auto }` and pins the panel to the top-left. */
+      margin: auto;
+      /* Size to content instead of stretching, and never exceed the viewport.
+         line-height:0 collapses the line boxes the whitespace between <header>
+         and <iframe> would otherwise create — this page's body line-height is
+         based on a 20px font, so each one added real dead space below the map. */
+      display: block;   /* not flex: whitespace between children would become
+                           anonymous flex items and add dead space */
+      line-height: 0;
+      /* fit-content, not auto: the whitespace between <header> and <iframe>
+         becomes anonymous flex items, and `auto` was leaving ~140px of dead
+         space below the map. */
+      height: fit-content;
+      max-height: calc(100dvh - 3rem);
+      overflow: hidden;
+      background: var(--mhj-card);
+      box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.5);
+    }
+    .map-dialog #mapIframe { height: min(500px, 70dvh); display: block; }
+    .map-dialog::backdrop { background: rgba(0, 0, 0, 0.55); }
+    .map-dialog-head {
+      line-height: 1.4;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 0.9rem 1.1rem;
+      border-bottom: 1px solid var(--mhj-border);
+    }
+    .map-dialog-head h4 {
+      margin: 0;
+      font-family: 'Noto Serif JP', serif;
+      font-weight: 500;
+      /* em, not rem: main.css sets body{font-size:15pt} on this page. */
+      font-size: 1em;
+      text-transform: none;
+      letter-spacing: normal;
+      color: var(--mhj-foreground);
+    }
+    /* The theme styles every <button> with a border, background, fixed height
+       and box-shadow, which turned this into a blue box. Override all of it. */
+    .map-dialog-close,
+    .map-dialog-close:hover,
+    .map-dialog-close:focus,
+    .map-dialog-close:active {
+      background: none !important;
+      background-image: none !important;
+      border: 0 !important;
+      box-shadow: none !important;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 1.6em;
+      font-weight: 400;
+      line-height: 1;
+      padding: 0 0.25rem;
+      margin: 0;
+      height: auto;
+      min-width: 0;
+      width: auto;
+      text-transform: none;
+      letter-spacing: normal;
+      color: var(--mhj-secondary);
+    }
+    .map-dialog-close:hover { color: var(--mhj-foreground); }
+    .map-dialog-close:focus-visible {
+      outline: 2px solid var(--mhj-primary) !important;
+      outline-offset: 2px;
+      border-radius: 4px;
+    }
+    /* Suppress the ring when focus was given programmatically on open rather
+       than by keyboard, which is what produced the blue box on first paint. */
+    .map-dialog-close:focus:not(:focus-visible) { outline: none !important; }
+  </style>
+
   <script>
-    // Defer the Google Maps iframe load until the user actually opens the modal.
-    document.addEventListener('DOMContentLoaded', function() {
-      var modal = document.getElementById('mapModal');
-      if (!modal) return;
-      $(modal).on('shown.bs.modal', function() {
+    document.addEventListener('DOMContentLoaded', function () {
+      var dialog = document.getElementById('mapModal');
+      if (!dialog || typeof dialog.showModal !== 'function') return;
+
+      function openMap(e) {
+        if (e) e.preventDefault();
         var iframe = document.getElementById('mapIframe');
-        if (iframe && !iframe.src) iframe.src = iframe.dataset.src;
+        // Load Google Maps on first open only, not on page load.
+        if (iframe && !iframe.src && iframe.dataset.src) iframe.src = iframe.dataset.src;
+        dialog.showModal();
+      }
+
+      document.querySelectorAll('[data-open-map]').forEach(function (el) {
+        el.addEventListener('click', openMap);
+      });
+      dialog.querySelectorAll('[data-close-map]').forEach(function (el) {
+        el.addEventListener('click', function () { dialog.close(); });
+      });
+      // Click outside the panel closes it; <dialog> already handles Esc.
+      dialog.addEventListener('click', function (e) {
+        if (e.target === dialog) dialog.close();
       });
     });
   </script>
 
-  <!-- Expression of Interest modal -->
-  <style>
-    /* main.css sets a light grey (#a0a0a1) on inputs site-wide, which makes
-       typed text nearly invisible on the white modal. Force dark text here. */
-    #interestModal .modal-content { color: #333; }
-    #interestModal .modal-body p { color: #555; }
-    #interestModal label { color: #333; font-weight: 600; margin-bottom: 4px; }
-    #interestModal .form-control {
-      color: #333 !important; background-color: #fff !important;
-      border: 1px solid #ccc; box-shadow: none; height: auto; line-height: 1.4;
-    }
-    #interestModal .form-control:focus { border-color: #477535; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
-    #interestModal .form-control::placeholder { color: #999 !important; }
-  </style>
-  <div class="modal fade" id="interestModal" tabindex="-1" role="dialog" aria-labelledby="interestModalLabel">
-    <div class="modal-dialog" role="document" style="max-width: 520px;">
-      <div class="modal-content">
-        <div class="modal-header">
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-          <h4 class="modal-title" id="interestModalLabel">Get help finding the right property</h4>
-        </div>
-        <div class="modal-body">
-          <p style="margin-bottom:16px;">Tell us what you're looking for and we'll connect you with an English-speaking agent in Japan who finds options that fit &mdash; no listing pressure, no fee to talk.</p>
-          <form id="interestForm">
-            <input type="hidden" name="property_url" value="{{ request.build_absolute_uri }}">
-            <div style="margin-bottom:12px;">
-              <label for="interestName">Name</label>
-              <input type="text" id="interestName" name="name" required class="form-control" placeholder="Your name">
-            </div>
-            <div style="margin-bottom:12px;">
-              <label for="interestEmail">Email</label>
-              <input type="email" id="interestEmail" name="email" required class="form-control" placeholder="you@example.com" value="{{ user_email|default:'' }}">
-            </div>
-            <div style="margin-bottom:12px;">
-              <label for="interestTimeline">Timeline</label>
-              <select id="interestTimeline" name="timeline" class="form-control">
-                <option value="">Select one</option>
-                <option value="Just exploring">Just exploring</option>
-                <option value="Next 6 months">Next 6 months</option>
-                <option value="Ready now">Ready now</option>
-              </select>
-            </div>
-            <div style="margin-bottom:12px;">
-              <label for="interestVisited">Have you visited Japan?</label>
-              <select id="interestVisited" name="visited_japan" class="form-control">
-                <option value="">Select one</option>
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-            <p id="interestError" style="color:#c0392b; display:none; margin-bottom:12px;"></p>
-            <button type="submit" id="interestSubmit" class="w-full primary text-white py-6 font-medium hover:bg-primary/90 transition-colors">Get matched with an agent</button>
-          </form>
-          <div id="interestSuccess" style="display:none; text-align:center; padding:16px 0;">
-            <h4 class="text-primary">Thank you!</h4>
-            <p>We've received your request and will be in touch shortly.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      var form = document.getElementById('interestForm');
-      if (!form) return;
-      form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        var btn = document.getElementById('interestSubmit');
-        var errorEl = document.getElementById('interestError');
-        errorEl.style.display = 'none';
-        btn.disabled = true;
-        btn.textContent = 'Sending...';
-        fetch('{% url "submit_interest_request" %}', {
-          method: 'POST',
-          headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name: form.elements['name'].value,
-            email: form.elements['email'].value,
-            timeline: form.elements['timeline'].value,
-            visited_japan: form.elements['visited_japan'].value,
-            property_url: form.elements['property_url'].value
-          })
-        })
-        .then(function(r) {
-          if (!r.ok) throw new Error('Request failed');
-          form.style.display = 'none';
-          document.getElementById('interestSuccess').style.display = 'block';
-        })
-        .catch(function() {
-          errorEl.textContent = 'Something went wrong. Please try again.';
-          errorEl.style.display = 'block';
-          btn.disabled = false;
-          btn.textContent = 'Get matched with an agent';
-        });
-      });
-    });
-  </script>
   <script src="{% static 'assets/js/units.js' %}"></script>
 </body>
 </html>
