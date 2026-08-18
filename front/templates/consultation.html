@@ -81,22 +81,246 @@
     will be.
   </p>
 
-  {% if booking_url %}
-    <h2>Book</h2>
+  {% if can_charge %}
+    <h2 id="book">Book</h2>
+
+    {% if cancelled %}
+      <p class="consult-note consult-note-warn">
+        Checkout was cancelled, so nothing was charged and the time you had
+        chosen is free again. Pick a slot below whenever you're ready.
+      </p>
+    {% endif %}
+
     <p>
-      <b>{{ consult_price }}</b> for 30 minutes, paid when you book. Pick a time
-      that suits you — slots are shown in your own timezone.
+      <b>{{ consult_price }}</b> for {{ duration_minutes }} minutes, paid when you
+      book. Times below are shown in <b id="tzName">{{ display_zone }}</b> —
+      the call itself is held from Japan ({{ agent_timezone }}).
     </p>
-    <a class="cta" href="{{ booking_url }}" rel="noopener">Book your consultation — {{ consult_price }}</a>
-    <p style="font-size:.9rem;color:var(--muted);margin-top:1rem;">
-      Need to move it? Reschedule from your confirmation email. Can't make it
-      work at all? Reply to that email and we'll refund you.
-    </p>
-  {% else %}
+
+    {% if slot_days %}
+      {% comment %}
+        Slots are rendered server-side, already grouped into days in the viewer's
+        zone, so the page is usable before any JavaScript runs and the times are
+        never a client-side guess about what is bookable.
+
+        JS does two things only: reload once with the browser's real timezone if
+        the server guessed wrong, and submit the form. Both degrade to something
+        that still works.
+      {% endcomment %}
+      <form id="bookForm" method="post" action="{% url 'book_consultation' %}">
+        {% csrf_token %}
+        <input type="hidden" name="timezone" id="tzField" value="{{ display_zone }}">
+        {% if property %}<input type="hidden" name="listing" value="{{ property.pk }}">{% endif %}
+        <input type="hidden" name="starts_at" id="slotField" value="">
+
+        {% comment %}
+          The times MUST render inside {% templatetag openblock %} timezone {% templatetag closeblock %}.
+          Slots are aware datetimes, so `{% templatetag openvariable %} slot|date:"H:i" {% templatetag closevariable %}`
+          otherwise renders in settings.TIME_ZONE — UTC — while group_by_day has
+          already filed them under the viewer's calendar dates. That mismatch
+          showed a 03:00 Madrid slot as "01:00" under "Thu 20 Aug": both correct
+          on their own, and wrong together, in the way that makes someone miss
+          the call.
+        {% endcomment %}
+        {% load tz %}
+        {% timezone display_zone %}
+        <div class="slot-days">
+          {% for day, slots in slot_days %}
+            <div class="slot-day">
+              <p class="slot-day-name">{{ day|date:"D j M" }}</p>
+              <div class="slot-times">
+                {% for slot in slots %}
+                  {% comment %}
+                    data-start, not data-utc: this renders inside the timezone
+                    block, so `date:'c'` emits the visitor's local time WITH its
+                    offset (2026-08-20T03:00:00+02:00). That is still one exact
+                    instant, and the view converts it back to UTC — but calling
+                    it "utc" would be a lie waiting to mislead someone.
+                  {% endcomment %}
+                  <button type="button" class="slot"
+                          data-start="{{ slot|date:'c' }}"
+                          data-label="{{ day|date:'D j M' }}">
+                    {{ slot|date:"H:i" }}
+                  </button>
+                {% endfor %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        {% endtimezone %}
+
+        <div class="slot-form" id="slotForm" hidden>
+          <p class="slot-chosen">
+            Selected: <b id="slotChosen"></b>
+            <button type="button" class="slot-change" id="slotChange">change</button>
+          </p>
+          <label for="bkName">Your name</label>
+          <input type="text" id="bkName" name="name" required autocomplete="name">
+          <label for="bkEmail">Email</label>
+          <input type="email" id="bkEmail" name="email" required autocomplete="email">
+          <label for="bkNotes">Anything we should know before the call? <span>(optional)</span></label>
+          <textarea id="bkNotes" name="notes" rows="3"
+                    placeholder="Budget, region, timeline, what you're hoping to do with it."></textarea>
+          <button type="submit" class="cta" id="bkSubmit">
+            Pay {{ consult_price }} and book
+          </button>
+          <p class="consult-note" id="bkError" hidden></p>
+          <p class="consult-note">
+            You'll pay with PayPal, then come straight back here with the time
+            confirmed. Need to move it later? Reply to the confirmation email —
+            rescheduling is free.
+          </p>
+        </div>
+      </form>
+    {% else %}
+      <p class="consult-note consult-note-warn">
+        There are no free slots in the next {{ lead_hours }} hours to three weeks.
+        Email <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>
+        and we'll find you a time.
+      </p>
+    {% endif %}
+
+    <style>
+      .slot-days { display: flex; flex-direction: column; gap: .9rem; margin: 1.4rem 0; }
+      .slot-day { display: grid; grid-template-columns: 6.5rem 1fr; gap: .6rem; align-items: start; }
+      .slot-day-name {
+        margin: .35rem 0 0; font-weight: 600; font-size: .92rem; color: var(--fg);
+      }
+      .slot-times { display: flex; flex-wrap: wrap; gap: .4rem; }
+      .slot {
+        border: 1px solid var(--border); background: var(--card); color: var(--fg);
+        border-radius: 8px; padding: .45rem .7rem; font-size: .92rem; cursor: pointer;
+        font-family: inherit; font-variant-numeric: tabular-nums; line-height: 1.2;
+      }
+      .slot:hover { border-color: var(--primary); color: var(--primary) !important; }
+      .slot[aria-pressed="true"] {
+        background: var(--primary); border-color: var(--primary); color: #fff !important;
+      }
+      .slot-form {
+        border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.3rem;
+        background: var(--card); margin: 1.2rem 0; max-width: 34rem;
+      }
+      .slot-chosen { margin: 0 0 1rem; font-size: 1rem; }
+      .slot-chosen b { color: var(--primary); }
+      .slot-change {
+        background: none; border: 0; color: var(--muted); cursor: pointer;
+        text-decoration: underline; font-size: .85rem; font-family: inherit;
+        padding: 0 0 0 .4rem;
+      }
+      .slot-form label {
+        display: block; font-size: .86rem; font-weight: 600; margin: .8rem 0 .25rem;
+      }
+      .slot-form label span { font-weight: 400; color: var(--muted); }
+      .slot-form input, .slot-form textarea {
+        width: 100%; box-sizing: border-box; border: 1px solid var(--border);
+        border-radius: 8px; padding: .55rem .7rem; font-family: inherit;
+        font-size: .95rem; background: #fff; color: var(--fg);
+      }
+      .slot-form input:focus, .slot-form textarea:focus {
+        outline: 2px solid var(--primary); outline-offset: 1px; border-color: var(--primary);
+      }
+      .slot-form .cta { margin-top: 1rem; }
+      .consult-note { font-size: .86rem; color: var(--muted); margin-top: .8rem; }
+      .consult-note-warn {
+        background: #fbf3e6; border-left: 3px solid #b8860b; color: var(--fg);
+        padding: .7rem .9rem; border-radius: 6px;
+      }
+      #bkError { color: var(--danger); font-weight: 600; }
+      @media (max-width: 560px) {
+        .slot-day { grid-template-columns: 1fr; gap: .2rem; }
+      }
+    </style>
+
+    <script>
+      (function () {
+        var zone = '';
+        try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone || ''; } catch (e) {}
+
+        // The server rendered in {{ display_zone }} because that is all it knew.
+        // If the browser is somewhere else, reload once with the real zone so the
+        // times shown are the visitor's own. Once only — the guard is the query
+        // string already carrying a tz.
+        var params = new URLSearchParams(location.search);
+        if (zone && zone !== '{{ display_zone }}' && !params.has('tz')) {
+          params.set('tz', zone);
+          location.replace(location.pathname + '?' + params.toString() + '#book');
+          return;
+        }
+        if (zone) {
+          var field = document.getElementById('tzField');
+          var label = document.getElementById('tzName');
+          if (field) field.value = zone;
+          if (label) label.textContent = zone;
+        }
+
+        var form = document.getElementById('bookForm');
+        if (!form) return;
+        var panel = document.getElementById('slotForm');
+        var chosen = document.getElementById('slotChosen');
+        var slotField = document.getElementById('slotField');
+        var error = document.getElementById('bkError');
+        var submit = document.getElementById('bkSubmit');
+
+        form.addEventListener('click', function (e) {
+          var slot = e.target.closest('.slot');
+          if (!slot) return;
+          form.querySelectorAll('.slot[aria-pressed="true"]').forEach(function (b) {
+            b.setAttribute('aria-pressed', 'false');
+          });
+          slot.setAttribute('aria-pressed', 'true');
+          slotField.value = slot.dataset.start;
+          chosen.textContent = slot.dataset.label + ', ' + slot.textContent.trim();
+          panel.hidden = false;
+          document.getElementById('bkName').focus();
+        });
+
+        document.getElementById('slotChange').addEventListener('click', function () {
+          panel.hidden = true;
+          slotField.value = '';
+          form.querySelectorAll('.slot[aria-pressed="true"]').forEach(function (b) {
+            b.setAttribute('aria-pressed', 'false');
+          });
+        });
+
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          if (!slotField.value) { return; }
+          error.hidden = true;
+          submit.disabled = true;
+          submit.textContent = 'Taking you to PayPal…';
+
+          fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+            headers: { 'X-Requested-With': 'fetch' },
+            credentials: 'same-origin'
+          })
+            .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+            .then(function (res) {
+              if (res.ok && res.d.redirect) { location.href = res.d.redirect; return; }
+              error.textContent = res.d.error || 'Something went wrong. Please try again.';
+              error.hidden = false;
+              submit.disabled = false;
+              submit.textContent = 'Pay {{ consult_price }} and book';
+            })
+            .catch(function () {
+              error.textContent = 'Could not reach us. Please check your connection and retry.';
+              error.hidden = false;
+              submit.disabled = false;
+              submit.textContent = 'Pay {{ consult_price }} and book';
+            });
+        });
+      })();
+    </script>
+  {% elif booking_url %}
     {% comment %}
-      No booking URL configured yet — never render a dead button. Fall back to
-      the enquiry form so the page still captures intent.
+      No PayPal credentials, so we cannot take money here. Use the external
+      scheduler rather than offering a checkout that cannot complete.
     {% endcomment %}
+    <h2>Book</h2>
+    <p><b>{{ consult_price }}</b> for 30 minutes, paid when you book.</p>
+    <a class="cta" href="{{ booking_url }}" rel="noopener">Book your consultation — {{ consult_price }}</a>
+  {% else %}
     <h2>Get in touch</h2>
     <p>
       Consultation booking is opening shortly. In the meantime, tell us what

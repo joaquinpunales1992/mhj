@@ -9,6 +9,7 @@ access for free or locks out someone who is paying.
 
 import json
 from datetime import timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 from django.contrib.auth.models import User
@@ -18,7 +19,7 @@ from django.utils import timezone
 
 from inventory.models import Property
 from membership.metering import check_access
-from membership.models import PropertyView, Subscription
+from membership.models import Consultation, PropertyView, Subscription
 
 WEBHOOK_URL = "/api/paypal-webhook"
 
@@ -361,3 +362,301 @@ class MeteringTests(TestCase):
         request = self._request(user=user)
         results = [check_access(request, p.pk)["locked"] for p in self.props[:5]]
         self.assertEqual(results, [False, False, False, True, True])
+
+
+@override_settings(
+    ALLOWED_HOSTS=["testserver"],
+    PAYPAL_CLIENT_ID="id", PAYPAL_CLIENT_SECRET="secret",
+    CONSULT_TIMEZONE="Asia/Tokyo", CONSULT_WEEKDAYS=[0, 1, 2, 3, 4],
+    CONSULT_OPEN="10:00", CONSULT_CLOSE="18:00",
+    CONSULT_DURATION_MINUTES=30, CONSULT_SLOT_STEP_MINUTES=30,
+    CONSULT_LEAD_HOURS=24, CONSULT_HORIZON_DAYS=14, CONSULT_HOLD_MINUTES=20,
+    CONSULT_PRICE="25.00", CONSULT_CURRENCY="USD",
+)
+class ConsultationBookingTests(TestCase):
+    """The booking flow, where a mistake either sells a slot twice or gives a
+    call away free.
+
+    PayPal is mocked throughout: create_order and capture_order are the only two
+    calls that leave the process, and exercising them for real would mean taking
+    money in a test.
+    """
+
+    def setUp(self):
+        from membership.scheduling import available_slots
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        self.slot = available_slots()[0]
+        self.listing = Property.objects.create(
+            url="http://x/consult", price=1200, show_in_front=True,
+            location="Oita City, Oita Prefecture",
+        )
+
+    def _post(self, **overrides):
+        data = {
+            "starts_at": self.slot.isoformat(),
+            "name": "Ada Lovelace",
+            "email": "ada@example.com",
+            "notes": "Thinking about Nagano.",
+            "timezone": "Europe/Madrid",
+        }
+        data.update(overrides)
+        return self.client.post("/consultation/book", data)
+
+    # -- holding the slot -------------------------------------------------
+
+    def test_booking_creates_a_hold_and_returns_paypal(self):
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-1", "https://paypal.test/approve")) as create:
+            response = self._post(listing=str(self.listing.pk))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["redirect"], "https://paypal.test/approve")
+
+        booking = Consultation.objects.get()
+        self.assertEqual(booking.status, Consultation.STATUS_HOLD)
+        self.assertEqual(booking.paypal_order_id, "ORDER-1")
+        self.assertEqual(booking.listing, self.listing)
+        self.assertEqual(booking.visitor_timezone, "Europe/Madrid")
+        self.assertIsNotNone(booking.hold_expires_at)
+        # The price charged comes from settings, never from the request.
+        self.assertEqual(str(booking.amount), "25.00")
+        self.assertEqual(create.call_args.kwargs["amount"], Decimal("25.00"))
+
+    def test_price_cannot_be_set_from_the_request(self):
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-2", "https://paypal.test/a")) as create:
+            self._post(amount="0.01", price="0.01", currency="XXX")
+        self.assertEqual(create.call_args.kwargs["amount"], Decimal("25.00"))
+        self.assertEqual(create.call_args.kwargs["currency"], "USD")
+
+    def test_a_held_slot_is_no_longer_offered(self):
+        from membership.scheduling import available_slots
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-3", "https://paypal.test/a")):
+            self._post()
+        self.assertNotIn(self.slot, available_slots())
+
+    def test_second_booking_of_the_same_slot_is_refused(self):
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-4", "https://paypal.test/a")):
+            self._post()
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-5", "https://paypal.test/a")):
+            response = self._post(email="eve@example.com")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(Consultation.objects.count(), 1)
+
+    def test_concurrent_booking_is_stopped_by_the_constraint(self):
+        """Both requests pass the availability check, so only the unique
+        constraint can stop the second one."""
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-6", "https://paypal.test/a")):
+            self._post()
+        with patch("membership.consultations.is_available", return_value=True), \
+             patch("membership.consultations.create_order",
+                   return_value=("ORDER-7", "https://paypal.test/a")):
+            response = self._post(email="mallory@example.com")
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(Consultation.objects.count(), 1)
+
+    def test_expired_hold_frees_the_slot(self):
+        from membership.scheduling import available_slots
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-8", "https://paypal.test/a")):
+            self._post()
+        booking = Consultation.objects.get()
+        booking.hold_expires_at = timezone.now() - timedelta(minutes=1)
+        booking.save(update_fields=["hold_expires_at"])
+        self.assertIn(self.slot, available_slots())
+
+    def test_paypal_failure_releases_the_slot_immediately(self):
+        from membership.paypal_orders import PayPalError
+        from membership.scheduling import available_slots
+        with patch("membership.consultations.create_order",
+                   side_effect=PayPalError("nope")):
+            response = self._post()
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(
+            Consultation.objects.get().status, Consultation.STATUS_CANCELLED
+        )
+        self.assertIn(self.slot, available_slots())
+
+    def test_unavailable_slot_is_refused(self):
+        past = timezone.now() - timedelta(days=1)
+        response = self._post(starts_at=past.isoformat())
+        self.assertEqual(response.status_code, 409)
+        self.assertFalse(Consultation.objects.exists())
+
+    def test_missing_contact_details_are_refused(self):
+        self.assertEqual(self._post(name="").status_code, 400)
+        self.assertEqual(self._post(email="").status_code, 400)
+        self.assertFalse(Consultation.objects.exists())
+
+    def test_a_bogus_timezone_falls_back_rather_than_being_stored(self):
+        with patch("membership.consultations.create_order",
+                   return_value=("ORDER-9", "https://paypal.test/a")):
+            self._post(timezone="Mars/Olympus_Mons")
+        self.assertEqual(Consultation.objects.get().visitor_timezone, "UTC")
+
+    # -- taking the money -------------------------------------------------
+
+    def _hold(self, order_id="ORDER-CAP"):
+        return Consultation.objects.create(
+            starts_at=self.slot, duration_minutes=30, name="Ada",
+            email="ada@example.com", visitor_timezone="Europe/Madrid",
+            status=Consultation.STATUS_HOLD, hold_expires_at=timezone.now() + timedelta(minutes=20),
+            paypal_order_id=order_id, amount=Decimal("25.00"), currency="USD",
+        )
+
+    def _captured(self, paid=True, **over):
+        data = {
+            "order_id": "ORDER-CAP", "status": "COMPLETED", "capture_id": "CAP-1",
+            "capture_status": "COMPLETED" if paid else "PENDING",
+            "amount": "25.00", "currency": "USD", "reference": "1",
+            "payer_email": "ada@example.com", "paid": paid,
+        }
+        data.update(over)
+        return data
+
+    def test_capture_marks_it_paid_and_emails(self):
+        booking = self._hold()
+        with patch("membership.consultations.capture_order", return_value=self._captured()), \
+             patch("membership.consultation_mail.send_confirmation") as mail:
+            response = self.client.get("/consultation/booked?token=ORDER-CAP")
+        self.assertEqual(response.status_code, 200)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, Consultation.STATUS_PAID)
+        self.assertEqual(booking.paypal_capture_id, "CAP-1")
+        self.assertIsNotNone(booking.paid_at)
+        self.assertIsNone(booking.hold_expires_at)
+        mail.assert_called_once()
+
+    def test_uncaptured_payment_is_not_a_booking(self):
+        """Approved-but-not-captured is a payer who stopped at the button."""
+        booking = self._hold()
+        with patch("membership.consultations.capture_order",
+                   return_value=self._captured(paid=False)):
+            response = self.client.get("/consultation/booked?token=ORDER-CAP")
+        self.assertEqual(response.status_code, 200)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, Consultation.STATUS_HOLD)
+
+    def test_reloading_the_receipt_does_not_capture_twice(self):
+        booking = self._hold()
+        with patch("membership.consultations.capture_order", return_value=self._captured()), \
+             patch("membership.consultation_mail.send_confirmation"):
+            self.client.get("/consultation/booked?token=ORDER-CAP")
+        with patch("membership.consultations.capture_order") as capture:
+            self.client.get("/consultation/booked?token=ORDER-CAP")
+        capture.assert_not_called()
+
+    def test_email_failure_does_not_lose_a_paid_booking(self):
+        booking = self._hold()
+        with patch("membership.consultations.capture_order", return_value=self._captured()), \
+             patch("membership.consultation_mail.send_confirmation",
+                   side_effect=Exception("smtp down")):
+            response = self.client.get("/consultation/booked?token=ORDER-CAP")
+        self.assertEqual(response.status_code, 200)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, Consultation.STATUS_PAID)
+
+    def test_capture_failure_leaves_it_unpaid(self):
+        from membership.paypal_orders import PayPalError
+        booking = self._hold()
+        with patch("membership.consultations.capture_order",
+                   side_effect=PayPalError("declined")):
+            response = self.client.get("/consultation/booked?token=ORDER-CAP")
+        self.assertEqual(response.status_code, 502)
+        booking.refresh_from_db()
+        self.assertEqual(booking.status, Consultation.STATUS_HOLD)
+
+    def test_unknown_token_is_a_404_not_a_crash(self):
+        response = self.client.get("/consultation/booked?token=NOPE")
+        self.assertEqual(response.status_code, 404)
+
+    def test_cancel_url_releases_the_hold(self):
+        from membership.scheduling import available_slots
+        self._hold(order_id="ORDER-X")
+        response = self.client.get("/consultation/cancelled?token=ORDER-X")
+        self.assertEqual(response.status_code, 302)
+        self.assertEqual(
+            Consultation.objects.get().status, Consultation.STATUS_CANCELLED
+        )
+        self.assertIn(self.slot, available_slots())
+
+    # -- the calendar invitation -----------------------------------------
+
+    def test_ics_is_well_formed_and_in_utc(self):
+        from membership.consultation_mail import build_ics
+        booking = self._hold()
+        booking.status = Consultation.STATUS_PAID
+        booking.save()
+        ics = build_ics(booking)
+        self.assertTrue(ics.startswith("BEGIN:VCALENDAR\r\n"))
+        self.assertIn("\r\n", ics, "RFC 5545 requires CRLF")
+        self.assertIn(f"UID:consultation-{booking.pk}@akiyainjapan.com", ics)
+        self.assertIn(booking.starts_at.strftime("DTSTART:%Y%m%dT%H%M%SZ"), ics)
+        self.assertIn(booking.ends_at.strftime("DTEND:%Y%m%dT%H%M%SZ"), ics)
+        self.assertIn("END:VCALENDAR", ics)
+
+    def test_confirmation_states_both_timezones(self):
+        from django.core import mail as django_mail
+        from membership.consultation_mail import send_confirmation
+        booking = self._hold()
+        booking.status = Consultation.STATUS_PAID
+        booking.save()
+        send_confirmation(booking)
+        self.assertEqual(len(django_mail.outbox), 2, "payer and owner")
+        payer = django_mail.outbox[0]
+        self.assertIn("Europe/Madrid", payer.body)
+        self.assertIn("Asia/Tokyo", payer.body)
+        self.assertEqual(payer.attachments[0][0], "consultation.ics")
+
+
+@override_settings(
+    ALLOWED_HOSTS=["testserver"],
+    CONSULT_TIMEZONE="Asia/Tokyo", CONSULT_WEEKDAYS=[0, 1, 2, 3, 4],
+    CONSULT_OPEN="10:00", CONSULT_CLOSE="18:00",
+    CONSULT_DURATION_MINUTES=60, CONSULT_SLOT_STEP_MINUTES=30,
+    CONSULT_LEAD_HOURS=24, CONSULT_HORIZON_DAYS=14,
+)
+class SchedulingTests(TestCase):
+    """Slot generation. Timezones and the window edges are where this goes wrong
+    quietly — an off-by-one here books the agent at 3am."""
+
+    def test_every_slot_is_inside_the_window_in_the_agents_zone(self):
+        from zoneinfo import ZoneInfo
+        from membership.scheduling import available_slots
+        for slot in available_slots():
+            local = slot.astimezone(ZoneInfo("Asia/Tokyo"))
+            self.assertGreaterEqual(local.hour, 10)
+            # A 60-minute call must finish by 18:00, so the last start is 17:00.
+            self.assertLessEqual(local.hour, 17)
+            if local.hour == 17:
+                self.assertEqual(local.minute, 0)
+
+    def test_no_slots_on_excluded_weekdays(self):
+        from zoneinfo import ZoneInfo
+        from membership.scheduling import available_slots
+        for slot in available_slots():
+            self.assertLess(slot.astimezone(ZoneInfo("Asia/Tokyo")).weekday(), 5)
+
+    def test_lead_time_and_horizon_are_respected(self):
+        from membership.scheduling import available_slots
+        now = timezone.now()
+        slots = available_slots(now=now)
+        self.assertTrue(all(s >= now + timedelta(hours=24) for s in slots))
+        self.assertTrue(all(s <= now + timedelta(days=14) for s in slots))
+
+    def test_grouping_uses_the_viewers_day_not_ours(self):
+        """A 10:00 Tokyo slot is the previous evening in New York, and must be
+        filed under the date the viewer will actually read."""
+        from zoneinfo import ZoneInfo
+        from membership.scheduling import available_slots, group_by_day
+        slots = available_slots()
+        for day, day_slots in group_by_day(slots, "America/New_York"):
+            for slot in day_slots:
+                self.assertEqual(slot.astimezone(ZoneInfo("America/New_York")).date(), day)
+
+    def test_a_bogus_display_zone_falls_back_to_utc(self):
+        from membership.scheduling import available_slots, group_by_day
+        self.assertTrue(group_by_day(available_slots(), "Nowhere/Fake"))

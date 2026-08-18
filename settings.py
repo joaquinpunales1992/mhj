@@ -232,14 +232,51 @@ PAYPAL_ENVIRONMENT = env("PAYPAL_ENVIRONMENT", default="sandbox")  # or "live"
 # variable reference and recurses until the stack overflows.
 PRO_PRICE_LABEL = env("PRO_PRICE_LABEL", default="US$10 / month")
 
-# Paid consultation booking link (Cal.com event type with PayPal attached).
-# When empty the consultation page and the auto-responder omit the booking
-# call-to-action rather than rendering a dead link.
+# --- Paid consultation -------------------------------------------------------
+#
+# Booking, payment and the calendar are handled here rather than by a scheduling
+# provider: the call is the product, and owning the flow means the booking
+# arrives already attached to the property that prompted it.
+#
+# CONSULT_BOOKING_URL is now only a fallback. If PayPal credentials are missing
+# the page cannot take money, so it falls back to this external scheduler (or,
+# failing that, the enquiry form) rather than offering a checkout that 500s.
 CONSULT_BOOKING_URL = env("CONSULT_BOOKING_URL", default="")
-# NOTE: never let this value START with "$" — django-environ reads a leading
+
+# NOTE: never let a *_LABEL value START with "$" — django-environ reads a leading
 # "$" as a variable-proxy reference and recurses until the stack overflows.
 # "US$25" is fine; "$25" hard-crashes settings import at startup.
 CONSULT_PRICE_LABEL = env("CONSULT_PRICE_LABEL", default="US$25")
+
+# What PayPal actually charges. Kept separate from the label because the label is
+# prose ("US$25", possibly with a promo note) and this must parse as a decimal.
+CONSULT_PRICE = env("CONSULT_PRICE", default="25.00")
+CONSULT_CURRENCY = env("CONSULT_CURRENCY", default="USD")
+
+# The agent takes these calls from Japan, so availability is defined in their
+# local time and converted for whoever is booking. Japan has no DST, but the
+# conversion goes through zoneinfo anyway so this stays correct if the window is
+# ever defined in a zone that does.
+CONSULT_TIMEZONE = env("CONSULT_TIMEZONE", default="Asia/Tokyo")
+# Weekdays bookable, Monday=0 through Sunday=6.
+CONSULT_WEEKDAYS = env.list("CONSULT_WEEKDAYS", cast=int, default=[0, 1, 2, 3, 4])
+# Daily window in CONSULT_TIMEZONE, 24h. The last slot starts early enough to
+# finish inside the window.
+CONSULT_OPEN = env("CONSULT_OPEN", default="10:00")
+CONSULT_CLOSE = env("CONSULT_CLOSE", default="18:00")
+CONSULT_DURATION_MINUTES = env.int("CONSULT_DURATION_MINUTES", default=30)
+# Slots start on this grid, so a 30-minute call on a 30-minute grid leaves no
+# gaps while a 60-minute call on a 30-minute grid can start on the half hour.
+CONSULT_SLOT_STEP_MINUTES = env.int("CONSULT_SLOT_STEP_MINUTES", default=30)
+# Minimum notice, so nobody books a call starting in ten minutes.
+CONSULT_LEAD_HOURS = env.int("CONSULT_LEAD_HOURS", default=24)
+# How far ahead the calendar opens.
+CONSULT_HORIZON_DAYS = env.int("CONSULT_HORIZON_DAYS", default=21)
+# How long a slot is held while the visitor is on PayPal. Long enough to finish
+# a checkout, short enough that an abandoned one frees the slot quickly.
+CONSULT_HOLD_MINUTES = env.int("CONSULT_HOLD_MINUTES", default=20)
+# Where booking notifications go. Defaults to the mailbox everything else uses.
+CONSULT_NOTIFY_EMAIL = env("CONSULT_NOTIFY_EMAIL", default=EMAIL_HOST_USER)
 
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/

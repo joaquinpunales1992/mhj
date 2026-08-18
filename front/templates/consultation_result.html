@@ -1,0 +1,110 @@
+{% extends "content_base.html" %}
+{% block title %}{% if state == 'booked' %}Your consultation is booked{% else %}Consultation booking{% endif %} — My Akiya in Japan{% endblock %}
+{% comment %}
+  Where PayPal returns the payer. Four outcomes, and each says plainly whether
+  money moved and whether there is a call in the diary — the two things somebody
+  standing on this page actually needs to know.
+
+  noindex: this is a per-payer receipt reached by a one-time token. It should
+  never turn up in search results.
+{% endcomment %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+
+  {% if state == 'booked' %}
+    <h1>You're booked</h1>
+    <p class="lead">
+      Payment received and the time is held for you. A confirmation is on its way
+      to <b>{{ booking.email }}</b> with a calendar invitation attached.
+    </p>
+
+    <div class="receipt">
+      <p class="receipt-row">
+        <span>When</span>
+        <b>{{ booking.starts_at|date:"D j M Y, H:i" }} UTC</b>
+      </p>
+      {% if booking.visitor_timezone %}
+        <p class="receipt-note">
+          Shown in UTC here; your confirmation email states it in
+          {{ booking.visitor_timezone }} and in Japan time, so there is no
+          ambiguity about which day it falls on at each end.
+        </p>
+      {% endif %}
+      <p class="receipt-row"><span>Length</span> <b>{{ booking.duration_minutes }} minutes</b></p>
+      <p class="receipt-row"><span>Paid</span> <b>{{ booking.amount }} {{ booking.currency }}</b></p>
+      <p class="receipt-row"><span>Reference</span> <b>#{{ booking.pk }}</b></p>
+      {% if booking.listing %}
+        <p class="receipt-row">
+          <span>About</span>
+          <a href="{{ booking.listing.get_public_url }}">
+            {{ booking.listing.get_price_for_front }} — {{ booking.listing.get_location_for_front }}
+          </a>
+        </p>
+      {% endif %}
+    </div>
+
+    <p>
+      We'll send the call link before we speak. Need to move it, or can't make
+      it after all? Reply to the confirmation email — rescheduling is free.
+    </p>
+    <a class="cta" href="/">Keep browsing homes</a>
+
+  {% elif state == 'pending' %}
+    <h1>Payment is still processing</h1>
+    <p class="lead">
+      PayPal has taken the payment but hasn't cleared it yet. That usually
+      resolves within a few minutes.
+    </p>
+    <p>
+      Nothing is lost: your reference is <b>#{{ booking.pk }}</b> and the slot is
+      held. As soon as it clears we'll email your confirmation. If you haven't
+      heard within an hour, reply to this address and quote that reference:
+      <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.
+    </p>
+
+  {% elif state == 'failed' %}
+    <h1>We couldn't complete the payment</h1>
+    <p class="lead">
+      PayPal didn't confirm the payment, so <b>you have not been charged</b> and
+      no call has been booked.
+    </p>
+    <p>
+      The slot you chose stays held for a short while, so trying again shortly
+      will usually get you the same time.
+    </p>
+    <a class="cta" href="{% url 'consultation' %}#book">Try booking again</a>
+    <p style="font-size:.9rem;color:var(--muted);margin-top:1rem;">
+      If it fails twice, email <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>
+      and we'll book you in by hand.
+    </p>
+
+  {% else %}
+    <h1>We couldn't find that booking</h1>
+    <p class="lead">
+      This link doesn't match a booking we hold — most often because it was
+      opened again long after the fact, or the address was edited.
+    </p>
+    <p>
+      If you were charged, nothing is lost. Email
+      <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a> with the
+      PayPal receipt and we'll find it and confirm your time.
+    </p>
+    <a class="cta" href="{% url 'consultation' %}#book">Back to booking</a>
+  {% endif %}
+
+  <style>
+    .receipt {
+      border: 1px solid var(--border); border-radius: 12px; background: var(--card);
+      padding: 1.1rem 1.3rem; margin: 1.5rem 0; max-width: 34rem;
+    }
+    .receipt-row {
+      display: flex; justify-content: space-between; gap: 1rem; margin: 0 0 .55rem;
+      font-size: .98rem;
+    }
+    .receipt-row span { color: var(--muted); }
+    .receipt-row b { text-align: right; font-variant-numeric: tabular-nums; }
+    .receipt-note {
+      font-size: .82rem; color: var(--muted); margin: .2rem 0 .8rem; line-height: 1.5;
+    }
+  </style>
+{% endblock %}

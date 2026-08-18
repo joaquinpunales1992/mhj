@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import models
 from django.utils import timezone
 
@@ -378,3 +380,103 @@ class Subscription(models.Model):
                 self.current_period_end and self.current_period_end > timezone.now()
             )
         return False
+
+
+class Consultation(models.Model):
+    """A paid orientation call: one slot, one payer, one payment.
+
+    The slot is stored in UTC and rendered in whatever timezone the visitor is
+    in; `visitor_timezone` records the zone they booked from so the confirmation
+    email and the admin can show the time they actually agreed to, not just ours.
+
+    Two states hold a slot. A `hold` is created before sending the visitor to
+    PayPal, so the slot cannot be sold twice while they are in checkout, and it
+    expires by itself if they never come back. `paid` is set only after PayPal
+    confirms capture.
+    """
+
+    STATUS_HOLD = "hold"
+    STATUS_PAID = "paid"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_COMPLETED = "completed"
+    STATUS_CHOICES = [
+        (STATUS_HOLD, "Awaiting payment"),
+        (STATUS_PAID, "Paid — booked"),
+        (STATUS_CANCELLED, "Cancelled"),
+        (STATUS_COMPLETED, "Call completed"),
+    ]
+
+    # The two states that occupy the calendar. Anything else frees the slot.
+    BLOCKING_STATUSES = (STATUS_HOLD, STATUS_PAID, STATUS_COMPLETED)
+
+    starts_at = models.DateTimeField(
+        help_text="Start of the call, in UTC.", db_index=True
+    )
+    duration_minutes = models.PositiveIntegerField(default=30)
+
+    name = models.CharField(max_length=120)
+    email = models.EmailField()
+    visitor_timezone = models.CharField(
+        max_length=64,
+        blank=True,
+        help_text="IANA zone the visitor booked from, e.g. Europe/Madrid.",
+    )
+    notes = models.TextField(blank=True)
+    # Named `listing`, not `property`: a model field called `property` shadows
+    # the builtin inside the class body, so the @property decorators below stop
+    # working with "'ForeignKey' object is not callable".
+    listing = models.ForeignKey(
+        "inventory.Property",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="consultations",
+        help_text="The listing that prompted the call, when there was one.",
+    )
+
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_HOLD, db_index=True
+    )
+    hold_expires_at = models.DateTimeField(
+        null=True, blank=True, help_text="When an unpaid hold stops blocking the slot."
+    )
+
+    paypal_order_id = models.CharField(max_length=64, blank=True, db_index=True)
+    paypal_capture_id = models.CharField(max_length=64, blank=True)
+    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=8, blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Consultation"
+        verbose_name_plural = "Consultations"
+        ordering = ["starts_at"]
+        constraints = [
+            # The real guard against selling the same slot twice. Two people
+            # reaching checkout together would otherwise both get a hold: the
+            # availability check cannot prevent that on its own, because it reads
+            # before either row exists. Cancelled and expired bookings are
+            # excluded so a freed slot can be sold again.
+            models.UniqueConstraint(
+                fields=["starts_at"],
+                condition=models.Q(status__in=("hold", "paid", "completed")),
+                name="one_live_consultation_per_slot",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.starts_at:%Y-%m-%d %H:%M} UTC — {self.email} ({self.status})"
+
+    @property
+    def ends_at(self):
+        return self.starts_at + timedelta(minutes=self.duration_minutes)
+
+    @property
+    def is_expired_hold(self):
+        return (
+            self.status == self.STATUS_HOLD
+            and self.hold_expires_at is not None
+            and self.hold_expires_at <= timezone.now()
+        )

@@ -2,6 +2,7 @@ from django.contrib import admin
 from front import views as front_views
 from membership.utils import notify_user_expressed_interest
 from membership import views as membership_views
+from membership import consultations as consultation_views
 from membership.paypal import webhook as paypal_webhook
 from django.urls import path, include
 from front import sitemap
@@ -21,6 +22,22 @@ urlpatterns = [
     path("how-to-buy/", front_views.how_to_buy, name="how_to_buy"),
     path("faqs/", front_views.faqs, name="faqs"),
     path("consultation/", front_views.consultation, name="consultation"),
+    # Booking a paid call: hold + PayPal order, then PayPal's two redirects back.
+    path(
+        "consultation/book",
+        consultation_views.book_consultation,
+        name="book_consultation",
+    ),
+    path(
+        "consultation/booked",
+        consultation_views.consultation_return,
+        name="consultation_return",
+    ),
+    path(
+        "consultation/cancelled",
+        consultation_views.consultation_cancelled,
+        name="consultation_cancelled",
+    ),
     path("pricing/", front_views.pricing, name="pricing"),
     path("map/", front_views.map_view, name="map"),
     path(

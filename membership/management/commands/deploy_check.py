@@ -30,6 +30,7 @@ class Command(BaseCommand):
         self.check_tiers()
         self.check_paypal()
         self.check_consultation()
+        self.check_booking()
         self.check_security()
 
         self.stdout.write("")
@@ -211,6 +212,97 @@ class Command(BaseCommand):
                 "CONSULT_BOOKING_URL is empty — /consultation/ shows the enquiry "
                 "fallback instead of a booking button, so no calls can be sold."
             )
+
+    def check_booking(self):
+        """Can somebody actually book and pay for a call right now?
+
+        Four independent things have to line up — credentials, a parseable price,
+        a sane availability window and slots inside it — and any one of them
+        failing produces a page that looks fine and takes no money.
+        """
+        self.stdout.write("Consultation booking")
+        from decimal import Decimal, InvalidOperation
+        from zoneinfo import ZoneInfo
+
+        can_charge = bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET)
+        if not can_charge:
+            self.warnings.append(
+                "No PayPal credentials, so /consultation/ falls back to "
+                "CONSULT_BOOKING_URL (or the enquiry form) instead of taking "
+                "money itself."
+            )
+            return
+
+        try:
+            price = Decimal(str(settings.CONSULT_PRICE))
+        except (InvalidOperation, TypeError):
+            self.problems.append(
+                f"CONSULT_PRICE={settings.CONSULT_PRICE!r} is not a decimal, so "
+                f"every checkout will fail. Use e.g. 25.00 (no currency symbol)."
+            )
+            return
+        if price <= 0:
+            self.problems.append(f"CONSULT_PRICE is {price} — calls would be free.")
+            return
+        self.ok(f"charging {price} {settings.CONSULT_CURRENCY} per call")
+
+        try:
+            ZoneInfo(settings.CONSULT_TIMEZONE)
+        except Exception:
+            self.problems.append(
+                f"CONSULT_TIMEZONE={settings.CONSULT_TIMEZONE!r} is not a valid "
+                f"IANA zone, so no slots can be generated."
+            )
+            return
+
+        from membership.scheduling import available_slots, window
+        open_at, close_at = window()
+        slots = available_slots()
+        self.ok(
+            f"{settings.CONSULT_DURATION_MINUTES}min slots, "
+            f"{open_at:%H:%M}-{close_at:%H:%M} {settings.CONSULT_TIMEZONE}, "
+            f"{settings.CONSULT_LEAD_HOURS}h notice"
+        )
+        if not slots:
+            self.problems.append(
+                "No bookable slots exist. Check CONSULT_WEEKDAYS, the "
+                "OPEN/CLOSE window is wide enough for one call, and that "
+                "CONSULT_HORIZON_DAYS is greater than CONSULT_LEAD_HOURS."
+            )
+        else:
+            first = slots[0].astimezone(ZoneInfo(settings.CONSULT_TIMEZONE))
+            self.ok(f"{len(slots)} slots bookable, next {first:%a %d %b %H:%M}")
+
+        # The audience is mostly in Europe and North America, and a window that
+        # is office hours in Japan is the middle of the night for them. Report
+        # the share of slots each region could actually take, because "224 slots
+        # bookable" reads as healthy while being unusable for most visitors.
+        if slots:
+            for label, zone in (
+                ("Europe", "Europe/Madrid"),
+                ("US east", "America/New_York"),
+            ):
+                usable = sum(
+                    1 for slot in slots
+                    if 8 <= slot.astimezone(ZoneInfo(zone)).hour <= 21
+                )
+                share = 100 * usable // len(slots)
+                message = f"{label}: {usable}/{len(slots)} slots fall 08:00-21:00 local ({share}%)"
+                if share == 0:
+                    self.problems.append(
+                        f"{message} — nobody there can book a call. "
+                        f"An evening window in Japan (CONSULT_OPEN=19:00, "
+                        f"CONSULT_CLOSE=23:00) is afternoon in Europe and "
+                        f"morning on the US east coast."
+                    )
+                elif share < 35:
+                    self.warnings.append(
+                        f"{message} — most visitors from there have no workable "
+                        f"time. CONSULT_OPEN=19:00 / CONSULT_CLOSE=23:00 in Japan "
+                        f"would cover both regions."
+                    )
+                else:
+                    self.ok(message)
 
     def check_security(self):
         self.stdout.write("Security")

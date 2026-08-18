@@ -8,6 +8,7 @@ from django.shortcuts import render, redirect
 from django.views import View
 from inventory.models import GeocodedPlace, Property, PropertyImage
 from membership.metering import check_access
+from membership.consultations import _safe_zone, slot_context
 from inventory.images import thumb_url
 from inventory.utils import (
     city_key,
@@ -409,12 +410,16 @@ def legacy_premium_redirect(request):
 
 
 def consultation(request):
-    """Landing page for the paid orientation call.
+    """Landing page and booking flow for the paid orientation call.
 
-    Booking and payment are handled by the scheduling provider (Cal.com +
-    PayPal) rather than in Django: a broken checkout costs a lead at the exact
-    moment of peak intent, and card/scheduling edge cases — timezones,
-    reschedules, refunds, webhook retries — are not worth owning here.
+    Booking, payment and the calendar live here now (see
+    membership/consultations.py). Owning the flow is what lets the booking arrive
+    already attached to the property that prompted it, and lets the confirmation
+    state the time in both the buyer's zone and the agent's.
+
+    CONSULT_BOOKING_URL survives as a fallback for the one case the internal flow
+    cannot cover: no PayPal credentials means no way to take the money, and an
+    external scheduler beats a checkout that fails.
     """
     # A booking that came from a property page carries ?property=<pk>. Prefill
     # the scheduler's notes field with it so the call arrives already knowing
@@ -435,15 +440,24 @@ def consultation(request):
         separator = "&" if "?" in booking_url else "?"
         booking_url = f"{booking_url}{separator}notes={urllib.parse.quote(note)}"
 
-    return render(
-        request,
-        "consultation.html",
-        {
-            "booking_url": booking_url,
-            "consult_price": settings.CONSULT_PRICE_LABEL,
-            "property": prop,
-        },
-    )
+    # Only fall back to the external scheduler when we genuinely cannot charge.
+    can_charge = bool(settings.PAYPAL_CLIENT_ID and settings.PAYPAL_CLIENT_SECRET)
+
+    context = {
+        "booking_url": booking_url if not can_charge else "",
+        "can_charge": can_charge,
+        "consult_price": settings.CONSULT_PRICE_LABEL,
+        "property": prop,
+        "cancelled": request.GET.get("cancelled") == "1",
+    }
+    if can_charge:
+        # The picker renders in the visitor's own timezone. The browser tells us
+        # which one via ?tz= on first load; until then UTC, which is honest
+        # rather than guessing from an IP.
+        display_zone = _safe_zone(request.GET.get("tz"))
+        context.update(slot_context(request, display_zone))
+
+    return render(request, "consultation.html", context)
 
 
 @cache_page(60 * 60)

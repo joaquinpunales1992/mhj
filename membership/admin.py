@@ -1,5 +1,7 @@
 from datetime import timedelta
+from zoneinfo import ZoneInfo
 
+from django.conf import settings
 from django.contrib import admin, messages
 from django.contrib.auth.models import User
 from django.db.models import Count, Q
@@ -7,6 +9,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from membership.models import (
+    Consultation,
     InterestRequest,
     PremiumRequest,
     PropertyView,
@@ -299,3 +302,75 @@ class PropertyViewAdmin(admin.ModelAdmin):
 
     def has_add_permission(self, request):
         return False
+
+
+@admin.register(Consultation)
+class ConsultationAdmin(admin.ModelAdmin):
+    """The call diary.
+
+    Ordered soonest-first and defaulted to the bookings that still matter, so
+    opening this is "what is coming up" rather than "everything that ever
+    happened". Expired holds are listed as such rather than hidden, because an
+    abandoned checkout is a lead worth chasing.
+    """
+
+    list_display = (
+        "starts_at_agent",
+        "starts_at_visitor",
+        "name",
+        "email",
+        "state",
+        "amount_paid",
+        "listing_link",
+    )
+    list_filter = ("status", "starts_at")
+    search_fields = ("name", "email", "paypal_order_id", "paypal_capture_id", "notes")
+    readonly_fields = (
+        "created_at", "paid_at", "paypal_order_id", "paypal_capture_id",
+        "amount", "currency", "visitor_timezone",
+    )
+    date_hierarchy = "starts_at"
+    ordering = ("-starts_at",)
+
+    @admin.display(description=f"When ({settings.CONSULT_TIMEZONE})", ordering="starts_at")
+    def starts_at_agent(self, obj):
+        local = obj.starts_at.astimezone(ZoneInfo(settings.CONSULT_TIMEZONE))
+        return f"{local:%a %d %b %Y, %H:%M}"
+
+    @admin.display(description="Their local time")
+    def starts_at_visitor(self, obj):
+        if not obj.visitor_timezone:
+            return "—"
+        try:
+            local = obj.starts_at.astimezone(ZoneInfo(obj.visitor_timezone))
+        except Exception:
+            return obj.visitor_timezone
+        return f"{local:%a %d %b, %H:%M} ({obj.visitor_timezone})"
+
+    @admin.display(description="Status")
+    def state(self, obj):
+        if obj.is_expired_hold:
+            return format_html('<span style="color:#999">abandoned checkout</span>')
+        colour = {
+            obj.STATUS_PAID: "#2f7a34",
+            obj.STATUS_COMPLETED: "#2f7a34",
+            obj.STATUS_HOLD: "#b8860b",
+            obj.STATUS_CANCELLED: "#999",
+        }.get(obj.status, "#333")
+        return format_html('<span style="color:{}">{}</span>', colour, obj.get_status_display())
+
+    @admin.display(description="Paid")
+    def amount_paid(self, obj):
+        if obj.status not in (obj.STATUS_PAID, obj.STATUS_COMPLETED):
+            return "—"
+        return f"{obj.amount} {obj.currency}"
+
+    @admin.display(description="Property")
+    def listing_link(self, obj):
+        if not obj.listing:
+            return "—"
+        return format_html(
+            '<a href="{}" target="_blank" rel="noopener">{}</a>',
+            obj.listing.get_public_url,
+            obj.listing.get_location_for_front(),
+        )

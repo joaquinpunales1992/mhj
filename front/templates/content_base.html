@@ -7,6 +7,8 @@
   <title>{% block title %}My Akiya in Japan{% endblock %}</title>
   <meta name="description" content="{% block description %}Affordable homes and akiya for sale in Japan.{% endblock %}">
   <link rel="canonical" href="{% block canonical %}https://akiyainjapan.com/{% endblock %}">
+  {% comment %}For per-page <head> additions — e.g. noindex on the booking receipt.{% endcomment %}
+  {% block extra_head %}{% endblock %}
 
   {% comment %}
     Social preview. Without these, sharing any of these pages in WhatsApp or a
