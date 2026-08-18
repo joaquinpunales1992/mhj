@@ -1529,10 +1529,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   .pp-newsletter h3 {
     display: flex;
-    align-items: center;
+    /* flex-start, not center: this heading wraps to two lines in the sidebar,
+       and centring floats the envelope into the gap between them instead of
+       sitting with the first line. The nudge aligns it with the cap-height
+       rather than the top of the line box. */
+    align-items: flex-start;
     gap: 0.45em;
     font-size: 1.32em;
   }
+  .pp-newsletter h3 .pp-nl-icon { margin-top: 0.18em; }
   .pp-nl-icon {
     flex: 0 0 auto;
     width: 1.05em;
@@ -2147,7 +2152,7 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="pp-newsletter pp-panel">
           <div class="flex flex-row flex-5 gap-6 w-full">
               <div class="flex-1">
-                <p class="pp-nl-eyebrow">Weekly email &middot; included with Pro</p>
+                <p class="pp-nl-eyebrow">The newsletter &middot; included with Pro</p>
                 <h3>
                   {% comment %}
                     Inline SVG rather than <span class="icon solid fa-envelope">:
@@ -2162,9 +2167,17 @@ document.addEventListener('DOMContentLoaded', () => {
                   </svg>
                   A hand-picked selection, every week
                 </h3>
+                {% comment %}
+                  Name the thing, then describe it. The heading sells the benefit,
+                  but a block that never says "newsletter" leaves the reader to
+                  work out what they are being offered — and "get the weekly
+                  email" could as easily be an alert or a digest. So: what it is,
+                  how often, roughly how much, and what it is not.
+                {% endcomment %}
                 <p class="pp-nl-copy">
-                  A short email of homes worth a second look — chosen by us,
-                  including ones like this.
+                  One email a week: a handful of homes we think are worth a second
+                  look, chosen by us — including ones like this. No listings dump,
+                  no daily alerts, and you can stop it in one click.
                 </p>
                 {% comment %}
                   Both handlers ping notify_user_expressed_interest and then send
@@ -2178,7 +2191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% endcomment %}
                 <button id="subscribe" class="pp-nl-btn"
                         onclick="{% if user.is_authenticated or request.COOKIES.email %}subscribeToNewsletterAuthenticated{% else %}subscribeToNewsletter{% endif %}('{{ user_email }}', '{{ property.pk }}')">
-                  Get the weekly email
+                  Get the newsletter
                 </button>
                 <p class="pp-nl-note">Included with Pro &middot; {{ pro_price }} &middot; cancel any time.</p>
                 <hr>
