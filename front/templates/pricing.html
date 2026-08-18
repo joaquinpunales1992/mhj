@@ -6,9 +6,9 @@
 {% block content %}
   <h1>Pricing</h1>
   <p class="lead">
-    Browsing is free. An account raises how many properties you can open and
-    what you see on each; Pro removes the limit and adds the analysis. The
-    consultation is separate — advice rather than access.
+    Browsing is free, and every listing shows its full details to everyone. An
+    account raises how many properties you can open; Pro removes the limit and
+    adds the analysis. The consultation is separate — advice rather than access.
   </p>
 
   <div class="tiers">
@@ -22,9 +22,8 @@
       <p class="tier-price">$0</p>
       <p class="tier-for">While you're shortlisting</p>
       <ul>
-        <li><b>{{ free_limit }} properties</b></li>
-        <li>Photos, title, price and location</li>
-        <li>Building and land area</li>
+        <li><b>{{ free_limit }} properties</b> instead of {{ anon_limit }}</li>
+        <li>Every listing detail: photos, price, location, building and land area</li>
         <li>Save homes and searches</li>
         <li class="tier-no">Price per m² vs the local market</li>
         <li class="tier-no">Short-term rental potential</li>
@@ -34,7 +33,7 @@
         <span class="tier-have">Your current plan</span>
       {% elif not user.is_authenticated %}
         <a class="tier-cta" href="{% url 'account_signup' %}">Create a free account</a>
-        <span class="tier-note">No card needed. Without an account you can open {{ anon_limit }}.</span>
+        <span class="tier-note">No card needed. Without an account you can open {{ anon_limit }}, with the same details.</span>
       {% else %}
         <span class="tier-have">Included with Pro</span>
       {% endif %}
@@ -80,7 +79,8 @@
   <div class="faq">
     <strong>I'm still browsing and enjoying it</strong>
     The free account. Genuinely — don't pay us anything yet. It takes you from
-    {{ anon_limit }} properties to {{ free_limit }} and adds the areas.
+    {{ anon_limit }} properties to {{ free_limit }} and lets you save the ones
+    you like.
   </div>
   <div class="faq">
     <strong>I've shortlisted a dozen houses and want to compare them properly</strong>

@@ -2,17 +2,17 @@
 
 Three tiers, all configurable in settings:
 
-    anonymous    VIEW_LIMIT_ANONYMOUS (5) properties, basic fields only
-    free account VIEW_LIMIT_FREE (25) properties, basic + standard fields
-    pro          unlimited properties, every field
+    anonymous    VIEW_LIMIT_ANONYMOUS (5) properties, open fields
+    free account VIEW_LIMIT_FREE (25) properties, open fields
+    pro          unlimited properties, open + premium fields
 
 Two independent axes: how many properties a tier may open, and how much of each
 it may see. Running out of views never removes fields the tier was entitled to;
 it shows a wall on the next new property instead.
 
-The basic fields — photos, title, price, location — are never withheld from
-anyone. They are what search engines index and what makes a property page worth
-arriving on.
+The open fields — photos, title, price, location, the two areas, description —
+are never withheld from anyone. They are what search engines index and what
+makes a property page worth arriving on.
 
 Two rules protect search traffic and must not be weakened:
 
@@ -43,13 +43,27 @@ CRAWLER_PATTERN = re.compile(
 
 # What each tier may see, independent of how many properties it may open.
 #
-#   BASIC     everyone, including anonymous visitors within their allowance.
-#             These are also the fields search engines index, so they are never
-#             withheld.
-#   STANDARD  free accounts and above.
-#   PREMIUM   Pro only — the derived analysis that is the reason to subscribe.
-FIELDS_BASIC = ("photos", "title", "price", "location")
-FIELDS_STANDARD = ("building_area", "land_area", "description")
+#   OPEN     everyone, anonymous included, on every property they may open.
+#            These are the facts a listing is useless without, and the text
+#            search engines have to rank the page on, so they are never
+#            withheld — an anonymous visitor is limited in *how many*
+#            properties they see, not in how much of each.
+#   PREMIUM  Pro only — the derived analysis that is the reason to subscribe.
+#
+# There was briefly a middle "standard" tier that held the areas back from
+# anonymous visitors. It was wrong twice over: it contradicted the meter wall's
+# own promise a few lines into contact_seller.html ("building area ... stays
+# visible"), and because crawlers resolve to the anonymous tier it also stopped
+# Googlebot from indexing the areas.
+FIELDS_OPEN = (
+    "photos",
+    "title",
+    "price",
+    "location",
+    "building_area",
+    "land_area",
+    "description",
+)
 FIELDS_PREMIUM = (
     "price_per_sqm",
     "short_term_rental_potential",
@@ -142,12 +156,11 @@ def check_access(request, property_id):
         limit      int   — allowance for the tier, None when unlimited
         remaining  int   — views left, None when unlimited
         next_step  str   — 'signup' or 'upgrade', which wall to show
-        standard   bool  — may see FIELDS_STANDARD (free and above)
         premium    bool  — may see FIELDS_PREMIUM (Pro only)
 
-    Quota and field access are separate axes. An anonymous visitor inside their
-    allowance still sees only the basic fields; a free account sees the standard
-    ones too but never the premium analysis.
+    Quota and field access are separate axes. Anonymous and free accounts differ
+    only in how many properties they may open — both see every open field on the
+    properties they do open. Pro adds the premium analysis.
     """
     tier = tier_for(request)
     limit = limit_for(tier)
@@ -155,7 +168,6 @@ def check_access(request, property_id):
     # Field access depends only on the tier, never on the quota: running out of
     # views does not take away fields you were already entitled to.
     fields = {
-        "standard": tier in (TIER_FREE, TIER_PRO),
         "premium": tier == TIER_PRO,
     }
 

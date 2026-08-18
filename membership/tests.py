@@ -148,9 +148,10 @@ class WebhookTests(TestCase):
 class FieldTierTests(TestCase):
     """Quota and field access are separate axes; these cover the field axis.
 
-    Anonymous sees only the basic fields, a free account adds the standard ones,
-    and the premium analysis is Pro-only. Getting this wrong either gives away
-    the reason to subscribe or hides fields a tier paid for.
+    Everyone — anonymous included, and crawlers — sees every open field on the
+    properties they may open. Only the premium analysis is Pro-only. Getting
+    this wrong either gives away the reason to subscribe or withholds the facts
+    a listing is useless without (and that Google ranks the page on).
     """
 
     def _request(self, user=None):
@@ -170,16 +171,27 @@ class FieldTierTests(TestCase):
             location="Oita City, Oita Prefecture",
         )
 
-    def test_anonymous_gets_basic_only(self):
+    def test_anonymous_gets_the_open_fields_but_not_premium(self):
         access = check_access(self._request(), self.prop.pk)
-        self.assertFalse(access["standard"])
         self.assertFalse(access["premium"])
+        self.assertNotIn("standard", access, "the middle field tier is gone")
 
-    def test_free_account_gets_standard_not_premium(self):
+    def test_crawler_gets_the_open_fields(self):
+        """Crawlers resolve to the anonymous tier, so this is what Googlebot
+        indexes. A middle tier here silently stopped the areas being indexed."""
+        request = self._request()
+        request.META["HTTP_USER_AGENT"] = "Mozilla/5.0 (compatible; Googlebot/2.1)"
+        access = check_access(request, self.prop.pk)
+        self.assertFalse(access["locked"])
+        self.assertFalse(access["premium"], "the paid analysis is still not published")
+
+    def test_free_account_gets_no_extra_fields_only_more_views(self):
+        """A free account buys quota, not fields: the only thing it adds over
+        anonymous is the higher allowance."""
         user = User.objects.create_user("t@example.com", email="t@example.com")
         access = check_access(self._request(user), self.prop.pk)
-        self.assertTrue(access["standard"])
         self.assertFalse(access["premium"], "price/m², rental, land rights are Pro-only")
+        self.assertGreater(access["limit"], check_access(self._request(), self.prop.pk)["limit"])
 
     def test_pro_gets_everything(self):
         user = User.objects.create_user("p@example.com", email="p@example.com")
@@ -190,11 +202,11 @@ class FieldTierTests(TestCase):
         )
         user.refresh_from_db()
         access = check_access(self._request(user), self.prop.pk)
-        self.assertTrue(access["standard"])
         self.assertTrue(access["premium"])
 
     def test_spending_the_quota_does_not_remove_field_access(self):
-        """A free account that runs out of views keeps the standard fields."""
+        """A free account that runs out of views is walled on the next new
+        property, but nothing is retroactively taken away."""
         user = User.objects.create_user("q@example.com", email="q@example.com")
         request = self._request(user)
         others = [
@@ -206,7 +218,6 @@ class FieldTierTests(TestCase):
             check_access(request, p.pk)
         access = check_access(request, self.prop.pk)
         self.assertTrue(access["locked"], "quota should be spent")
-        self.assertTrue(access["standard"], "but the tier's fields remain")
         self.assertFalse(access["premium"])
 
 

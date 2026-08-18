@@ -1279,7 +1279,6 @@ document.addEventListener('DOMContentLoaded', () => {
   .mhj-wall-cta:hover { background: #3a5f2b; color: #fff; }
   .mhj-wall-note { display: block; margin-top: 10px; color: #8a8f8a; font-size: 0.86em; }
   .mhj-wall-note a { color: #477535; }
-  .mhj-locked-inline { color: #a6a9a6; font-style: italic; }
 
   /* Small inline gate used where a field is Pro-only but the label stays. */
   .mhj-mini-gate {
@@ -1901,20 +1900,12 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Building Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Building Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The total floor area of the building (建物面積), as reported by the listing source. Shown in square meters (㎡) or square feet (ft²) per your unit setting.</span></span></p>
-                {% if access.standard %}
-                  <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
-                {% else %}
-                  <p class="text-xll mhj-locked-inline">Free account</p>
-                {% endif %}
+                <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
                 <hr>
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡) or square feet (ft²) per your unit setting. "(public book)" means the figure is from the official land register.</span></span></p>
-                {% if access.standard %}
-                  <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
-                {% else %}
-                  <p class="text-xll mhj-locked-inline">Free account</p>
-                {% endif %}
+                <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
               </div>
             </div>
 
