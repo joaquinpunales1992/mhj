@@ -224,6 +224,71 @@ class FieldTierTests(TestCase):
 @override_settings(
     ALLOWED_HOSTS=["testserver"], VIEW_LIMIT_ANONYMOUS=2, VIEW_LIMIT_FREE=3
 )
+class WalledPageTests(TestCase):
+    """What the walled page actually renders.
+
+    check_access can be perfectly correct while the page still shows everything,
+    because the withholding happens in the template. That is exactly how the
+    areas stayed visible past the limit, and how the wall came to advertise
+    "unlock the land area" directly beneath a visible land area — so these
+    assertions are on the response body, not on the access dict.
+    """
+
+    def setUp(self):
+        self.props = [
+            Property.objects.create(
+                url=f"http://x/w{i}", price=1000, show_in_front=True,
+                location="Oita City, Oita Prefecture",
+                building_area="103㎡", land_area="101㎡ (public book)",
+            )
+            for i in range(4)
+        ]
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+
+    def get(self, prop):
+        return self.client.get(f"/japanese-houses/{prop.pk}/0/")
+
+    def test_areas_show_inside_the_allowance(self):
+        body = self.get(self.props[0]).content.decode()
+        self.assertIn("103㎡", body)
+        self.assertIn("101㎡ (public book)", body)
+
+    def test_areas_are_withheld_once_the_allowance_is_spent(self):
+        for p in self.props[:2]:          # spend the 2-view anonymous allowance
+            self.get(p)
+        body = self.get(self.props[2]).content.decode()
+        self.assertNotIn("103㎡", body, "building area must be withheld past the limit")
+        self.assertNotIn("101㎡ (public book)", body, "land area too")
+        self.assertIn("Create a free account", body)
+
+    def test_the_wall_persists_on_every_further_property(self):
+        """The reported symptom was the wall vanishing on the next click."""
+        for p in self.props[:2]:
+            self.get(p)
+        for p in self.props[2:]:
+            body = self.get(p).content.decode()
+            self.assertNotIn("103㎡", body, f"pk={p.pk} leaked the area")
+            self.assertIn("Create a free account", body)
+
+    def test_revisiting_an_allowed_property_still_shows_its_areas(self):
+        """Spending the allowance must not retroactively strip the properties
+        already opened."""
+        for p in self.props[:2]:
+            self.get(p)
+        self.get(self.props[2])           # hit the wall
+        body = self.get(self.props[0]).content.decode()
+        self.assertIn("103㎡", body)
+
+    def test_crawler_sees_the_areas_past_the_limit(self):
+        crawler = Client(HTTP_USER_AGENT="Mozilla/5.0 (compatible; Googlebot/2.1)")
+        for p in self.props:
+            body = crawler.get(f"/japanese-houses/{p.pk}/0/").content.decode()
+            self.assertIn("103㎡", body, "Googlebot must never be walled")
+
+
+@override_settings(
+    ALLOWED_HOSTS=["testserver"], VIEW_LIMIT_ANONYMOUS=2, VIEW_LIMIT_FREE=3
+)
 class MeteringTests(TestCase):
     """The meter and the subscription meet here: an active subscription must
     lift the cap, and an inactive one must not."""

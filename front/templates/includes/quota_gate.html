@@ -1,0 +1,15 @@
+{% comment %}
+  Inline stand-in for a field withheld because the visitor's view allowance is
+  spent — not because their tier lacks the field. Points at whichever step
+  actually lifts the limit for them, which check_access has already worked out:
+  'signup' for an anonymous visitor, 'upgrade' for a free account.
+
+  Kept in one file because it appears once per withheld field and the two links
+  must never drift apart; a signup link shown to someone already signed in is
+  a dead end.
+{% endcomment %}
+{% if access.next_step == 'upgrade' %}
+  <a class="mhj-mini-gate" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Go Pro to keep browsing</a>
+{% else %}
+  <a class="mhj-mini-gate" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
+{% endif %}

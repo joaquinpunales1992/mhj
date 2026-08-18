@@ -6,13 +6,15 @@ Three tiers, all configurable in settings:
     free account VIEW_LIMIT_FREE (25) properties, open fields
     pro          unlimited properties, open + premium fields
 
-Two independent axes: how many properties a tier may open, and how much of each
-it may see. Running out of views never removes fields the tier was entitled to;
-it shows a wall on the next new property instead.
+Two axes: how many properties a tier may open, and how much of each it may see.
 
-The open fields — photos, title, price, location, the two areas, description —
-are never withheld from anyone. They are what search engines index and what
-makes a property page worth arriving on.
+Photos, title, price and location are never withheld from anyone — they are what
+search engines index and what makes a property page worth arriving on. The two
+areas and the description are open to every tier as well, but only on the
+properties that tier may actually open: past the allowance they are withheld
+along with the rest of the detail, which is what `locked` drives in the
+template. Re-opening a property already seen never locks, so nothing is taken
+away retroactively.
 
 Two rules protect search traffic and must not be weakened:
 
@@ -43,11 +45,11 @@ CRAWLER_PATTERN = re.compile(
 
 # What each tier may see, independent of how many properties it may open.
 #
-#   OPEN     everyone, anonymous included, on every property they may open.
-#            These are the facts a listing is useless without, and the text
-#            search engines have to rank the page on, so they are never
-#            withheld — an anonymous visitor is limited in *how many*
-#            properties they see, not in how much of each.
+#   OPEN     every tier, anonymous included, on every property that tier may
+#            open. These are the facts a listing is useless without and the
+#            text search engines rank the page on, so no tier is singled out —
+#            but they are still subject to the allowance: on a new property
+#            past the limit the template withholds them behind the wall.
 #   PREMIUM  Pro only — the derived analysis that is the reason to subscribe.
 #
 # There was briefly a middle "standard" tier that held the areas back from
@@ -165,8 +167,10 @@ def check_access(request, property_id):
     tier = tier_for(request)
     limit = limit_for(tier)
 
-    # Field access depends only on the tier, never on the quota: running out of
-    # views does not take away fields you were already entitled to.
+    # `premium` is purely a tier question and never a quota one: a Pro
+    # subscriber has no limit to run out of, and a free account that does run out
+    # was never entitled to these fields anyway. The open fields are the ones the
+    # allowance affects, and the template keys that off `locked`.
     fields = {
         "premium": tier == TIER_PRO,
     }

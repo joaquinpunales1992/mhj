@@ -1900,20 +1900,38 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Building Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Building Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The total floor area of the building (建物面積), as reported by the listing source. Shown in square meters (㎡) or square feet (ft²) per your unit setting.</span></span></p>
-                <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
+                {% comment %}
+                  Withheld once the allowance is spent. This is quota-driven,
+                  not tier-driven: an anonymous visitor sees the areas on the
+                  properties they may open, and loses them only on a *new*
+                  property past the limit. Re-opening one of the first few keeps
+                  them, and crawlers are never locked, so indexing is unaffected.
+                {% endcomment %}
+                {% if access.locked %}
+                  <p class="text-xll">{% include "includes/quota_gate.html" %}</p>
+                {% else %}
+                  <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
+                {% endif %}
                 <hr>
               </div>
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡) or square feet (ft²) per your unit setting. "(public book)" means the figure is from the official land register.</span></span></p>
-                <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
+                {% if access.locked %}
+                  <p class="text-xll">{% include "includes/quota_gate.html" %}</p>
+                {% else %}
+                  <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
+                {% endif %}
               </div>
             </div>
 
             {% if access.locked %}
             {% comment %}
-              The meter wall. Everything above stays visible — photos, price,
-              building area, town — so the page keeps its value in search
-              results and to a first-time visitor.
+              The meter wall. Photos, title, price and town stay visible — that
+              is what makes the page worth arriving on from search, and crawlers
+              are never locked so indexing is unaffected. The areas above are
+              withheld here, so this copy must not promise anything that is
+              still on screen: claiming to "unlock the land area" while the land
+              area is displayed is what made the meter look broken.
             {% endcomment %}
             <div class="flex flex-row flex-2 gap-4 w-full">
               <div class="flex-1 mhj-wall">
@@ -1925,9 +1943,14 @@ document.addEventListener('DOMContentLoaded', () => {
                   {% endif %}
                 </p>
                 <p class="mhj-wall-body">
-                  Unlock the full address, land area, land rights, zoning and how
-                  this price compares with other homes nearby — on this property
-                  and every other.
+                  {% if access.next_step == 'signup' %}
+                    Unlock the building and land area on this property and every
+                    other — {{ free_limit }} homes, free.
+                  {% else %}
+                    You've used the {{ access.limit }} homes your free account
+                    includes. Pro removes the limit and adds price per m², rental
+                    potential, land rights and risk information.
+                  {% endif %}
                 </p>
                 {% if access.next_step == 'signup' %}
                   <a class="mhj-wall-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
