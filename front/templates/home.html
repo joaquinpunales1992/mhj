@@ -196,7 +196,13 @@
 		<link rel="icon" href="{% static 'favicon.ico' %}" sizes="any" />
 		<link rel="icon" type="image/png" sizes="32x32" href="{% static 'favicon-32.png' %}" />
 		<link rel="apple-touch-icon" href="{% static 'apple-touch-icon.png' %}" />
-		<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+		{% comment %}
+		  No user-scalable=no. Blocking pinch-zoom is an accessibility failure —
+		  anyone who needs to magnify a listing photo or a price simply cannot —
+		  and it applied only here and on the region pages, so zoom worked on
+		  /faqs/ but not on the page most visitors land on.
+		{% endcomment %}
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		{% compress css %}
 			<link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
 		{% endcompress %}
@@ -417,6 +423,46 @@
 							.share-opt:hover { background: #ece9e1 !important; }
 							.share-opt img { width: 20px; height: 20px; }
 							.share-opt .share-opt-ico { width: 20px; text-align: center; font-size: 1.05rem; }
+
+							/* --- FAQ pairs in the footer panel -----------------------------
+							   Matches /faqs/ — bold question on its own line, plain answer,
+							   hairline between — but tuned for the dark panel this sits on.
+							   The theme leaves <strong> inline, so without display:block the
+							   question and answer run together on one line.
+
+							   Defined here because home.html does not extend
+							   content_base.html (it is the HTML5UP template), so the shared
+							   .faq rule never reaches it. That is the template fork the audit
+							   identifies as the root cause. */
+							#faqs .faq { border-bottom: 1px solid rgba(255, 255, 255, 0.12); padding: 0.9em 0; }
+							#faqs .faq:last-child { border-bottom: 0; }
+							#faqs .faq strong { display: block; margin-bottom: 0.25em; color: #ffffff; }
+
+							/* --- Listing card CTA ------------------------------------------
+							   main.css styles .primary with the HTML5UP theme's teal
+							   (#34a58e), square corners and uppercase. That put two palettes
+							   on the same card: "Learn more" in teal next to "Share" outlined
+							   in the brand green #477535. Nothing else on the site is teal.
+
+							   Scoped with #main so it beats main.css's `button.primary`
+							   (0,1,1) without needing !important, and matched to the buttons
+							   on the content pages: brand green, 8px radius, sentence case,
+							   Work Sans. */
+							#main .thumb button.primary {
+								background-color: #477535;
+								border-radius: 8px;
+								text-transform: none;
+								letter-spacing: normal;
+								font-family: 'Work Sans', sans-serif;
+								font-weight: 600;
+							}
+							#main .thumb button.primary:hover { background-color: #3a5f2b; }
+							/* The theme forces `color: #34a58e !important` on button:hover, so
+							   the label needs an equally loud answer or it turns teal. */
+							#main .thumb button.primary:hover,
+							#main .thumb button.primary:hover:active { color: #ffffff !important; }
+							/* Share sits beside it; same radius so the pair reads as a set. */
+							#main .thumb .share-btn { border-radius: 8px; text-transform: none; }
 					</style>
 
 					<button class="filter-button{% if nav == 'home' %} is-active{% endif %}" onclick="window.location.href='{% url "home" %}'" style="
@@ -646,11 +692,11 @@
 												{% if property.premium %}
 													{% if user.is_authenticated or request.COOKIES.email %}
 														<button class="primary" onclick="window.location.href='{% url "pricing" %}'">
-															Upgrade to Learn More
+															Upgrade to learn more
 														</button>
 													{% else %}
 														<button class="primary" onclick="window.location.href='{% url "pricing" %}'">
-															Upgrade to Learn More
+															Upgrade to learn more
 														</button>
 													{% endif %}
 												{% else %}
@@ -668,7 +714,7 @@
 													
 														<div style="display:flex; gap:0.5rem; align-items:stretch; flex-wrap:wrap;">
 															<button class="primary" onclick="window.location.href='{% url "property_detail" property.pk 0 %}'">
-																<span class="lock-icon"></span> Learn More
+																<span class="lock-icon"></span> Learn more
 															</button>
 															<button type="button" class="share-btn"
 																data-share-url="{{ request.scheme }}://{{ request.get_host }}{% url 'property_detail' property.pk %}"
@@ -760,14 +806,12 @@
 								</section>
 
 								<section>
-									<h3>For general inquiries, reach out to us at <a href="mailto:hello@akiyainjapan.com" title="Email us">hello@akiyainjapan.com</a></h3>
+									{% comment %}Sentences, not headings — these were <h3>.{% endcomment %}
+					<p>For general inquiries, reach out to us at <a href="mailto:hello@akiyainjapan.com" title="Email us">hello@akiyainjapan.com</a></p>
 								</section>
 								<section>
-									<h3>Follow us on Instagram <a href="https://www.instagram.com/myakiyainjapan/" class="icon brands fa-instagram"></a></h3>
+									<p>Follow us on <a href="https://www.instagram.com/myakiyainjapan/" rel="noopener">Instagram</a></p>
 								</section>
-								<p class="copyright">
-									&copy; My Akiya in Japan</a>.
-								</p>
 							</div>
 							<div>
 							</div>
@@ -786,7 +830,7 @@
 
 										<li>Sign the service contract and choose a certified real estate agent from our available options.</li>
 
-										<li>Define the properties you'd like to inspect (personally or virtually).</li>
+										<li>Define the properties you’d like to inspect (personally or virtually).</li>
 
 										<li>Formalize your offer for the property you’ve chosen.</li>
 
@@ -796,9 +840,6 @@
 									</ol>
 								</section>
 								
-								<p class="copyright">
-									&copy; My Akiya in Japan</a>.
-								</p>
 							</div>
 							<div>
 							</div>
@@ -809,21 +850,30 @@
 						<div class="inner">
 							<div>
 								<section>
-									<h2>Frequently Asked Questions</h2>
-										<strong>Q:</strong> What is an Akiya? <br><strong>A:</strong> An Akiya is a vacant or abandoned house in Japan, often available at very affordable prices. <hr>
-										<strong>Q:</strong> Are only "Akiyas" (abandoned houses) available on this site?<br><strong>A:</strong> No, we aggregate properties from multiple Japanese websites. Some are Akiyas, while others are not. <hr>
-										<strong>Q:</strong> Can foreigners buy property in Japan? <br><strong>A:</strong> Yes, foreigners can purchase property in Japan with no restrictions. Full ownership is yours.<hr>
-										<strong>Q:</strong> Do I need to live in Japan to buy a house? <br><strong>A:</strong> No, you can complete the entire process remotely and visit Japan whenever you choose.<hr>
-										<strong>Q:</strong> Does purchasing a house in Japan grant me a visa?<br><strong>A:</strong> No, Japan does not provide investor visas for real estate owners. <hr>
-										<strong>Q:</strong> Can I use my property in Japan as an Airbnb? <br><strong>A:</strong> Yes, depending on the location, you can manage your property as an Airbnb. <hr>
-										<strong>Q:</strong> Can I rent my property in Japan for long-term leases? <br><strong>A:</strong> Yes, you can.<hr>
-										<strong>Q:</strong> What are the additional costs involved? <br><strong>A:</strong> Additional costs may include taxes, agent fees, depending on the property. 
+									<h2>Frequently asked questions</h2>
+									{% comment %}
+										Same presentation as /faqs/ — bold question, plain answer.
+										This block used literal "Q:"/"A:" prefixes separated by
+										<hr>, so identical content looked like two different
+										features depending on which page you were on.
+									{% endcomment %}
+									<div class="faq"><strong>What is an Akiya?</strong>An Akiya is a vacant or abandoned house in Japan, often available at very affordable prices.</div>
+									<div class="faq"><strong>Are only "Akiyas" (abandoned houses) available on this site?</strong>No, we aggregate properties from multiple Japanese websites. Some are Akiyas, while others are not.</div>
+									<div class="faq"><strong>Can foreigners buy property in Japan?</strong>Yes, foreigners can purchase property in Japan with no restrictions. Full ownership is yours.</div>
+									<div class="faq"><strong>Do I need to live in Japan to buy a house?</strong>No, you can complete the entire process remotely and visit Japan whenever you choose.</div>
+									<div class="faq"><strong>Does purchasing a house in Japan grant me a visa?</strong>No, Japan does not provide investor visas for real estate owners.</div>
+									<div class="faq"><strong>Can I use my property in Japan as an Airbnb?</strong>Yes, depending on the location, you can manage your property as an Airbnb.</div>
+									<div class="faq"><strong>Can I rent my property in Japan for long-term leases?</strong>Yes, you can.</div>
+									<div class="faq"><strong>What are the additional costs involved?</strong>Additional costs may include taxes, agent fees, depending on the property.</div>
 								</section>
 								<br>
 								
-								<p class="copyright">
-									&copy; My Akiya in Japan</a>.
-								</p>
+								{% comment %}
+									One copyright line for the page. There were three — one per
+									footer panel — each also carrying an orphan </a> with no
+									opening tag.
+								{% endcomment %}
+								<p class="copyright">&copy; My Akiya in Japan.</p>
 							</div>
 							<div>
 							</div>
