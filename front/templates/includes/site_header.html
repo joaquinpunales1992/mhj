@@ -1,0 +1,108 @@
+{% comment %}
+  The site header: brand left, navigation right. One definition for every page.
+
+  There were three. The content pages had .topbar (brand 1.25rem, links .95rem,
+  capped at 1000px), the map had .site-header (brand 1.1rem, links .9rem, full
+  width), and the property page had a third set sized in `em` against a smaller
+  local font-size, which came out at 15px and 12px — noticeably smaller than
+  either. Same markup, same labels, three sizes.
+
+  The styles live in this file rather than in each template's stylesheet because
+  the templates do not share one: home.html and contact_seller.html are
+  standalone, content_base.html is the base for everything else. A shared include
+  carrying its own CSS is the only place a single definition can sit.
+
+  Every value below resolves through the tokens in includes/brand.html, which all
+  three pages already include.
+
+  Parameters:
+    compact=True   omit "Browse homes" and "Map". For pages that already offer a
+                   prominent way to both — the map has "List view", the property
+                   page has "Back to listings | Browse the map".
+
+  Set --site-header-max on :root to align the bar with a capped content column;
+  leave it unset for a full-bleed page.
+{% endcomment %}
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="/">My Akiya in Japan</a>
+    <nav class="topnav" aria-label="Primary">
+      {% include "includes/main_nav.html" with compact=compact %}
+    </nav>
+  </div>
+</header>
+<style>
+  /* The header defines its own scale and palette instead of inheriting them.
+
+     It has to: the three pages that use it do not share a cascade.
+       - Bootstrap 3 sets `html { font-size: 10px }` on the property page, so
+         every rem there renders at 62.5% — the brand came out 13px against the
+         map's 20px from the identical rule.
+       - property_detail.css declares its own :root with
+         --primary: hsl(110,26%,35%) (#4A7042), a different green from the brand
+         #477535, and is linked after includes/brand.html so it wins. The signup
+         button was quietly the wrong colour on that page.
+       - --font-display resolved to Work Sans there rather than the serif.
+
+     So: font-size in px on the container, everything inside in em off that, and
+     brand values as literals. A shared component that renders identically
+     regardless of the host page is the only way one header can mean one header
+     here. The literals match includes/brand.html — change both together. */
+  .site-header {
+    font-size: 16px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(71, 117, 53, 0.14);
+  }
+  .site-header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.5em 1em;
+    max-width: var(--site-header-max, none);
+    margin: 0 auto;
+    padding: 0.7em 1.1em;
+  }
+  .site-header .brand {
+    font-family: 'Noto Serif JP', Georgia, serif;
+    font-size: 1.25em;
+    font-weight: 500;
+    color: #477535;
+    /* border-bottom as well as text-decoration: some pages draw link underlines
+       with a dotted border, which text-decoration:none leaves alone. */
+    text-decoration: none;
+    border-bottom: 0;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+  .site-header .topnav {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    /* gap rather than margin-left per link, so a wrapped second row lines up
+       with the first instead of being indented by one gap. */
+    gap: 0.3em 1.1em;
+  }
+  .site-header .topnav a {
+    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.95em;
+    color: #2b2b2b;
+    text-decoration: none;
+    border-bottom: 0;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
+  .site-header .topnav a:hover { color: #477535; }
+  .site-header .topnav a.on { color: #477535; font-weight: 600; }
+  .site-header .topnav a.acct-link { color: #477535; font-weight: 600; }
+  .site-header .topnav a.acct-cta {
+    background: #477535;
+    color: #ffffff !important;
+    border-radius: 8px;
+    padding: 0.35em 0.7em;
+    font-weight: 600;
+  }
+  .site-header .topnav a.acct-cta:hover { background: #3a5f2b; color: #ffffff !important; }
+  .site-header .acct-saved { display: inline-flex; align-items: center; gap: 0.3em; }
+  .site-header .acct-saved svg { width: 0.95em; height: 0.95em; }
+</style>

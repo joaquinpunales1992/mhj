@@ -36,21 +36,8 @@
     * { box-sizing:border-box; margin:0; padding:0; }
     body { font-family:var(--font-body); background:var(--bg); color:var(--fg); line-height:1.65; -webkit-font-smoothing:antialiased; }
     a { color:var(--primary); }
-    .topbar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:.5rem; max-width:1000px; margin:0 auto; padding:1.1rem 1.5rem; }
-    .brand { font-family:var(--font-display); font-size:1.25rem; color:var(--primary); text-decoration:none; font-weight:500; }
-    .topnav a { margin-left:1.1rem; text-decoration:none; color:var(--fg); font-size:.95rem; }
-    .topnav a:hover { color:var(--primary); }
-    .topnav a.on { color:var(--primary); font-weight:600; }
     /* Account controls sit at the end of the nav, visually separated so
        "Sign in" doesn't read as another section link. */
-    .acct-link { color:var(--primary); font-weight:600; }
-    .acct-saved { display:inline-flex; align-items:center; gap:.3rem; }
-    .acct-saved svg { width:.95em; height:.95em; }
-    .acct-cta {
-      background:var(--primary); color:#fff !important; border-radius:8px;
-      padding:.35rem .7rem;
-    }
-    .acct-cta:hover { background:var(--primary-dark); }
     .wrap { max-width:820px; margin:0 auto; padding:1rem 1.5rem 4rem; }
     .wrap h1 { font-family:var(--font-display); font-weight:500; font-size:2.1rem; margin:1.25rem 0 1rem; line-height:1.2; }
     .wrap h2 { font-family:var(--font-display); font-weight:500; font-size:1.4rem; margin:2rem 0 .75rem; }
@@ -76,12 +63,7 @@
   </style>
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="/">My Akiya in Japan</a>
-    <nav class="topnav" aria-label="Primary">
-      {% include "includes/main_nav.html" %}
-    </nav>
-  </header>
+  {% include "includes/site_header.html" %}
   <main class="wrap">
     {% block content %}{% endblock %}
   </main>

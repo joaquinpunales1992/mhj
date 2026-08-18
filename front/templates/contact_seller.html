@@ -1533,65 +1533,6 @@ document.addEventListener('DOMContentLoaded', () => {
     text-transform: uppercase;
     color: var(--mhj-primary);
   }
-  /* --- Site header ---------------------------------------------------------
-     Mirrors the map page's .site-header so the two look like the same site.
-     Values are taken from there and expressed in this page's own tokens, since
-     contact_seller.html does not extend content_base.html and cannot inherit
-     them.
-
-     One deliberate difference: the map hides its nav below 900px, because the
-     map itself needs the vertical space. Here it wraps to a second row instead —
-     hiding it would leave a phone with no navigation at all on the page most
-     visitors arrive on. */
-  .site-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-wrap: wrap;
-    gap: 0.4em 1em;
-    padding: 0.7em 1.1em;
-    background: var(--mhj-card);
-    border-bottom: 1px solid var(--mhj-border);
-  }
-  .site-header .brand {
-    font-family: 'Noto Serif JP', serif;
-    font-size: 1.1em;
-    font-weight: 500;
-    color: var(--mhj-primary);
-    /* border-bottom as well as text-decoration: this page's link styling draws
-       its underline with a dotted border, which text-decoration:none does not
-       touch — the wordmark came out underlined. */
-    text-decoration: none;
-    border-bottom: 0;
-    white-space: nowrap;
-  }
-  .site-header .topnav {
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 0.2em 1.1em;
-  }
-  /* main_nav.html emits bare <a>s, and the theme's link styling would give each
-     one a dotted underline. */
-  .site-header .topnav a {
-    color: var(--mhj-foreground);
-    font-size: 0.88em;
-    text-decoration: none;
-    border-bottom: 0;
-    white-space: nowrap;
-  }
-  .site-header .topnav a:hover { color: var(--mhj-primary); }
-  .site-header .topnav a.on { color: var(--mhj-primary); font-weight: 600; }
-  /* account_nav.html's signup call to action, kept visually distinct. */
-  .site-header .topnav a.acct-cta {
-    background: var(--mhj-primary);
-    color: #fff;
-    padding: 0.35em 0.8em;
-    border-radius: 8px;
-    font-weight: 600;
-  }
-  .site-header .topnav a.acct-cta:hover { background: var(--mhj-primary-dark); color: #fff; }
-
   /* "Back to listings | Browse the map" on one row, at every width.
      Measured: the pair fits inside 320px, so there is no breakpoint that needs
      to hide the separator or stack them. flex-wrap is kept only as a floor for
@@ -2012,12 +1953,7 @@ document.addEventListener('DOMContentLoaded', () => {
     The brand moves here from the sidebar, where it was an <h1> at 2rem competing
     with the property's own title for the one h1 the page should have.
   {% endcomment %}
-  <header class="site-header">
-    <a class="brand" href="/">My Akiya in Japan</a>
-    <nav class="topnav">
-      {% include "includes/main_nav.html" with compact=True %}
-    </nav>
-  </header>
+  {% include "includes/site_header.html" with compact=True %}
 
   <div class="flex flex-col lg:flex-row min-h-screen" id="pp-layout">
     <!-- Sidebar -->
