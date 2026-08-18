@@ -83,6 +83,24 @@ class Property(TimestampMixin):
         loc = (self.location or "").split("[", 1)[0].strip(" ,")
         return loc
 
+    @property
+    def display_location(self):
+        """The address with the scrapers' UI junk removed.
+
+        SUUMO injects fragments like "[ ■ Surrounding environment]" into the
+        address, which were being rendered verbatim on the property page and,
+        worse, inside its JSON-LD addressLocality. Strips the bracketed span
+        rather than everything after it, because the junk is sometimes mid-string
+        and the city and prefecture follow it.
+        """
+        import re
+
+        cleaned = re.sub(r"\[[^\]]*\]", " ", self.location or "")
+        # An unclosed bracket has no reliable end; drop the tail in that case.
+        cleaned = cleaned.split("[", 1)[0]
+        cleaned = re.sub(r"\s+", " ", cleaned)
+        return re.sub(r"\s*,\s*", ", ", cleaned).strip(" ,-")
+
     def get_location_url(self):
         return f"https://www.google.com/maps/search/?api=1&query={urllib.parse.quote(self.get_location_for_map(), safe='')}"
 

@@ -28,7 +28,7 @@
           "address": {
             "@type": "PostalAddress",
             "addressCountry": "JP",
-            "addressLocality": "{{ property.location }}",
+            "addressLocality": "{{ property.display_location }}",
             "addressRegion": "{{ property.get_location_for_front }}"
           },
           "offers": {
@@ -1815,7 +1815,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   anonymous visitors, because it is part of what makes the page
                   worth arriving on from search.
                 {% endcomment %}
-                <p class="text-xll">{{ property.location }} | <a href="#" data-open-map class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
+                <p class="text-xll">{{ property.display_location }} | <a href="#" data-open-map class="hover:underline" style="color: #477535; font-weight: 600;">View on Map</a></p>
                 <hr>
               </div>
               </div>
@@ -2297,7 +2297,7 @@ document.addEventListener('DOMContentLoaded', () => {
   {% endcomment %}
   <dialog id="mapModal" class="map-dialog" aria-labelledby="mapModalLabel">
     <header class="map-dialog-head">
-      <h4 id="mapModalLabel">{{ property.location }}</h4>
+      <h4 id="mapModalLabel">{{ property.display_location }}</h4>
       <button type="button" class="map-dialog-close" data-close-map aria-label="Close">&times;</button>
     </header>
     <iframe
@@ -2313,7 +2313,12 @@ document.addEventListener('DOMContentLoaded', () => {
   </dialog>
 
   <style>
-    .map-dialog {
+    /* [open] is essential: the browser hides a closed <dialog> with
+       `dialog:not([open]) { display: none }` in its own stylesheet, and any
+       author `display` declaration beats that regardless of specificity. Without
+       the attribute selector this panel rendered as a stray white box below the
+       footer, showing the property's address. */
+    .map-dialog[open] {
       padding: 0;
       border: 0;
       border-radius: 12px;
