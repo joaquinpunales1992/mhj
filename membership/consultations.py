@@ -62,13 +62,35 @@ def _abs(request, name, **kwargs):
                                       else reverse(name))
 
 
+# Offered in the "shown in" picker, so somebody whose machine is set to the wrong
+# zone — or who is booking from a laptop that travelled with them — can correct it
+# without editing the URL. The detected zone is added to this list at render time
+# if it is not already in it.
+COMMON_ZONES = [
+    "Asia/Tokyo",
+    "Europe/London",
+    "Europe/Madrid",
+    "Europe/Berlin",
+    "America/New_York",
+    "America/Chicago",
+    "America/Los_Angeles",
+    "Australia/Sydney",
+    "Asia/Singapore",
+    "UTC",
+]
+
+
 def slot_context(request, display_zone):
     """Everything the picker needs, grouped in the viewer's own timezone."""
     slots = available_slots()
+    zones = list(COMMON_ZONES)
+    if display_zone not in zones:
+        zones.insert(0, display_zone)
     return {
         "slot_days": group_by_day(slots, display_zone),
         "slot_count": len(slots),
         "display_zone": display_zone,
+        "zone_choices": zones,
         "duration_minutes": settings.CONSULT_DURATION_MINUTES,
         "agent_timezone": settings.CONSULT_TIMEZONE,
         "lead_hours": settings.CONSULT_LEAD_HOURS,

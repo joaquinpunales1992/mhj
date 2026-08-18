@@ -93,8 +93,23 @@
 
     <p>
       <b>{{ consult_price }}</b> for {{ duration_minutes }} minutes, paid when you
-      book. Times below are shown in <b id="tzName">{{ display_zone }}</b> —
-      the call itself is held from Japan ({{ agent_timezone }}).
+      book. The call itself is held from Japan ({{ agent_timezone }}).
+    </p>
+
+    {% comment %}
+      The zone is detected from the browser, which is right until it is not — a
+      machine set to the wrong region, or a laptop that has travelled, shows times
+      the visitor cannot act on. This lets them say so, and it doubles as the
+      answer to "why does it say that?": the value is visible and changeable
+      rather than implicit.
+    {% endcomment %}
+    <p class="tz-picker">
+      <label for="tzSelect">Times shown in</label>
+      <select id="tzSelect" aria-label="Show times in this timezone">
+        {% for z in zone_choices %}
+          <option value="{{ z }}"{% if z == display_zone %} selected{% endif %}>{{ z }}</option>
+        {% endfor %}
+      </select>
     </p>
 
     {% if slot_days %}
@@ -181,6 +196,13 @@
     {% endif %}
 
     <style>
+      .tz-picker { display: flex; align-items: center; gap: .5rem; flex-wrap: wrap;
+                   font-size: .92rem; color: var(--muted); margin: 0 0 1rem; }
+      .tz-picker select {
+        font-family: inherit; font-size: .92rem; padding: .3rem .5rem;
+        border: 1px solid var(--border); border-radius: 7px; background: #fff;
+        color: var(--fg); max-width: 16rem;
+      }
       .slot-days { display: flex; flex-direction: column; gap: .9rem; margin: 1.4rem 0; }
       .slot-day { display: grid; grid-template-columns: 6.5rem 1fr; gap: .6rem; align-items: start; }
       .slot-day-name {
@@ -240,17 +262,34 @@
         // If the browser is somewhere else, reload once with the real zone so the
         // times shown are the visitor's own. Once only — the guard is the query
         // string already carrying a tz.
+        // Reconcile on every load, not only when ?tz= is absent.
+        //
+        // The old guard meant a URL that already carried ?tz= was never
+        // re-checked — so a shared or bookmarked link, or a laptop that changed
+        // timezone, rendered its slots in the OLD zone while the label below was
+        // still overwritten with the browser's current one. Wrong times under a
+        // correct-looking label, which is worse than either alone.
+        //
+        // This cannot loop: after the reload the server renders display_zone as
+        // `zone`, so the condition is false.
         var params = new URLSearchParams(location.search);
-        if (zone && zone !== '{{ display_zone }}' && !params.has('tz')) {
+        if (zone && zone !== '{{ display_zone }}') {
           params.set('tz', zone);
           location.replace(location.pathname + '?' + params.toString() + '#book');
           return;
         }
-        if (zone) {
-          var field = document.getElementById('tzField');
-          var label = document.getElementById('tzName');
-          if (field) field.value = zone;
-          if (label) label.textContent = zone;
+        var field = document.getElementById('tzField');
+        if (field) field.value = '{{ display_zone }}';
+
+        // A manual choice wins over detection: reloading with ?tz=<chosen> makes
+        // the condition above false on the next load, so it sticks.
+        var picker = document.getElementById('tzSelect');
+        if (picker) {
+          picker.addEventListener('change', function () {
+            var p = new URLSearchParams(location.search);
+            p.set('tz', picker.value);
+            location.href = location.pathname + '?' + p.toString() + '#book';
+          });
         }
 
         var form = document.getElementById('bookForm');
