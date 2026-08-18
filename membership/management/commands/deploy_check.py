@@ -27,6 +27,7 @@ class Command(BaseCommand):
         self.check_migrations()
         self.check_geocoding()
         self.check_prices()
+        self.check_tiers()
         self.check_paypal()
         self.check_consultation()
         self.check_security()
@@ -124,6 +125,32 @@ class Command(BaseCommand):
             )
         else:
             self.ok("no implausibly cheap properties on show")
+
+    def check_tiers(self):
+        """Report the live allowances.
+
+        These are env-overridable, so the deployed numbers can differ from the
+        code defaults and from whatever the pricing page was written against.
+        Printing them makes that visible instead of something you discover from
+        a screenshot.
+        """
+        self.stdout.write("Access tiers")
+        anon = settings.VIEW_LIMIT_ANONYMOUS
+        free = settings.VIEW_LIMIT_FREE
+        self.ok(
+            f"no account: {anon or 'unlimited'} · free: {free or 'unlimited'} "
+            f"· pro: unlimited"
+        )
+        if free and anon and free <= anon:
+            self.problems.append(
+                f"VIEW_LIMIT_FREE ({free}) is not above VIEW_LIMIT_ANONYMOUS "
+                f"({anon}), so creating an account buys nothing."
+            )
+        if not free:
+            self.warnings.append(
+                "VIEW_LIMIT_FREE is 0 — free accounts have unlimited views, so "
+                "the only thing Pro adds is the extra fields."
+            )
 
     def check_paypal(self):
         self.stdout.write("PayPal")
