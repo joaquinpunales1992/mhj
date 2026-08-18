@@ -1402,10 +1402,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   a#book-button:hover { color: #fff; text-decoration: none; }
 
+  /* --- Type inside the "Interested in buying?" collapsible ----------------
+     The six steps were marked up inconsistently: step 1 carries a full-size
+     paragraph, steps 2-6 use <h4> + <small>. .step h4 had no rule at all, so
+     those headings fell through to the CDN Bootstrap defaults, and <small>
+     renders at ~80%, which is why the descriptions looked faint and smaller
+     than step 1's. Font families are literal here on purpose: this template
+     loads its own font link rather than includes/brand.html, so the
+     --font-* tokens are not defined on this page. */
+  .buying-details .step h4 {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 500;
+    /* em, not rem: main.css sets body{font-size:15pt} (20px) while html stays
+       at 16px, so on this page a rem value renders SMALLER than the
+       surrounding copy. Sizing in em keeps these in the page's own scale. */
+    font-size: 1.1em;
+    line-height: 1.35;
+    /* Long step titles are sentences; the theme uppercases all headings, which
+       is fine for short section labels but unreadable across a full line. */
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--mhj-foreground);
+    margin: 0 0 0.3em;
+  }
+  .buying-details .step small {
+    display: block;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 1em;
+    line-height: 1.6;
+    color: var(--mhj-secondary);
+    max-width: 62ch;
+  }
+  .buying-details .step { padding-bottom: 1.15rem; }
+  .buying-details .step:last-child { padding-bottom: 0.25rem; }
+
   /* Body copy inside the CTA block. Was an <h5> inheriting heading styles. */
   .buying-details .step .cta-blurb {
     font-family: 'Work Sans', sans-serif;
-    font-size: 1rem;
+    font-size: 1em;
     line-height: 1.6;
     color: var(--mhj-foreground);
     margin: 0 0 1.1rem;
@@ -1925,6 +1959,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </summary>
 
               <div class="step" data-step="1">
+                <h4>1 - Talk to our team about this property</h4>
                 <p class="cta-blurb">Talk it through with our English-speaking team: what this house would really cost you, what the process looks like, and whether your plan is realistic.</p>
                 <div>
                     {% comment %}
