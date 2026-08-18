@@ -258,9 +258,9 @@ class Property(TimestampMixin):
             return values[min(int(p / 100 * n), n - 1)]
 
         def usd(yen):
-            # Whole-dollar USD; convert_yen_to_usd keeps cents, which look
-            # noisy on a per-m² figure. Same 0.007 rate as the rest of the site.
-            return f"${round(yen * 0.007):,}"
+            # Same formatter as every other price on the site, so the per-m²
+            # figures cannot drift to a bare "$" while the cards say "US$".
+            return convert_yen_to_usd(yen)
 
         return {
             "area": area,

@@ -401,8 +401,11 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
         color: #2b2b2b !important; cursor: pointer; transition: background 0.15s ease; text-transform: none; letter-spacing: normal;
     }
     .share-opt:hover { background: #ece9e1 !important; }
-    .share-opt img { width: 20px; height: 20px; }
-    .share-opt .share-opt-ico { width: 20px; text-align: center; font-size: 1.05rem; }
+    /* One icon set, sized here rather than by width/height attributes so the
+       same SVG can be reused at other sizes. currentColor means each icon
+       takes the colour of its label and follows hover for free. */
+    .share-opt svg { width: 20px; height: 20px; flex: 0 0 auto; }
+    .mhj-icon-pin { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.12em; opacity: .85; }
 
     /* Close button */
     .close-btn {
@@ -985,7 +988,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (navigator.clipboard && navigator.clipboard.writeText) {
           navigator.clipboard.writeText(shareUrl).then(() => {
             this.textContent = 'Copied!';
-            setTimeout(() => { this.innerHTML = '<span class="share-opt-ico">🔗</span> Copy link'; }, 1400);
+            setTimeout(() => { this.innerHTML = '{% include "includes/icons/copy.html" %} Copy link'; }, 1400);
           }, () => window.prompt('Copy this link:', shareUrl));
         } else { window.prompt('Copy this link:', shareUrl); }
         return;
@@ -2212,11 +2215,11 @@ document.addEventListener('DOMContentLoaded', () => {
                   <button type="button" class="close-btn" id="closePopup" aria-label="Close">&times;</button>
                   <h4 class="share-card-title">Share this property</h4>
                   <div class="share-options">
-                    <button type="button" class="share-opt" data-net="facebook"><img src="{% static 'images/social_icons/facebook.png' %}" alt=""> Facebook</button>
-                    <button type="button" class="share-opt" data-net="x"><img src="{% static 'images/social_icons/twitter.png' %}" alt=""> X (Twitter)</button>
-                    <button type="button" class="share-opt" data-net="whatsapp"><img src="{% static 'images/social_icons/whatsapp.png' %}" alt=""> WhatsApp</button>
-                    <button type="button" class="share-opt" data-net="email"><span class="share-opt-ico">✉</span> Email</button>
-                    <button type="button" class="share-opt" data-net="copy" data-label="Copy link"><span class="share-opt-ico">🔗</span> Copy link</button>
+                    <button type="button" class="share-opt" data-net="facebook">{% include "includes/icons/facebook.html" %} Facebook</button>
+                    <button type="button" class="share-opt" data-net="x">{% include "includes/icons/x.html" %} X (Twitter)</button>
+                    <button type="button" class="share-opt" data-net="whatsapp">{% include "includes/icons/whatsapp.html" %} WhatsApp</button>
+                    <button type="button" class="share-opt" data-net="email">{% include "includes/icons/email.html" %} Email</button>
+                    <button type="button" class="share-opt" data-net="copy" data-label="Copy link">{% include "includes/icons/copy.html" %} Copy link</button>
                   </div>
                 </div>
               </div>
@@ -2345,7 +2348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     {% comment %}
                       Same CTA as everywhere else, but carrying ?property= so the
                       booking arrives knowing which house prompted it — a call
-                      about a specific $30k house in Oita is a much stronger
+                      about a specific US$30k house in Oita is a much stronger
                       signal than a generic booking.
                     {% endcomment %}
                     {% comment %}
@@ -2405,7 +2408,7 @@ document.addEventListener('DOMContentLoaded', () => {
                       {% endif %}
                     {% endwith %}
                     <div class="property-info">
-                      <p class="property-location">Akiya in 📍 {{ property.get_location_for_front }}</p>
+                      <p class="property-location">Akiya in {% include "includes/icons/pin.html" %} {{ property.get_location_for_front }}</p>
                       <p class="property-price"><span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
                       <a href="{% url 'property_detail' property.pk 0 %}" class="property-details-button" style="background-color: transparent;  border: 2px solid #477535; color: #477535;"> <span style="color: #477535;">Learn More</span></a>
                     </div>

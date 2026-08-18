@@ -630,7 +630,7 @@
 
     /* ---------- filters ---------- */
     // Price bounds in USD for the selected bucket, handed over by the server so
-    // the client and the listing page agree on what "$50k – $100k" means.
+    // the client and the listing page agree on what "US$50k – US$100k" means.
     var PRICE_RANGES = {
       {% for b in price_buckets %}'{{ b.key }}': [{{ b.gt }} * 10000 * 0.007, {{ b.lte }} * 10000 * 0.007]{% if not forloop.last %},{% endif %}
       {% endfor %}

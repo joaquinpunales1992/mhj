@@ -17,7 +17,12 @@
   // JPY -> currency. USD matches the server-side rate (inventory/utils.py) so
   // the price doesn't shift when JS upgrades the server-rendered USD value.
   var RATES = { USD: 0.007, EUR: 0.0062, AUD: 0.0101, JPY: 1 };
-  var SYMBOL = { USD: "$", EUR: "€", AUD: "A$", JPY: "¥" };
+  // "US$" for dollars, not a bare "$": the audience is mostly outside the US and
+  // the same page also shows yen, so "$" is ambiguous (AUD, CAD and SGD all use
+  // it). Must match inventory/utils.py's CURRENCY_PREFIX — this script overwrites
+  // the server-rendered price on load, so a mismatch here silently undoes it and
+  // the notation flickers from US$ to $ as soon as JS runs.
+  var SYMBOL = { USD: "US$", EUR: "€", AUD: "A$", JPY: "¥" };
   var M2_TO_FT2 = 10.7639;
 
   var CUR_KEY = "mhj_currency";

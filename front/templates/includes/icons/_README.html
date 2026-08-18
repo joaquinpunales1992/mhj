@@ -1,0 +1,17 @@
+{% comment %}
+  One icon set for the whole site: inline SVG, 24x24 viewBox, solid paths filled
+  with currentColor so each icon takes the colour of the text beside it and
+  follows hover states for free.
+
+  Replaces a mix of three systems that had drifted apart — PNG files for the
+  social networks, emoji for Email and Copy link, emoji again for the location
+  marker on cards, and Font Awesome classes that render as empty spans on any
+  page that does not link fontawesome-all.min.css.
+
+  Emoji were the worst of the three here: they are rendered by the operating
+  system, so the same card looked different on macOS, Windows and Android, and
+  they sat in a row beside pixel-aligned PNGs.
+
+  Sized by the caller through CSS (.share-opt svg, .card-pin, …), never by width
+  and height attributes, so one icon can appear at several sizes.
+{% endcomment %}

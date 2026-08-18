@@ -1,9 +1,7 @@
-import locale
 import re
 
 import requests
 
-locale.setlocale(locale.LC_ALL, "en_US.UTF-8")
 
 # Deliberately no model imports here: inventory.models imports this module.
 
@@ -74,8 +72,35 @@ def convert_price_string(price):
         raise ValueError(f"Invalid price: {price}")
 
 
+# "US$", not "$". The site quotes Japanese property to a mostly non-US audience,
+# where a bare "$" is ambiguous — Canadian, Australian and Singapore dollars all
+# use it, and the same page also shows yen. Pricing and the consultation already
+# said "US$"; the listings said "$".
+CURRENCY_PREFIX = "US$"
+YEN_TO_USD = 0.007
+
+
+def format_usd(amount):
+    """`US$12,345` — whole dollars, thousands separated.
+
+    Formatted explicitly rather than via locale.currency(), which returned the
+    symbol for whatever locale happened to be installed and raises outright under
+    the C locale. That made the site's prices depend on the server's locale being
+    configured, which is not a dependency price display should have.
+    """
+    try:
+        value = round(float(amount))
+    except (TypeError, ValueError):
+        return ""
+    return f"{CURRENCY_PREFIX}{value:,}"
+
+
 def convert_yen_to_usd(price):
-    return locale.currency(float(price) * 0.007, grouping=True).replace(".00", "")
+    """A yen amount rendered as US dollars, for display."""
+    try:
+        return format_usd(float(price) * YEN_TO_USD)
+    except (TypeError, ValueError):
+        return ""
 
 
 def infer_location(location):

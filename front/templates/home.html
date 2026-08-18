@@ -144,14 +144,31 @@
 			src="https://www.facebook.com/tr?id=639531835572767&ev=PageView&noscript=1"
 			/></noscript>
 			<!-- End Meta Pixel Code -->
-		<!-- Google tag (gtag.js) -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS"></script>
+		{% comment %}
+		  Google tag, deferred to the load event — same treatment as
+		  includes/analytics.html, which this page does not use because it is the
+		  standalone HTML5UP template rather than a content_base child. That is why
+		  the earlier deferral missed the busiest page on the site: 166KB of
+		  gtag.js was still competing with the card photos here.
+
+		  dataLayer is a plain array and gtag() only pushes to it, so calls made
+		  before the script lands are queued and replayed — no events are lost.
+		{% endcomment %}
 		<script>
 		window.dataLayer = window.dataLayer || [];
 		function gtag(){dataLayer.push(arguments);}
 		gtag('js', new Date());
-
 		gtag('config', 'G-QBY9Y9CMPS');
+		(function () {
+			var load = function () {
+				var s = document.createElement('script');
+				s.async = true;
+				s.src = 'https://www.googletagmanager.com/gtag/js?id=G-QBY9Y9CMPS';
+				document.head.appendChild(s);
+			};
+			if (document.readyState === 'complete') load();
+			else window.addEventListener('load', load);
+		})();
 		</script>
 		<title>{{ page_title|default:"My Akiya in Japan — Affordable Homes & Akiya for Sale in Japan" }}</title>
 		<meta charset="utf-8" />
@@ -421,8 +438,11 @@
 								color: #2b2b2b !important; cursor: pointer; transition: background 0.15s ease;
 							}
 							.share-opt:hover { background: #ece9e1 !important; }
-							.share-opt img { width: 20px; height: 20px; }
-							.share-opt .share-opt-ico { width: 20px; text-align: center; font-size: 1.05rem; }
+							/* One icon set, sized here rather than by width/height attributes so the
+							   same SVG can be reused at other sizes. currentColor means each icon
+							   takes the colour of its label and follows hover for free. */
+							.share-opt svg { width: 20px; height: 20px; flex: 0 0 auto; }
+							.mhj-icon-pin { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.12em; opacity: .85; }
 
 							/* --- FAQ pairs in the footer panel -----------------------------
 							   Matches /faqs/ — bold question on its own line, plain answer,
@@ -631,7 +651,7 @@
 									{% with property.get_ordered_images.first as first_image %}
 										{% if property.premium %}
 											<a href="{% static 'images/premium_placeholder.png' %}" class="image"><img src="{% static 'images/premium_placeholder.png' %}" alt="This is a premium property"/></a>
-											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
+											<p id="property-location" hidden>{% include "includes/icons/pin.html" %}{{ property.get_location_for_front }}</p>
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
 										{% else %}
 											{% if first_image.show_in_front %}
@@ -663,7 +683,7 @@
 												{% endcomment %}
 												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file|thumb:700 }}" data-full="{{ first_image.file }}" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}" alt="{{ first_image.alt }}" loading="lazy" decoding="async"/></a>
 											{% endif %}
-											<p id="property-location" hidden>📍{{ property.get_location_for_front }}</p>
+											<p id="property-location" hidden>{% include "includes/icons/pin.html" %}{{ property.get_location_for_front }}</p>
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
 										{% endif %}
 									{% endwith %}
@@ -701,7 +721,7 @@
 													{% endif %}
 												{% else %}
 													{% if property.location and property.price %}
-														<p style="margin: 1rem;">📍 {{ property.get_location_for_front }} - <span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
+														<p style="margin: 1rem;">{% include "includes/icons/pin.html" %} {{ property.get_location_for_front }} - <span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
 													{% else %}
 														{% if property.location %}
 															<p style="margin: 0;"><span ></span> {{ property.get_location_for_front }}</p>
@@ -888,11 +908,11 @@
 				<button type="button" class="share-close" aria-label="Close">&times;</button>
 				<h4>Share this property</h4>
 				<div class="share-options">
-					<button type="button" class="share-opt" data-net="facebook"><img src="{% static 'images/social_icons/facebook.png' %}" alt=""> Facebook</button>
-					<button type="button" class="share-opt" data-net="x"><img src="{% static 'images/social_icons/twitter.png' %}" alt=""> X (Twitter)</button>
-					<button type="button" class="share-opt" data-net="whatsapp"><img src="{% static 'images/social_icons/whatsapp.png' %}" alt=""> WhatsApp</button>
-					<button type="button" class="share-opt" data-net="email"><span class="share-opt-ico">✉</span> Email</button>
-					<button type="button" class="share-opt" data-net="copy" data-label="Copy link"><span class="share-opt-ico">🔗</span> Copy link</button>
+					<button type="button" class="share-opt" data-net="facebook">{% include "includes/icons/facebook.html" %} Facebook</button>
+					<button type="button" class="share-opt" data-net="x">{% include "includes/icons/x.html" %} X (Twitter)</button>
+					<button type="button" class="share-opt" data-net="whatsapp">{% include "includes/icons/whatsapp.html" %} WhatsApp</button>
+					<button type="button" class="share-opt" data-net="email">{% include "includes/icons/email.html" %} Email</button>
+					<button type="button" class="share-opt" data-net="copy" data-label="Copy link">{% include "includes/icons/copy.html" %} Copy link</button>
 				</div>
 			</div>
 		</div>
@@ -940,7 +960,7 @@
 								if (navigator.clipboard && navigator.clipboard.writeText) {
 									navigator.clipboard.writeText(current.url).then(function () {
 										self.textContent = 'Copied!';
-										setTimeout(function () { self.innerHTML = '<span class="share-opt-ico">🔗</span> Copy link'; }, 1400);
+										setTimeout(function () { self.innerHTML = '{% include "includes/icons/copy.html" %} Copy link'; }, 1400);
 									}, function () { window.prompt('Copy this link:', current.url); });
 								} else { window.prompt('Copy this link:', current.url); }
 								return;
@@ -1150,9 +1170,9 @@
 					<label for="eoi-budget">Budget range</label>
 					<select id="eoi-budget" name="budget">
 						<option value="">No preference</option>
-						<option value="Under $50k">Under $50k</option>
-						<option value="$50k – $100k">$50k – $100k</option>
-						<option value="$100k+">$100k+</option>
+						<option value="Under US$50k">Under US$50k</option>
+						<option value="US$50k – US$100k">US$50k – US$100k</option>
+						<option value="US$100k+">US$100k+</option>
 					</select>
 					<label for="eoi-timeline">Timeline</label>
 					<select id="eoi-timeline" name="timeline">
