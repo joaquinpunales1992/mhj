@@ -1280,6 +1280,43 @@ document.addEventListener('DOMContentLoaded', () => {
   .mhj-wall-note a { color: #477535; }
   .mhj-locked-inline { color: #a6a9a6; font-style: italic; }
 
+  /* ===== Desktop two-column layout ======================================
+     This page's columns were expressed entirely in Tailwind — flex,
+     lg:flex-row, lg:w-120, flex-1, max-w-8xl — and Tailwind is not loaded
+     here, so none of it applied. The columns appeared by accident and `main`
+     took its width from the widest thing inside it: the page's own
+     `.container { max-width: 1200px; padding: 20px }`. That made main a fixed
+     ~1220px at every viewport, so below about 1500px the page overflowed
+     horizontally by ~200px and the Share/Like block sat off-screen.
+
+     Declaring the layout for real fixes the whole class of symptom. min-width:0
+     is the load-bearing part: without it a flex item refuses to shrink below
+     its content's intrinsic width, which is exactly what was happening.
+     Scoped to >=1024px so the existing mobile reorder (which flattens both
+     columns with display:contents) is untouched. ====================== */
+  @media (min-width: 1024px) {
+    #pp-layout {
+      display: flex;
+      align-items: flex-start;
+      min-height: 100vh;
+    }
+    #pp-layout > aside {
+      flex: 0 0 clamp(240px, 24%, 340px);
+      min-width: 0;
+      box-sizing: border-box;
+    }
+    #pp-layout > main {
+      flex: 1 1 auto;
+      /* Allow the column to shrink below its content width. */
+      min-width: 0;
+      box-sizing: border-box;
+      overflow-x: clip;
+    }
+    /* .container's 1200px cap was what pinned the column's width. Inside the
+       main column it should follow the column instead. */
+    #pp-layout > main .container { max-width: 100%; }
+  }
+
   .pp-title-row {
     display: flex;
     align-items: flex-start;
