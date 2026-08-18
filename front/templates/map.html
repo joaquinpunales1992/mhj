@@ -173,14 +173,42 @@
       font-variant-numeric:tabular-nums; transition:transform .12s ease, background .12s ease;
     }
     .marker-pin.hot { background:#25401b; transform:scale(1.22); z-index:900; }
-    .leaflet-popup-content { margin:.7rem .9rem; font-family:inherit; }
+    /* Leaflet's own rule is `.leaflet-container a { color: #0078A8 }` at
+       specificity (0,1,1), which beat .pop-link (0,1,0) — so the button label
+       rendered in Leaflet's link colour on the green fill and was unreadable.
+       Scoping to .leaflet-container wins on specificity without !important. */
+    /* No `width: auto !important` here: Leaflet sets an inline width on this
+       element from the minWidth/maxWidth popup options, and overriding it let
+       the content collapse to ~100px so the title and button wrapped a word
+       per line. */
+    .leaflet-popup-content { margin:0; font-family:inherit; }
+    .leaflet-popup-content-wrapper { padding:0; overflow:hidden; border-radius:12px; }
+    .pop-img {
+      display:block; width:100%; aspect-ratio:16/10; background:var(--shade);
+      overflow:hidden;
+    }
+    .pop-img img { width:100%; height:100%; object-fit:cover; display:block; }
+    .pop-img-none {
+      display:flex; align-items:center; justify-content:center;
+      color:var(--muted); font-size:.78rem;
+    }
+    .pop-body { padding:.6rem .75rem .75rem; }
     .pop-title { font-weight:600; font-size:.95rem; margin-bottom:.2rem; }
     .pop-meta { color:var(--muted); font-size:.85rem; margin-bottom:.4rem; }
     .pop-price { color:var(--primary); font-weight:700; font-size:1.05rem; }
-    .pop-link { display:inline-block; margin-top:.5rem; background:var(--primary); color:#fff;
-                text-decoration:none; padding:.35rem .75rem; border-radius:7px;
-                font-size:.85rem; font-weight:600; }
-    .pop-link:hover { background:var(--primary-dark); }
+    /* Leaflet ships `.leaflet-container a { color: #0078A8 }` at specificity
+       (0,1,1), which beat a bare .pop-link (0,1,0) — the label rendered in
+       Leaflet's blue on the green fill and was unreadable. Scoping to
+       .leaflet-container a.pop-link (0,2,1) wins without !important. */
+    .leaflet-container a.pop-link {
+      display:block; text-align:center; margin-top:.55rem;
+      background:var(--primary); color:#fff;
+      text-decoration:none; padding:.45rem .75rem; border-radius:8px;
+      font-size:.85rem; font-weight:600;
+    }
+    .leaflet-container a.pop-link:hover {
+      background:var(--primary-dark); color:#fff;
+    }
 
     .note {
       position:absolute; left:10px; bottom:22px; z-index:600; max-width:250px;
@@ -354,10 +382,18 @@
           })
         });
         m.bindPopup(
-          '<div class="pop-title">' + esc(p.t) + '</div>' +
-          '<div class="pop-meta">' + esc(p.l) + (p.f ? ' · ' + esc(p.f) : '') + '</div>' +
-          '<div class="pop-price">' + esc(p.p) + '</div>' +
-          '<a class="pop-link" href="/japanese-houses/' + encodeURIComponent(p.i) + '/">View property</a>'
+          // The photo is fetched when the popup opens, not shipped in the
+          // points payload: image URLs here average ~137 characters, which
+          // would add well over a megabyte to a file whose job is placing
+          // markers. See popupopen below.
+          '<div class="pop-img" data-pop-img="' + p.i + '"></div>' +
+          '<div class="pop-body">' +
+            '<div class="pop-title">' + esc(p.t) + '</div>' +
+            '<div class="pop-meta">' + esc(p.l) + (p.f ? ' · ' + esc(p.f) : '') + '</div>' +
+            '<div class="pop-price">' + esc(p.p) + '</div>' +
+            '<a class="pop-link" href="/japanese-houses/' + encodeURIComponent(p.i) + '/">View property</a>' +
+          '</div>',
+          { minWidth: 240, maxWidth: 260 }
         );
         markersById[p.i] = m;
         return m;
@@ -409,6 +445,45 @@
           '</div></a>';
       }).join('');
     }
+
+    // Photos already fetched, so reopening a popup doesn't re-request.
+    var popImgCache = {};
+
+    map.on('popupopen', function (e) {
+      var slot = e.popup.getElement() &&
+                 e.popup.getElement().querySelector('[data-pop-img]');
+      if (!slot || slot.dataset.loaded) return;
+      var id = slot.getAttribute('data-pop-img');
+
+      function paint(url) {
+        slot.dataset.loaded = '1';
+        if (!url) { slot.classList.add('pop-img-none'); slot.textContent = 'No photo'; return; }
+        var img = document.createElement('img');
+        img.src = url;
+        img.alt = '';
+        img.loading = 'lazy';
+        img.decoding = 'async';
+        // A dead source would otherwise leave a broken-image icon.
+        img.onerror = function () { slot.classList.add('pop-img-none'); slot.textContent = 'No photo'; };
+        slot.appendChild(img);
+      }
+
+      if (id in popImgCache) return paint(popImgCache[id]);
+
+      fetch('{% url "map_property_cards_json" %}?ids=' + encodeURIComponent(id))
+        .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(function (data) {
+          var card = (data.cards || [])[0];
+          var url = card && card.img ? card.img : '';
+          popImgCache[id] = url;
+          paint(url);
+        })
+        .catch(function (err) {
+          popImgCache[id] = '';
+          paint('');
+          console.error('popup image failed', err);
+        });
+    });
 
     /* ---------- free-account gating ---------- */
     // Ids this user has already saved, so hearts render filled on first paint.
