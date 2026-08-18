@@ -999,6 +999,18 @@
 					bottom: 1.25em; right: 1em; padding: 12px 18px; font-size: 14px;
 					white-space: normal; max-width: 72vw; text-align: center; line-height: 1.3;
 				}
+
+				/* The bar moves to the top here and the theme hides the link labels,
+				   leaving five icons. At the desktop wordmark size those icons were
+				   pushed off the right edge — only two and a half were reachable.
+				   Shrink the wordmark, tighten the icons, and let the row wrap: at
+				   the top of the page the bar is not height-constrained the way the
+				   desktop bottom bar is. */
+				#header { flex-wrap: wrap; gap: 0.25em 0.75em; }
+				#header h1 strong { font-size: 0.78em; }
+				#header nav { flex: 0 1 auto; }
+				#header nav ul { gap: 0 0.15em; }
+				#header nav ul li a { padding: 0 0.4em; font-size: 1em; }
 			}
 		</style>
 		{% comment %}
