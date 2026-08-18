@@ -181,7 +181,10 @@ def send_confirmation(booking):
                 to=to,
                 reply_to=[settings.CONSULT_NOTIFY_EMAIL],
             )
-            message.attach("consultation.ics", ics, "text/calendar; charset=utf-8")
+            # Mimetype without charset: EmailMessage appends its own, and
+            # passing one here produced a duplicated
+            # `charset="utf-8"; charset="utf-8"` in the part header.
+            message.attach("consultation.ics", ics, "text/calendar")
             sent += message.send(fail_silently=False)
         except Exception as e:
             logger.error("Consultation %s: could not email %s: %s", booking.pk, to, e)
