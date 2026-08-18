@@ -1621,12 +1621,17 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--mhj-secondary);
   }
 
-  /* "Discover other homes" is a different kind of content — separate it more
-     firmly than the cards are separated from each other. */
+  /* "Discover other homes" is the least important thing on the page — somewhere
+     to go next, not what the visitor came for — so it sits well below the rest
+     instead of reading as another section of the listing.
+
+     em, not rem: Bootstrap sets html to 10px here, so the mobile rule's old
+     `2.5rem` was 25px where it looks like 40. em resolves against the 14px body,
+     which is what the surrounding copy actually uses. */
   .related-properties-container {
-    margin-top: 3.5em !important;
-    padding-top: 2.5em !important;
-    border-top: 2px solid var(--mhj-border) !important;
+    margin-top: 7em !important;
+    padding-top: 3em !important;
+    border-top: 1px solid var(--mhj-border) !important;
   }
 
   .mhj-tip { position: relative; display: inline-block; margin-left: 6px; vertical-align: middle; cursor: help; }
@@ -1828,14 +1833,11 @@ document.addEventListener('DOMContentLoaded', () => {
     #pp-layout .pp-details { order: 5; }
     #pp-layout .pp-cta     { order: 6; }
     #pp-layout .pp-newsletter { order: 7; }
-    /* The divider above this section is a flattened <hr> we hide on mobile,
-       so give the section its own top separator + breathing room. */
-    #pp-layout .related-properties-container {
-      order: 8;
-      margin-top: 2.5rem;
-      padding-top: 2rem;
-      border-top: 1px solid rgba(71,117,53,0.18);
-    }
+    /* Only the order here. The spacing and rule come from the
+       .related-properties-container block above, whose !important beats this
+       selector despite the lower specificity — declaring them again here just
+       created two rules where the loser looked authoritative. */
+    #pp-layout .related-properties-container { order: 8; }
 
     /* The flattened columns lost their p-5/p-6 padding, so give the page a
        consistent side gutter here and prevent any stray horizontal overflow. */
@@ -2454,7 +2456,10 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </details>
 
-            <hr style="border: 0; height: 1px; background: rgba(71,117,53,0.18); margin: 2.5rem 0;">
+            {% comment %}
+              No <hr> here: .related-properties-container draws its own
+              border-top, so this rendered two rules a few pixels apart.
+            {% endcomment %}
             <div class="related-properties-container">
             <h2 class="related-properties-heading">Discover other traditional Japanese houses:</h2>
             {% find_related_properties property.pk as related_properties %}
