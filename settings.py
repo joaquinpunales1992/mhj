@@ -262,8 +262,16 @@ CONSULT_TIMEZONE = env("CONSULT_TIMEZONE", default="Asia/Tokyo")
 CONSULT_WEEKDAYS = env.list("CONSULT_WEEKDAYS", cast=int, default=[0, 1, 2, 3, 4])
 # Daily window in CONSULT_TIMEZONE, 24h. The last slot starts early enough to
 # finish inside the window.
-CONSULT_OPEN = env("CONSULT_OPEN", default="10:00")
-CONSULT_CLOSE = env("CONSULT_CLOSE", default="18:00")
+#
+# Evening in Japan, deliberately. Office hours here (10:00-18:00) are the middle
+# of the night for the people who actually book: measured across the offered
+# slots, that window put only 37% of them inside 08:00-21:00 for Europe and 12%
+# for the US east coast — a Madrid visitor was shown a wall of 03:00-10:30 times.
+# 19:00-23:00 is afternoon in Europe and morning on the US east coast, taking
+# those shares to 100% and 50%. deploy_check reports both numbers, so the effect
+# of changing this is visible rather than something to work out by hand.
+CONSULT_OPEN = env("CONSULT_OPEN", default="19:00")
+CONSULT_CLOSE = env("CONSULT_CLOSE", default="23:00")
 CONSULT_DURATION_MINUTES = env.int("CONSULT_DURATION_MINUTES", default=30)
 # Slots start on this grid, so a 30-minute call on a 30-minute grid leaves no
 # gaps while a 60-minute call on a 30-minute grid can start on the half hour.
