@@ -815,23 +815,41 @@ input:checked + .toggle-slider:before {
 
     .step {
       position: relative;
-      margin-bottom: 50px;
+      padding-left: 44px;
+      margin-bottom: 0;
     }
 
     .step::before {
+      /* The missing piece: the markup already carries data-step="1".."6". */
+      content: attr(data-step);
       position: absolute;
-      left: -30px;
+      left: 0;
       top: 0;
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       background: #477535;
-      color: white;
+      color: #fff;
       border-radius: 50%;
       text-align: center;
-      line-height: 24px;
-      font-weight: bold;
-      font-size: 14px;
+      line-height: 26px;
+      font-family: 'Work Sans', sans-serif;
+      font-weight: 600;
+      font-size: 13px;
+      z-index: 1;
     }
+
+    /* The line joining the markers, so six blocks read as one process rather
+       than six unrelated paragraphs. Drawn per step and stopped on the last. */
+    .step::after {
+      content: "";
+      position: absolute;
+      left: 12px;
+      top: 26px;
+      bottom: -1.15em;
+      width: 2px;
+      background: rgba(71, 117, 53, 0.22);
+    }
+    .step:last-child::after { display: none; }
 
     .step h3 {
       margin: 0 0 0.5rem;
@@ -877,8 +895,16 @@ input:checked + .toggle-slider:before {
       transform: rotate(180deg);
     }
     .buying-details[open] > .step {
-      margin-top: 1.5rem;
+      margin-top: 1.4rem;
     }
+    /* Indent the whole sequence under the summary so it reads as its content. */
+    .buying-details[open] {
+      padding: 0 1.25rem 1.35rem;
+      background: #fbfbf9;
+      border: 1px solid rgba(71, 117, 53, 0.16);
+      border-radius: 12px;
+    }
+    .buying-details[open] > summary { margin: 0 -1.25rem 0; }
 </style>
 
   <script>
@@ -1380,10 +1406,11 @@ document.addEventListener('DOMContentLoaded', () => {
      .primary only sets colour and radius, and previously the surrounding
      <button> supplied the padding and font size. */
   a#book-button {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     box-sizing: border-box;
     padding: 1rem 1.5rem;
     font-size: 1.05rem;
@@ -1954,7 +1981,7 @@ document.addEventListener('DOMContentLoaded', () => {
               </summary>
 
               <div class="step" data-step="1">
-                <h4>1 - Talk to our team about this property</h4>
+                <h4>Talk to our team about this property</h4>
                 <p class="cta-blurb">Talk it through with our English-speaking team: what this house would really cost you, what the process looks like, and whether your plan is realistic.</p>
                 <div>
                     {% comment %}
@@ -1978,27 +2005,27 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
 
               <div class="step" data-step="2">
-                <h4>2 - Sign & pay the MyAkiyaInJapan service fee and choose up to 3 properties</h4>
+                <h4>Sign &amp; pay the service fee and choose up to 3 properties</h4>
                 <small>We will support you throughout the entire purchase process, ensuring a smooth and confident experience</small>
               </div>
 
               <div class="step" data-step="3">
-                <h4>3 - Request a Virtual Inspection</h4>
+                <h4>Request a virtual inspection</h4>
                 <small>We’ll coordinate a virtual or in-person inspection of your selected properties, providing a detailed condition report</small>
               </div>
 
               <div class="step" data-step="4">
-                <h4>4 - Submit your offer for the property you’ve chosen</h4>
+                <h4>Submit your offer</h4>
                 <small>We’ll formally submit your offer to the property owner and help with the negotiation process</small>
               </div>
 
               <div class="step" data-step="5">
-                <h4>5 - Finalize the details, costs, and documentation</h4>
+                <h4>Finalise the details, costs and documentation</h4>
                 <small>Complete all necessary paperwork, tax payments, and contract signings to finalize your purchase</small>
               </div>
 
               <div class="step" data-step="6">
-                <h4>6 - Receive the keys to your new home in Japan</h4>
+                <h4>Receive the keys</h4>
                 <small>Congratulations! Your new home is ready for you!</small>
               </div>
             </details>
