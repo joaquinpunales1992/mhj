@@ -1280,7 +1280,22 @@ document.addEventListener('DOMContentLoaded', () => {
   .mhj-wall-note { display: block; margin-top: 10px; color: #8a8f8a; font-size: 0.86em; }
   .mhj-wall-note a { color: #477535; }
 
-  /* Small inline gate used where a field is Pro-only but the label stays. */
+  /* Shared by all three gate CTA shapes so the padlock reads the same size
+     relative to its label whether it sits in a pill, a block gate or the wall. */
+  .mhj-lock {
+    flex: 0 0 auto;
+    width: 1em;
+    height: 1em;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    vertical-align: -0.14em;
+  }
+  .mhj-gate-cta, .mhj-wall-cta { display: inline-flex; align-items: center; gap: 0.45em; }
+
+  /* Small inline gate used in place of a withheld field value. */
   .mhj-mini-gate {
     display: inline-flex;
     align-items: center;
@@ -1908,7 +1923,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   them, and crawlers are never locked, so indexing is unaffected.
                 {% endcomment %}
                 {% if access.locked %}
-                  <p class="text-xll">{% include "includes/quota_gate.html" %}</p>
+                  <p class="text-xll">{% include "includes/field_gate.html" %}</p>
                 {% else %}
                   <p class="text-xll">{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</p>
                 {% endif %}
@@ -1917,7 +1932,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="flex-1">
                 <p class="text-xll" style="color: black; font-weight: bold;">Land Area<span class="mhj-tip" tabindex="0" role="img" aria-label="What is Land Area?"><span class="mhj-tip-icon">i</span><span class="mhj-tip-text">The size of the plot the property sits on (土地面積), in square meters (㎡) or square feet (ft²) per your unit setting. "(public book)" means the figure is from the official land register.</span></span></p>
                 {% if access.locked %}
-                  <p class="text-xll">{% include "includes/quota_gate.html" %}</p>
+                  <p class="text-xll">{% include "includes/field_gate.html" %}</p>
                 {% else %}
                   <p class="text-xll">{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %} </p>
                 {% endif %}
@@ -1953,14 +1968,14 @@ document.addEventListener('DOMContentLoaded', () => {
                   {% endif %}
                 </p>
                 {% if access.next_step == 'signup' %}
-                  <a class="mhj-wall-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
+                  <a class="mhj-wall-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">{% include "includes/icon_lock.html" %} Create a free account</a>
                   <span class="mhj-wall-note">
                     Free, no card — {{ free_limit }} homes included.
                     <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a>
                   </span>
                 {% else %}
-                  <a class="mhj-wall-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Go Pro — {{ pro_price }}</a>
-                  <span class="mhj-wall-note">Unlimited properties. Cancel any time.</span>
+                  <a class="mhj-wall-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">{% include "includes/icon_lock.html" %} Unlock with Pro</a>
+                  <span class="mhj-wall-note">{{ pro_price }} · unlimited properties, cancel any time. <a href="{% url 'pricing' %}">Compare plans</a></span>
                 {% endif %}
               </div>
             </div>
@@ -1981,7 +1996,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   See how this asking price compares with {{ cmp.sample_size }}
                   other listings in {{ cmp.area }} — and whether it's good value.
                 </p>
-                <a class="mhj-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Unlock with Pro</a>
+                <a class="mhj-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">{% include "includes/icon_lock.html" %} Unlock with Pro</a>
                 <span class="mhj-gate-note">{{ pro_price }} · cancel any time. <a href="{% url 'pricing' %}">Compare plans</a></span>
               </div>
             </div>
@@ -2013,7 +2028,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   We've worked out from this property's zoning whether a
                   short-term let is likely to be allowed here.
                 </p>
-                <a class="mhj-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Unlock with Pro</a>
+                <a class="mhj-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">{% include "includes/icon_lock.html" %} Unlock with Pro</a>
                 <span class="mhj-gate-note">{{ pro_price }} · cancel any time. <a href="{% url 'pricing' %}">Compare plans</a></span>
               </div>
             </div>
@@ -2046,9 +2061,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% if access.premium %}
                   <p class="text-xll">{{ property.land_rights|default:"Not stated in the source listing" }}</p>
                 {% else %}
-                  <a class="mhj-mini-gate" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
-                    <span class="icon solid fa-lock" aria-hidden="true"></span> Unlock with Pro
-                  </a>
+                  {% include "includes/field_gate.html" with pro_only=True %}
                 {% endif %}
                 <hr>
               </div>
@@ -2066,9 +2079,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     and we'll email it to you.
                   </p>
                 {% else %}
-                  <a class="mhj-mini-gate" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
-                    <span class="icon solid fa-lock" aria-hidden="true"></span> Unlock with Pro
-                  </a>
+                  {% include "includes/field_gate.html" with pro_only=True %}
                 {% endif %}
               </div>
             </div>

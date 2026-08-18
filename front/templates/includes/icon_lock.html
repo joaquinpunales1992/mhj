@@ -1,0 +1,14 @@
+{% comment %}
+  Padlock for gate CTAs.
+
+  Inline SVG rather than <span class="icon solid fa-lock">: fontawesome-all.min.css
+  is present in static/assets/css but linked by no template, and no stylesheet the
+  property page loads defines a single .fa-* selector — so every fa- icon on that
+  page renders as an empty span. The locks on these gates were invisible.
+
+  currentColor so it follows the CTA's own colour through hover states.
+{% endcomment %}
+<svg class="mhj-lock" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+  <rect x="5" y="11" width="14" height="10" rx="2"/>
+  <path d="M8 11V8a4 4 0 0 1 8 0v3"/>
+</svg>

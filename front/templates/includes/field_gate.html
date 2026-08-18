@@ -1,0 +1,29 @@
+{% comment %}
+  The inline pill shown in place of a withheld field value.
+
+  Two call sites, one component, so the wording can never drift:
+
+    {% include "includes/field_gate.html" %}
+        the field is withheld because the view allowance is spent. Which step
+        lifts it depends on who is asking, and check_access has already decided:
+        'signup' for an anonymous visitor, 'upgrade' for a spent free account.
+
+    {% include "includes/field_gate.html" with pro_only=True %}
+        the field is Pro-only regardless of allowance (price per m², rental
+        potential, land rights, risk information). Always Pro, never signup —
+        offering a free account here would be a dead end, since a free account
+        does not include the field.
+
+  Exactly two labels exist site-wide, each naming the thing that lifts the gate:
+  "Create a free account" and "Unlock with Pro". Anything else reads as a
+  different offer.
+{% endcomment %}
+{% if pro_only or access.next_step == 'upgrade' %}
+  <a class="mhj-mini-gate" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
+    {% include "includes/icon_lock.html" %} Unlock with Pro
+  </a>
+{% else %}
+  <a class="mhj-mini-gate" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">
+    {% include "includes/icon_lock.html" %} Create a free account
+  </a>
+{% endif %}
