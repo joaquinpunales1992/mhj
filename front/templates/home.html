@@ -504,9 +504,6 @@
 						<nav>
 							<ul>
 								<li class="responsive-icon">
-									<a href="{% url 'map' %}" class="icon solid fa-map-marked-alt"><span class="responsive-text">Map</span></a>
-								</li>
-								<li class="responsive-icon">
 									<a href="{% url 'how_to_buy' %}" class="icon solid fa-home"><span class="responsive-text">How to buy</span></a>
 								</li>
 								<li class="responsive-icon">
@@ -524,14 +521,14 @@
 									landed on the home page had no way back into their account.
 								{% endcomment %}
 								{% if user.is_authenticated %}
-								<li class="responsive-icon">
+								<li class="responsive-icon acct-item">
 									<a href="{% url 'saved' %}" class="icon solid fa-heart"><span class="responsive-text">Saved</span></a>
 								</li>
-								<li class="responsive-icon">
+								<li class="responsive-icon acct-item">
 									<a href="{% url 'account_logout' %}" class="icon solid fa-sign-out-alt"><span class="responsive-text">Log out</span></a>
 								</li>
 								{% else %}
-								<li class="responsive-icon">
+								<li class="responsive-icon acct-item">
 									<a href="{% url 'account_login' %}?next=/" class="icon solid fa-user"><span class="responsive-text">Sign in</span></a>
 								</li>
 								{% endif %}
@@ -874,6 +871,57 @@
 			   letter-spacing, fixed 3em height, box-shadow, white !important
 			   color) so the widget renders as its own self-contained component. */
 			#header h1 strong, .site-tagline { font-family: var(--font-display); }
+
+			/* The theme absolutely positions #header nav at right:0, so it takes
+			   up no space in the bar. That was fine for the original three
+			   items, but the nav now carries the account controls too and was
+			   printing straight over the "My Akiya in Japan" wordmark. Lay the
+			   bar out as a flex row instead so the two halves can't collide. */
+			#header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				gap: 0.5rem 1.5rem;
+				/* nowrap: the bar has a fixed height, so anything that wraps to a
+				   second line is clipped out of sight. */
+				flex-wrap: nowrap;
+			}
+			/* The h1 holds the wordmark AND the tagline, so it must be allowed to
+			   shrink — otherwise it claims the whole row and pushes the nav out. */
+			#header h1 { margin: 0; flex: 1 1 auto; min-width: 0; }
+			/* Keep the wordmark on one line — it was wrapping to "MY AKIYA / IN
+			   JAPAN" once the nav took its share of the row. */
+			#header h1 strong { white-space: nowrap; }
+			/* The tagline keeps the theme's own treatment — it stacks on its own
+			   line inside the h1, which is what that CSS was written for. The
+			   collision was never the tagline; it was the nav growing wide
+			   enough to reach the wordmark while absolutely positioned. */
+			#header nav {
+				position: static;
+				right: auto;
+				top: auto;
+				float: none;
+				flex: 0 0 auto;
+			}
+			#header nav ul {
+				display: flex;
+				align-items: center;
+				flex-wrap: wrap;
+				justify-content: flex-end;
+				gap: 0 0.1rem;
+			}
+			/* The theme pads each nav link 0 1.15em at 1em, which was fine for the
+			   original three items. Six of them measured 1158px — wider than the
+			   viewport — so the h1 collapsed to zero and the nowrap wordmark
+			   painted over the nav. Tighten these to fit. */
+			#header nav ul li a {
+				font-size: 0.82em;
+				padding: 0 0.5em;
+				letter-spacing: 0.04em;
+			}
+			/* Set the account controls apart from the section links. */
+			#header nav li.acct-item { margin-left: 0.75rem; }
+			#header nav li.acct-item + li.acct-item { margin-left: 0; }
 			#eoi-fab {
 				/* z-index above the site's fixed bottom nav bar (#header, z-index 10002)
 				   and panels (10001); bottom offset clears the ~8.5em-tall bar. */
@@ -885,7 +933,6 @@
 				letter-spacing: normal; text-transform: none; white-space: nowrap; cursor: pointer;
 				box-shadow: 0 4px 14px rgba(0,0,0,0.3);
 			}
-			#header h1 strong, .site-tagline { font-family: var(--font-display); }
 			#eoi-fab { text-decoration: none; display: inline-flex; align-items: center; height: auto; line-height: 1.4; }
 			#eoi-fab:hover { background-color: var(--primary-dark); color: #fff !important; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
 			#eoi-overlay {
@@ -948,8 +995,7 @@
 			@media (max-width: 736px) {
 				/* white-space:normal + max-width so the long label wraps instead of
 				   running off-screen / being clipped; center the wrapped lines. */
-				#header h1 strong, .site-tagline { font-family: var(--font-display); }
-			#eoi-fab {
+				#eoi-fab {
 					bottom: 1.25em; right: 1em; padding: 12px 18px; font-size: 14px;
 					white-space: normal; max-width: 72vw; text-align: center; line-height: 1.3;
 				}
