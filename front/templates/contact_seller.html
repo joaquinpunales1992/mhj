@@ -906,28 +906,52 @@ input:checked + .toggle-slider:before {
   <script>
     // Wait for DOM to be ready
 document.addEventListener('DOMContentLoaded', () => {
-  const likeButton = document.getElementById('likeButton');
-  const likeCount = document.getElementById('likeCount');
+  // Favourite heart on the gallery. Same endpoint and same saved state as the
+  // map's cards, so hearting here shows up there and vice versa.
+  //
+  // Every lookup below is null-guarded: this handler also wires the share popup,
+  // and a throw on a missing element would take that down with it. That is how
+  // the old code was arranged — `likeButton.addEventListener` with no guard —
+  // so removing the Like button would have silently broken Share too.
+  const favButton = document.querySelector('.pp-fav');
 
-  likeButton.addEventListener('click', () => {
-    fetch('{% url "update_like_count" property.pk %}', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-CSRFToken': '{{ csrf_token }}'
-      },
-      body: JSON.stringify({ property_id: '{{ property.pk }}' })
-    })
-      .then(response => {
-        if (!response.ok) throw new Error('Failed to update like count.');
-        return response.json();
+  if (favButton) {
+    const favCount = favButton.querySelector('.pp-fav-count');
+    favButton.addEventListener('click', () => {
+      if (favButton.dataset.busy) return;          // ignore double-clicks in flight
+      favButton.dataset.busy = '1';
+      fetch('{% url "toggle_saved_property" %}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': '{{ csrf_token }}' },
+        body: JSON.stringify({ property_id: {{ property.pk }} }),
+        credentials: 'same-origin'
       })
-      .then(data => {
-        likeCount.textContent = `${data.likes} people Liked this Property`;
-        likeButton.disabled = true;
-      })
-      .catch(error => console.error('Error:', error));
-  });
+        .then(response => {
+          if (response.status === 401) {
+            // Favourites need a real account. Send them to signup and bring
+            // them back to this property afterwards.
+            window.location.href = '{% url "account_signup" %}?next=' +
+              encodeURIComponent(location.pathname);
+            return null;
+          }
+          if (!response.ok) throw new Error('save failed: ' + response.status);
+          return response.json();
+        })
+        .then(data => {
+          if (!data) return;
+          favButton.classList.toggle('on', data.saved);
+          favButton.setAttribute('aria-pressed', data.saved ? 'true' : 'false');
+          favButton.setAttribute('aria-label', data.saved
+            ? 'Remove from your favourites' : 'Save to your favourites');
+          if (favCount) {
+            favCount.textContent = data.property_saves ? data.property_saves : '';
+            favButton.classList.toggle('has-count', Boolean(data.property_saves));
+          }
+        })
+        .catch(error => console.error('Error:', error))
+        .finally(() => { delete favButton.dataset.busy; });
+    });
+  }
 
   const openBtn = document.getElementById('openPopup');
   const closeBtn = document.getElementById('closePopup');
@@ -1385,46 +1409,74 @@ document.addEventListener('DOMContentLoaded', () => {
   /* The pair sat in a `bg-primary/10 p-2` box — Tailwind classes that are not
      loaded here, so the container had no styling at all and the two buttons
      read as stray green pills. */
-  .pp-actions {
+  /* Favourite + share, overlaid on the gallery photo.
+
+     These replace the old Share/Like pair that sat in the sidebar. The heart is
+     the same component as the map's card hearts — same path, same filled #c0392b
+     when saved — because it is the same favourite: one SavedProperty row, shown
+     in both places. */
+  .pp-media-actions {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 3;
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5em;
-    padding: 0.75em;
-    background: var(--mhj-accent-soft);
-    border-radius: 12px;
+    gap: 8px;
   }
-  .pp-actions-row { display: flex; gap: 0.5em; }
-  .pp-actions .pp-act {
+  .pp-media-btn {
     display: inline-flex;
     align-items: center;
-    gap: 0.4em;
-    background: #fff !important;
-    border: 1px solid rgba(71, 117, 53, 0.35) !important;
-    color: var(--mhj-primary) !important;
+    justify-content: center;
+    gap: 0.3em;
+    width: 38px;
+    height: 38px;
+    padding: 0;
+    border: 0;
     border-radius: 999px;
-    padding: 0.42em 0.95em !important;
-    font-family: 'Work Sans', sans-serif;
-    font-size: 0.82em !important;
-    font-weight: 600;
-    line-height: 1.2;
-    height: auto !important;
-    letter-spacing: 0.02em;
-    text-transform: none;
-    box-shadow: none !important;
     cursor: pointer;
+    background: rgba(255, 255, 255, 0.92);
+    /* !important because main.css's base rule for every button/input is
+       `color: #ffffff !important` — without it these icons render white on a
+       white pill and vanish. The same declaration is why :hover and .on below
+       need it too. */
+    color: #6f7570 !important;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.82em;
+    font-weight: 600;
+    line-height: 1;
+    -webkit-backdrop-filter: blur(2px);
+    backdrop-filter: blur(2px);
+    transition: color 0.15s ease, background 0.15s ease;
   }
-  .pp-actions .pp-act:hover {
-    background: var(--mhj-primary) !important;
-    border-color: var(--mhj-primary) !important;
-    color: #fff !important;
+  .pp-media-btn svg {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
   }
-  .pp-actions .pp-act .icon { font-size: 0.95em; }
-  .pp-actions #likeCount {
-    font-size: 0.78em !important;
-    color: var(--mhj-secondary) !important;
-    font-weight: 500;
+  /* main.css sets `button:hover { color: #34a58e !important }` plus a teal inset
+     ring, so both need an explicit answer or these go teal on hover. */
+  .pp-media-btn:hover {
+    background: #fff;
+    color: var(--mhj-primary) !important;
+    box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
   }
+  .pp-media-btn:hover:active { color: var(--mhj-primary) !important; }
+  .pp-media-btn:focus-visible {
+    outline: 2px solid var(--mhj-primary);
+    outline-offset: 2px;
+  }
+  /* Saved: filled heart in the map's red, so the state reads at a glance. */
+  .pp-fav.on, .pp-fav.on:hover { color: #c0392b !important; }
+  .pp-fav.on svg { fill: currentColor; }
+  /* The pill grows only when there is a number to show. */
+  .pp-fav.has-count { width: auto; padding: 0 0.7em; }
+  .pp-fav-count:empty { display: none; }
 
   /* Each block below the gallery is its own card. Previously they ran into one
      another with only a hairline <hr> between, so the page read as one
@@ -2151,56 +2203,6 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="pp-title-actions">
 
         
-                <div class="pp-actions">
-                  <div class="pp-actions-row">
-                    <button id="openPopup" type="button" class="pp-act">
-                      <span class="icon solid fa-share" aria-hidden="true"></span> Share
-                    </button>
-                    <button id="likeButton" type="button" class="pp-act">
-                      <span class="icon solid fa-thumbs-up" aria-hidden="true"></span> Like
-                    </button>
-                  </div>
-                  {% if property.likes == 0 %}
-                    <span id="likeCount" class="text-primary text-base font-semibold block text-center" style="font-size: 0.95rem;">
-                      First to Like?
-                    </span>
-                  {% else %}
-                    {% if property.likes == 1 %}
-                      <span id="likeCount" class="text-primary text-base font-semibold block text-center" style="font-size: 0.95rem;">
-                        {{ property.likes }} person Liked this Property
-                      </span>
-                    {% else %}
-                      <span id="likeCount" class="text-primary text-base font-semibold block text-center" style="font-size: 0.95rem;">
-                        {{ property.likes }} people Liked this Property
-                      </span>
-                    {% endif %}
-                  {% endif %}
-                </div>
-                    <!-- <div class="flex items-center justify-center space-x-4 mb-2">
-                        <button id="openPopup" class="primary text-white px-4 py-2">
-                            <span class="icon solid fa-share"></span> Share
-                        </button>
-                        <button id="likeButton" class="primary text-white px-4 py-2">
-                            <span class="icon solid fa-thumbs-up"></span> Like
-                        </button>
-                    </div>
-                
-                    {% if property.likes == 0 %}
-                        <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
-                            First to Like?
-                        </span>
-                    {% else %}
-                        {% if property.likes == 1 %}
-                            <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
-                                {{ property.likes }} person Liked this Property
-                            </span>
-                        {% else %}
-                            <span id="likeCount" class="text-primary text-lg font-semibold block text-center">
-                                {{ property.likes }} people Liked this Property
-                            </span>
-                        {% endif %}
-                    {% endif %}
-                </div> -->
               </div>
               
               <div id="sharePopup" class="popup hidden"
@@ -2226,6 +2228,34 @@ document.addEventListener('DOMContentLoaded', () => {
           <main>
               <section class="carousel-container">
                   <div class="carousel" id="imageCarousel">
+                      {% comment %}
+                        Favourite and share sit on the photo, the way the map's
+                        cards do, so the actions are where the image is instead
+                        of in a separate cluster in the sidebar. Same heart, same
+                        filled-red saved state, same endpoint as the map — one
+                        favourite, visible in both places.
+                      {% endcomment %}
+                      <div class="pp-media-actions">
+                        <button type="button"
+                                class="pp-media-btn pp-fav{% if is_saved %} on{% endif %}{% if saves_count %} has-count{% endif %}"
+                                data-id="{{ property.pk }}"
+                                aria-pressed="{% if is_saved %}true{% else %}false{% endif %}"
+                                aria-label="{% if is_saved %}Remove from your favourites{% else %}Save to your favourites{% endif %}">
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1L12 21l7.7-7.6 1.1-1a5.5 5.5 0 0 0 0-7.8z"/>
+                          </svg>
+                          <span class="pp-fav-count">{% if saves_count %}{{ saves_count }}{% endif %}</span>
+                        </button>
+                        <button type="button" id="openPopup" class="pp-media-btn pp-share"
+                                aria-label="Share this property">
+                          <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <circle cx="18" cy="5" r="3"/>
+                            <circle cx="6" cy="12" r="3"/>
+                            <circle cx="18" cy="19" r="3"/>
+                            <path d="m8.6 10.5 6.8-4M8.6 13.5l6.8 4"/>
+                          </svg>
+                        </button>
+                      </div>
                       <div class="carousel-track">
                         {% for image in property.images.all %}
                           <div class="carousel-slide" data-index="0">

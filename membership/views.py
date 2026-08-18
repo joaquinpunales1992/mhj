@@ -79,7 +79,16 @@ def toggle_saved_property(request):
         saved = True
 
     return JsonResponse(
-        {"saved": saved, "count": request.user.saved_properties.count()}
+        {
+            "saved": saved,
+            "count": request.user.saved_properties.count(),
+            # How many people have saved *this* property, for the counter beside
+            # the heart on the property page. Counted here rather than derived
+            # client-side so the number stays right when several tabs are open.
+            "property_saves": SavedProperty.objects.filter(
+                property_id=property_id
+            ).count(),
+        }
     )
 
 

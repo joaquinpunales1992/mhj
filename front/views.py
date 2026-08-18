@@ -731,6 +731,13 @@ def property_detail(request, pk, user_just_registered=0):
     # Metered access: records this view and decides whether the detail is
     # locked. Photos, price, floor plan and location render regardless.
     access = check_access(request, property.pk)
+    # Favourite state for the heart on the gallery. Rendered server-side so the
+    # heart is already filled on first paint rather than popping in after a
+    # fetch — the map does the same thing with its saved_ids_json.
+    is_saved = (
+        request.user.is_authenticated
+        and property.saved_by.filter(user=request.user).exists()
+    )
     return render(
         request,
         "contact_seller.html",
@@ -740,6 +747,8 @@ def property_detail(request, pk, user_just_registered=0):
             "user_email": user_email,
             "user_just_registered": user_just_registered,
             "access": access,
+            "is_saved": is_saved,
+            "saves_count": property.saved_by.count(),
             "pro_price": settings.PRO_PRICE_LABEL,
             "free_limit": settings.VIEW_LIMIT_FREE,
         },
