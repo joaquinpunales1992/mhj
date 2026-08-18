@@ -11,6 +11,7 @@ from membership.metering import check_access
 from membership.consultations import _safe_zone, slot_context
 from inventory.images import thumb_url
 from inventory.utils import (
+    CURRENCY_PREFIX,
     city_key,
     convert_price_string,
     convert_yen_to_usd,
@@ -81,11 +82,15 @@ PREFECTURES = sorted(CITY_CATEGORIES.keys())
 
 # Price ranges. Bounds are in the model's stored unit (man-yen, ~70 USD each);
 # labels are the rounded USD equivalents shown to users. price__gt/__lte.
+# Labels are built from CURRENCY_PREFIX rather than written out, so the filter
+# cannot drift back to a bare "$" while every price beside it says "US$" — which
+# is exactly what happened: these labels are the live ones, and a stale hardcoded
+# set in home.html hid them from a search-and-replace over the templates.
 PRICE_BUCKETS = [
-    {"key": "u50", "label": "Under $50k", "gt": 0, "lte": 714},
-    {"key": "50-100", "label": "$50k – $100k", "gt": 714, "lte": 1428},
-    {"key": "100-200", "label": "$100k – $200k", "gt": 1428, "lte": 2857},
-    {"key": "200-350", "label": "$200k – $350k", "gt": 2857, "lte": 5000},
+    {"key": "u50", "label": f"Under {CURRENCY_PREFIX}50k", "gt": 0, "lte": 714},
+    {"key": "50-100", "label": f"{CURRENCY_PREFIX}50k – {CURRENCY_PREFIX}100k", "gt": 714, "lte": 1428},
+    {"key": "100-200", "label": f"{CURRENCY_PREFIX}100k – {CURRENCY_PREFIX}200k", "gt": 1428, "lte": 2857},
+    {"key": "200-350", "label": f"{CURRENCY_PREFIX}200k – {CURRENCY_PREFIX}350k", "gt": 2857, "lte": 5000},
 ]
 PRICE_BUCKETS_BY_KEY = {b["key"]: b for b in PRICE_BUCKETS}
 

@@ -1533,6 +1533,32 @@ document.addEventListener('DOMContentLoaded', () => {
     text-transform: uppercase;
     color: var(--mhj-primary);
   }
+  /* "Back to listings | Browse the map" on one row, at every width.
+     Measured: the pair fits inside 320px, so there is no breakpoint that needs
+     to hide the separator or stack them. flex-wrap is kept only as a floor for
+     a viewport narrower than any real phone. */
+  .pp-backlinks {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.55em;
+    margin: 0 0 1.4em;
+    font-size: 1em;
+    line-height: 1.3;
+  }
+  .pp-backlinks a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4em;
+    color: var(--mhj-primary);
+    font-weight: 600;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  .pp-backlinks a:hover { text-decoration: underline; }
+  .pp-backlinks svg { width: 1em; height: 1em; flex: 0 0 auto; }
+  .pp-backlinks-sep { color: var(--mhj-secondary); }
+
   .pp-newsletter h3 {
     display: flex;
     /* flex-start, not center: this heading wraps to two lines in the sidebar,
@@ -1922,24 +1948,31 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
 
       <nav class="space-y-6 mb-auto pp-flatten">
-        <a href="/" class="flex items-center space-x-3 text-primary group pp-back">
-          <div class="w-6 h-6 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-            </svg>
-          </div>
-          <span class="transition-all group-hover:translate-x-1" style="font-size: 2rem;">Back to Listing</span>
-        </a>
+        {% comment %}
+          Both ways out of this page on one row, separated by a rule.
 
-        <a href="{% url 'map' %}" class="flex items-center space-x-3 text-primary group pp-back">
-          <div class="w-6 h-6 flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          They were two separate anchors with 2rem labels, which stacked — on
+          mobile that was most of a screen of navigation before any of the
+          property. Kept on .pp-back so the mobile reordering rule still finds
+          them, and the separator is aria-hidden because a screen reader
+          announcing "pipe" between two links adds nothing.
+        {% endcomment %}
+        <p class="pp-backlinks pp-back">
+          <a href="/">
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" focusable="false">
+              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z"/>
+            </svg>
+            Back to listings
+          </a>
+          <span class="pp-backlinks-sep" aria-hidden="true">|</span>
+          <a href="{% url 'map' %}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
               <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/>
               <line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/>
             </svg>
-          </div>
-          <span class="transition-all group-hover:translate-x-1" style="font-size: 2rem;">Browse the map</span>
-        </a>
+            Browse the map
+          </a>
+        </p>
 
         <div class="max-w-4xl mx-auto p-4 shadow rounded-2xl pp-details">
           <!-- Units / currency preference (remembered across the site) -->
