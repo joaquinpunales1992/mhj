@@ -31,6 +31,7 @@ class Command(BaseCommand):
         self.check_paypal()
         self.check_consultation()
         self.check_booking()
+        self.check_email()
         self.check_security()
 
         self.stdout.write("")
@@ -303,6 +304,30 @@ class Command(BaseCommand):
                     )
                 else:
                     self.ok(message)
+
+    def check_email(self):
+        """Can the server actually send mail?
+
+        This is a problem, not a warning, once bookings are live: the console
+        backend silently prints a paid customer's confirmation to a log file
+        nobody reads, and they are left with a charge and no calendar invite.
+        """
+        self.stdout.write("Email")
+        backend = settings.EMAIL_BACKEND.rsplit(".", 1)[-1]
+        if "console" in settings.EMAIL_BACKEND or "locmem" in settings.EMAIL_BACKEND:
+            self.problems.append(
+                f"EMAIL_BACKEND is {backend} — mail is printed, not sent. Paid "
+                f"consultation confirmations and their calendar invites would "
+                f"never reach the customer. Set EMAIL_HOST_PASSWORD in .env "
+                f"(that is what switches the backend to SMTP)."
+            )
+            return
+        self.ok(f"{backend} via {settings.EMAIL_HOST} as {settings.EMAIL_HOST_USER}")
+        if not settings.CONSULT_NOTIFY_EMAIL:
+            self.warnings.append(
+                "CONSULT_NOTIFY_EMAIL is empty, so nobody is told when a call is "
+                "booked."
+            )
 
     def check_security(self):
         self.stdout.write("Security")
