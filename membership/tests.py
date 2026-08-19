@@ -660,3 +660,80 @@ class SchedulingTests(TestCase):
     def test_a_bogus_display_zone_falls_back_to_utc(self):
         from membership.scheduling import available_slots, group_by_day
         self.assertTrue(group_by_day(available_slots(), "Nowhere/Fake"))
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class SubscriptionAttemptTests(TestCase):
+    """Recording that somebody *started* Pro.
+
+    The point of this endpoint is funnel visibility, so the risks are the two
+    ways it could do harm: handing out access without payment, or downgrading a
+    paying member's row.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user("try@example.com", email="try@example.com")
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+
+    def post(self):
+        return self.client.post("/api/pro-checkout-started", "{}",
+                                content_type="application/json")
+
+    def test_anonymous_is_refused(self):
+        self.assertEqual(self.post().status_code, 401)
+        self.assertFalse(Subscription.objects.exists())
+
+    def test_attempt_is_recorded_without_granting_access(self):
+        self.client.force_login(self.user)
+        response = self.post()
+        self.assertEqual(response.status_code, 200)
+        sub = Subscription.objects.get()
+        self.assertEqual(sub.status, Subscription.STATUS_APPROVAL_PENDING)
+        self.assertFalse(sub.is_active, "an attempt must not grant Pro")
+        self.user.refresh_from_db()
+        from membership.metering import user_is_pro
+        self.assertFalse(user_is_pro(self.user))
+
+    def test_two_different_users_can_both_attempt(self):
+        """paypal_subscription_id is unique, so attempts must not collide —
+        storing "" for both would raise IntegrityError on the second."""
+        other = User.objects.create_user("two@example.com", email="two@example.com")
+        self.client.force_login(self.user)
+        self.assertEqual(self.post().status_code, 200)
+        self.client.force_login(other)
+        self.assertEqual(self.post().status_code, 200)
+        self.assertEqual(Subscription.objects.count(), 2)
+
+    def test_repeat_attempt_does_not_duplicate(self):
+        self.client.force_login(self.user)
+        self.post()
+        self.post()
+        self.assertEqual(Subscription.objects.count(), 1)
+
+    def test_an_active_member_is_not_downgraded(self):
+        """A Pro member idly clicking the button again must keep their access."""
+        Subscription.objects.create(
+            user=self.user, paypal_subscription_id="I-REAL",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+        self.client.force_login(self.user)
+        self.post()
+        sub = Subscription.objects.get()
+        self.assertEqual(sub.status, Subscription.STATUS_ACTIVE)
+        self.assertEqual(sub.paypal_subscription_id, "I-REAL")
+        self.assertTrue(sub.is_active)
+
+    def test_approval_upgrades_the_attempt_row(self):
+        """The attempt and the real subscription are the same row, so the funnel
+        shows one person rather than two."""
+        self.client.force_login(self.user)
+        self.post()
+        self.client.post(
+            "/api/register-subscription",
+            json.dumps({"subscription_id": "I-APPROVED"}),
+            content_type="application/json",
+        )
+        sub = Subscription.objects.get()
+        self.assertEqual(sub.status, Subscription.STATUS_ACTIVE)
+        self.assertEqual(sub.paypal_subscription_id, "I-APPROVED")

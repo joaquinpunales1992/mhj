@@ -1,4 +1,7 @@
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse
@@ -157,6 +160,44 @@ def upgrade_pro(request):
             "next_url": request.GET.get("next", ""),
         },
     )
+
+
+@require_POST
+def record_subscription_attempt(request):
+    """Note that someone opened PayPal's subscribe flow, before they approve it.
+
+    Without this the funnel has a hole: register_subscription only fires *after*
+    PayPal's JS approves, so anyone who clicks subscribe and then abandons leaves
+    no trace at all — and that is precisely the group worth knowing about, because
+    they are the ones who wanted it and something stopped them.
+
+    APPROVAL_PENDING is the model's default status and `is_active` is False for
+    it, so recording an attempt cannot hand out access. If they go on to approve,
+    register_subscription flips the same row to ACTIVE.
+
+    Deliberately does not overwrite an existing subscription: a Pro member
+    revisiting the page and idly clicking the button must not have their ACTIVE
+    row downgraded to a pending one.
+    """
+    if not request.user.is_authenticated:
+        return _login_required_json(request)
+
+    from membership.models import Subscription
+
+    existing = getattr(request.user, "subscription", None)
+    if existing is not None:
+        if existing.status == Subscription.STATUS_APPROVAL_PENDING:
+            # Re-attempt: move the timestamp so the funnel shows the latest try.
+            existing.save(update_fields=[])
+        return JsonResponse({"ok": True, "recorded": False})
+
+    Subscription.objects.create(
+        user=request.user,
+        paypal_subscription_id=None,
+        status=Subscription.STATUS_APPROVAL_PENDING,
+    )
+    logger.info("Pro checkout started by %s", request.user.email or request.user.pk)
+    return JsonResponse({"ok": True, "recorded": True})
 
 
 @require_POST

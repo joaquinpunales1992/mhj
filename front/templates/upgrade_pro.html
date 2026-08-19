@@ -51,6 +51,21 @@
       paypal.Buttons({
         style: { shape: 'rect', color: 'gold', layout: 'vertical', label: 'subscribe' },
         createSubscription: function (data, actions) {
+          // Note the attempt before handing over to PayPal. Anyone who gets this
+          // far wanted Pro; if they never come back, that is the most useful
+          // thing in the funnel to know about, and previously it left no trace.
+          //
+          // Fire-and-forget on purpose: this is bookkeeping, and a failure here
+          // must not stop somebody paying.
+          fetch('{% url "record_subscription_attempt" %}', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+            },
+            credentials: 'same-origin',
+            body: '{}'
+          }).catch(function () {});
           return actions.subscription.create({ plan_id: '{{ paypal_plan_id }}' });
         },
         onApprove: function (data) {

@@ -109,6 +109,11 @@ urlpatterns = [
         membership_views.register_subscription,
         name="register_subscription",
     ),
+    path(
+        "api/pro-checkout-started",
+        membership_views.record_subscription_attempt,
+        name="record_subscription_attempt",
+    ),
     path("api/paypal-webhook", paypal_webhook, name="paypal_webhook"),
     path(
         "api/toggle-saved-property",

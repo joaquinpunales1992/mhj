@@ -349,8 +349,16 @@ class Subscription(models.Model):
     user = models.OneToOneField(
         "auth.User", on_delete=models.CASCADE, related_name="subscription"
     )
+    # NULL, not "", until PayPal issues one. The field is unique, and a second
+    # attempt row carrying the same empty string would raise IntegrityError —
+    # whereas several NULLs are permitted under a unique constraint. NULL also
+    # says the honest thing: this subscription has no PayPal id yet.
     paypal_subscription_id = models.CharField(
-        max_length=64, unique=True, help_text="PayPal's subscription id (I-XXXX)."
+        max_length=64,
+        unique=True,
+        null=True,
+        blank=True,
+        help_text="PayPal's subscription id (I-XXXX). Empty until they approve.",
     )
     status = models.CharField(
         max_length=20, choices=STATUS_CHOICES, default=STATUS_APPROVAL_PENDING
