@@ -211,12 +211,22 @@ AGENT_NOTIFICATION_EMAILS = env.list("AGENT_NOTIFICATION_EMAILS", default=[])
 
 # METERED ACCESS
 # How many distinct properties each tier may open before the detail locks.
-# Photos, price, floor plan and location are never withheld — see
-# membership.metering.LOCKED_FIELDS. Crawlers are exempt entirely; metering
-# Googlebot would cost the search traffic these pages exist to earn.
+# Price, floor plan and location are never withheld. Crawlers are exempt
+# entirely; metering Googlebot would cost the search traffic these pages exist
+# to earn.
 # Set VIEW_LIMIT_FREE to 0 to give members unlimited views.
 VIEW_LIMIT_ANONYMOUS = env.int("VIEW_LIMIT_ANONYMOUS", default=5)
 VIEW_LIMIT_FREE = env.int("VIEW_LIMIT_FREE", default=25)
+
+# Photos shown on a property whose detail has locked — the allowance is spent and
+# this is a new listing. A typical listing carries 25, so this is the gate with
+# real weight behind it: "22 more photos" is a concrete offer, where the two area
+# figures the wall also withholds are easy to walk past without noticing.
+#
+# Not applied before the allowance is spent, and never to crawlers, so the first
+# few listings and everything Google sees keep the full gallery. 0 disables the
+# photo gate and leaves only the area figures behind the wall.
+VIEW_PHOTO_LIMIT_LOCKED = env.int("VIEW_PHOTO_LIMIT_LOCKED", default=3)
 
 # PRO SUBSCRIPTION (PayPal)
 # Create a Product and a Plan in the PayPal dashboard, then put the plan id

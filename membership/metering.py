@@ -8,13 +8,20 @@ Three tiers, all configurable in settings:
 
 Two axes: how many properties a tier may open, and how much of each it may see.
 
-Photos, title, price and location are never withheld from anyone — they are what
-search engines index and what makes a property page worth arriving on. The two
-areas and the description are open to every tier as well, but only on the
+Title, price, location and the first photo are never withheld from anyone — they
+are what search engines index and what makes a property page worth arriving on.
+The two areas and the description are open to every tier as well, but only on the
 properties that tier may actually open: past the allowance they are withheld
 along with the rest of the detail, which is what `locked` drives in the
 template. Re-opening a property already seen never locks, so nothing is taken
 away retroactively.
+
+Photos past VIEW_PHOTO_LIMIT_LOCKED are withheld on a locked property too. That
+is deliberately the sharpest edge of the wall: a typical listing carries 25
+photos, so it is the part a visitor actually notices, where the area figures are
+easy to walk past. It applies only once the allowance is spent — the first
+listings keep every photo — and the withheld slides are not rendered at all
+rather than hidden with CSS, so the gate cannot be read out of the page source.
 
 Two rules protect search traffic and must not be weakened:
 
@@ -159,6 +166,7 @@ def check_access(request, property_id):
         remaining  int   — views left, None when unlimited
         next_step  str   — 'signup' or 'upgrade', which wall to show
         premium    bool  — may see FIELDS_PREMIUM (Pro only)
+        photo_limit int  — photos to render, None when the whole gallery shows
 
     Quota and field access are separate axes. Anonymous and free accounts differ
     only in how many properties they may open — both see every open field on the
@@ -176,6 +184,11 @@ def check_access(request, property_id):
     }
 
     def result(locked, viewed, remaining, next_step):
+        # Derived from `locked` rather than from the tier, for the same reason the
+        # areas are: an anonymous visitor keeps the full gallery on the listings
+        # they may open, and loses it only on a new one past the allowance. A
+        # setting of 0 turns the photo gate off without touching the template.
+        photo_limit = (settings.VIEW_PHOTO_LIMIT_LOCKED or None) if locked else None
         return dict(
             locked=locked,
             tier=tier,
@@ -183,6 +196,7 @@ def check_access(request, property_id):
             limit=limit,
             remaining=remaining,
             next_step=next_step,
+            photo_limit=photo_limit,
             **fields,
         )
 

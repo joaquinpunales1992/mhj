@@ -1587,6 +1587,82 @@ document.addEventListener('DOMContentLoaded', () => {
      A white .pp-panel, not the newsletter's accent card: two coloured cards in
      the same column compete, and the newsletter is the one selling something
      today. This asks for a reply, so it reads as part of the page. */
+  /* --- Photo gate ----------------------------------------------------------
+     The slide that stands in for the withheld photos. Sized by the track like
+     any other slide; the inner block centres in it.
+
+     Deliberately a flat, solid tone rather than anything shimmering or
+     translucent — the whole point is that it cannot be mistaken for a photo
+     still loading. Colours are named explicitly because main.css is a dark
+     theme and would style the bare <p> and <a> for a dark background. */
+  .carousel-slide.pp-photo-gate {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #f4f1ea;
+    text-align: center;
+  }
+  .pp-photo-gate-inner {
+    max-width: 30em;
+    padding: 2em 1.5em;
+    color: var(--mhj-foreground);
+  }
+  /* The shared lock is sized in em by its own include, so it needs a font-size
+     to resolve against rather than a width here. */
+  .pp-photo-gate-inner svg { width: 1.6em; height: 1.6em; margin-bottom: 0.4em; }
+  .pp-photo-gate-count {
+    margin: 0 0 0.3em;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 1.5em;
+    line-height: 1.2;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--mhj-foreground);
+  }
+  .pp-photo-gate-copy {
+    margin: 0 0 1.1em;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.95em;
+    line-height: 1.55;
+    color: var(--mhj-secondary);
+  }
+  /* Same shape as the other two gate CTAs on this page, and the same reason for
+     a class of its own: main.css styles .primary teal at a higher specificity
+     than this page can override. */
+  .pp-photo-gate-cta {
+    display: inline-block;
+    border: 0;
+    background-color: var(--mhj-primary);
+    color: #fff !important;
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95em;
+    line-height: 1.2;
+    padding: 0.8em 1.5em;
+    border-radius: 10px;
+    box-shadow: none;
+    text-decoration: none;
+    white-space: normal;
+    max-width: 100%;
+  }
+  .pp-photo-gate-cta:hover {
+    background-color: var(--mhj-primary-dark);
+    color: #fff !important;
+    text-decoration: none;
+  }
+  .pp-photo-gate-cta:focus-visible {
+    outline: 2px solid var(--mhj-primary-dark);
+    outline-offset: 3px;
+  }
+  .pp-photo-gate-note {
+    display: block;
+    margin-top: 0.7em;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.8em;
+    color: var(--mhj-secondary);
+  }
+  .pp-photo-gate-note a { color: var(--mhj-primary); }
+
   /* Stated outright rather than left to the UA sheet: main.css is an aggressive
      theme and a `display` on the element would beat the browser's built-in
      [hidden] rule, leaving a "hidden" panel on screen. */
@@ -2457,6 +2533,17 @@ document.addEventListener('DOMContentLoaded', () => {
                       </div>
                       <div class="carousel-track">
                         {% for image in property.images.all %}
+                        {% comment %}
+                          Past the view allowance only the first
+                          VIEW_PHOTO_LIMIT_LOCKED photos are rendered, and the
+                          rest are left out of the HTML entirely rather than
+                          hidden — a display:none slide is readable from view
+                          source and still costs the image request, which on the
+                          heaviest page of a 1600-listing site is the whole cost
+                          with none of the gate. Crawlers are never locked, so
+                          `photo_limit` is None for them and this is a no-op.
+                        {% endcomment %}
+                        {% if not access.photo_limit or forloop.counter <= access.photo_limit %}
                           <div class="carousel-slide" data-index="0">
                               {% comment %}
                                 31 photos on a typical listing, so this is the
@@ -2511,7 +2598,50 @@ document.addEventListener('DOMContentLoaded', () => {
                               </div>
                               {% endif %}
                           </div>
-                        {% endfor %}  
+                        {% endif %}
+                        {% endfor %}
+                        {% comment %}
+                          The gate takes the next slide's place, so swiping on
+                          reaches an explicit offer rather than the gallery simply
+                          ending. It must not read as a loading state: every photo
+                          on this page shimmers while it fetches, so an empty or
+                          placeholder-looking slot here would be indistinguishable
+                          from a broken gallery — hence a lock, a real count and a
+                          button.
+
+                          photos_withheld is 0 when there is nothing to withhold,
+                          which also covers listings with fewer photos than the cap.
+                        {% endcomment %}
+                        {% if photos_withheld %}
+                          <div class="carousel-slide pp-photo-gate">
+                            <div class="pp-photo-gate-inner">
+                              {% include "includes/icon_lock.html" %}
+                              <p class="pp-photo-gate-count">
+                                {{ photos_withheld }} more photo{{ photos_withheld|pluralize }}
+                              </p>
+                              <p class="pp-photo-gate-copy">
+                                {% if access.next_step == 'signup' %}
+                                  You've opened {{ access.limit }} homes. Create a free
+                                  account to see every photo on this one — and on
+                                  {{ free_limit }} homes in total.
+                                {% else %}
+                                  You've used the {{ access.limit }} homes your free
+                                  account includes. Pro removes the limit.
+                                {% endif %}
+                              </p>
+                              {% if access.next_step == 'signup' %}
+                                <a class="pp-photo-gate-cta" href="{% url 'account_signup' %}?next={{ request.path|urlencode }}">Create a free account</a>
+                                <span class="pp-photo-gate-note">
+                                  Free, no card.
+                                  <a href="{% url 'account_login' %}?next={{ request.path|urlencode }}">Already a member?</a>
+                                </span>
+                              {% else %}
+                                <a class="pp-photo-gate-cta" href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">Unlock with Pro</a>
+                                <span class="pp-photo-gate-note">{{ pro_price }} · cancel any time.</span>
+                              {% endif %}
+                            </div>
+                          </div>
+                        {% endif %}
                       </div>
   
                       <button class="carousel-control prev" aria-label="Previous slide">

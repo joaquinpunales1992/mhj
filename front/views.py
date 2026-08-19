@@ -753,8 +753,18 @@ def property_detail(request, pk, user_just_registered=0):
         else request.COOKIES.get("email")
     )
     # Metered access: records this view and decides whether the detail is
-    # locked. Photos, price, floor plan and location render regardless.
+    # locked. Price, floor plan and location render regardless.
     access = check_access(request, property.pk)
+    # How many photos the gate is holding back, for the tile that replaces them.
+    # Counted here rather than in the template because the number is only
+    # meaningful against the cap check_access has just decided, and the template
+    # cannot subtract one variable from another. 0 when nothing is withheld, which
+    # is also what keeps the tile from rendering on a listing with 3 photos or
+    # fewer — a gate offering "0 more photos" reads as a bug.
+    photo_cap = access.get("photo_limit")
+    photos_withheld = (
+        max(0, property.images.count() - photo_cap) if photo_cap else 0
+    )
     # Favourite state for the heart on the gallery. Rendered server-side so the
     # heart is already filled on first paint rather than popping in after a
     # fetch — the map does the same thing with its saved_ids_json.
@@ -771,6 +781,7 @@ def property_detail(request, pk, user_just_registered=0):
             "user_email": user_email,
             "user_just_registered": user_just_registered,
             "access": access,
+            "photos_withheld": photos_withheld,
             "is_saved": is_saved,
             "saves_count": property.saved_by.count(),
             "pro_price": settings.PRO_PRICE_LABEL,
