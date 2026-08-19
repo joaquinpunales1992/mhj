@@ -1563,6 +1563,10 @@ document.addEventListener('DOMContentLoaded', () => {
      A white .pp-panel, not the newsletter's accent card: two coloured cards in
      the same column compete, and the newsletter is the one selling something
      today. This asks for a reply, so it reads as part of the page. */
+  /* Stated outright rather than left to the UA sheet: main.css is an aggressive
+     theme and a `display` on the element would beat the browser's built-in
+     [hidden] rule, leaving a "hidden" panel on screen. */
+  .pp-inspect[hidden] { display: none; }
   .pp-inspect .pp-inspect-eyebrow {
     margin: 0 0 0.4em;
     font-size: 0.72em;
@@ -1603,6 +1607,20 @@ document.addEventListener('DOMContentLoaded', () => {
     background-color: var(--mhj-primary); color: #fff !important;
     font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.95em;
     line-height: 1.2; padding: 0.8em 1.5em; border-radius: 10px; box-shadow: none;
+    /* The theme sets white-space:nowrap and a fixed height on every button, so
+       this label — 305px on one line — hung out past the card's right edge below
+       about 340px wide. Same pair of overrides a#book-button needs: let it wrap,
+       and let the box grow to hold the second line instead of spilling below it.
+       max-width keeps the wrap inside the card rather than at the viewport. */
+    white-space: normal; height: auto; max-width: 100%; box-sizing: border-box;
+    text-align: left;
+    /* height:auto alone shrank the button from 41px to 37px, because the theme's
+       fixed height was the only thing padding it out. This is that same height as
+       a floor, so a one-line label looks exactly as it did while a wrapped one is
+       free to grow. Also keeps the tap target from getting smaller on phones,
+       which is where the label wraps. */
+    min-height: 3.05556em;
+    display: inline-flex; align-items: center;
   }
   .pp-inspect-btn:hover { background-color: var(--mhj-primary-dark); color: #fff !important; box-shadow: none; }
   .pp-inspect-btn:disabled { opacity: 0.6; cursor: default; }
@@ -1857,6 +1875,44 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   .buying-details .step { padding-bottom: 1.15rem; }
   .buying-details .step:last-child { padding-bottom: 0.25rem; }
+
+  /* Step 3's link down to the inspection panel. A link, not a button: it moves
+     you to another part of this page rather than doing something, and step 1's
+     filled CTA has to stay the obvious action in here.
+
+     Colour and font-family are stated outright — main.css is a dark theme that
+     styles bare <a> for a dark background, and this page defines no --font-*
+     tokens because it loads its own font link. Same trap as the step <h4>s. */
+  .buying-details .step .step-inspect-link {
+    display: inline-block;
+    margin-top: 0.7em;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.95em;
+    font-weight: 600;
+    line-height: 1.35;
+    color: var(--mhj-primary);
+    border-bottom: 0;
+    text-decoration: none;
+  }
+  .buying-details .step .step-inspect-link:hover {
+    color: var(--mhj-primary-dark);
+    text-decoration: underline;
+  }
+  .buying-details .step .step-inspect-link:focus-visible {
+    outline: 2px solid var(--mhj-primary-dark);
+    outline-offset: 3px;
+  }
+  /* The arrow shifts on hover, so it needs to be its own inline-block to avoid
+     dragging the label's baseline with it. */
+  .buying-details .step .step-inspect-link span {
+    display: inline-block;
+    transition: transform 0.15s ease;
+  }
+  .buying-details .step .step-inspect-link:hover span { transform: translateX(3px); }
+  @media (prefers-reduced-motion: reduce) {
+    .buying-details .step .step-inspect-link span { transition: none; }
+    .buying-details .step .step-inspect-link:hover span { transform: none; }
+  }
 
   /* Body copy inside the CTA block. Was an <h5> inheriting heading styles. */
   .buying-details .step .cta-blurb {
@@ -2489,6 +2545,22 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="step" data-step="3">
                 <h4>Request a virtual inspection</h4>
                 <small>We’ll coordinate a virtual or in-person inspection of your selected properties, providing a detailed condition report</small>
+                {% comment %}
+                  Jumps to the .pp-inspect panel rather than repeating the form:
+                  two forms would mean two #inspectForm / #inspEmail ids, and
+                  getElementById would silently drive only the first one.
+
+                  Worded as "this house" because the step above it describes the
+                  inspection that comes bundled with the service fee, while the
+                  panel is a standalone request that costs nothing to ask. Not
+                  styled as another solid green button — step 1's "Book a
+                  consultation" is the primary action here and a second filled
+                  button beside it would compete with it.
+                {% endcomment %}
+                <a class="step-inspect-link" href="#inspect"
+                   aria-controls="inspect" aria-expanded="false">
+                  Ask about inspecting this house <span aria-hidden="true">→</span>
+                </a>
               </div>
 
               <div class="step" data-step="4">
@@ -2521,7 +2593,19 @@ document.addEventListener('DOMContentLoaded', () => {
               does the work and we arrange it, and that no figure is promised
               here. Both are the same boundary the consultation page draws.
             {% endcomment %}
-            <div class="pp-panel pp-inspect">
+            {% comment %}
+              Hidden until step 3's link asks for it, so the page isn't offering
+              an inspection to everyone who scrolls past — only to someone who
+              opened the buying steps and went looking.
+
+              Hidden with the `hidden` attribute rather than a class so assistive
+              tech drops it from the accessibility tree too, and server-side
+              rather than by script on load, which would flash the panel and then
+              yank it away. That does mean it never appears without JS — but this
+              form has no action attribute and submits through fetch(), so with JS
+              off it could not be sent anyway.
+            {% endcomment %}
+            <div class="pp-panel pp-inspect" id="inspect" hidden>
               <p class="pp-inspect-eyebrow">Before you commit</p>
               <h3>Have this house professionally inspected</h3>
               <p class="pp-inspect-copy">
@@ -2531,9 +2615,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 you make an offer.
               </p>
               <p class="pp-inspect-copy pp-inspect-small">
-                Tell us you're interested and we'll check the listing is still
-                available and that access can be arranged, then come back with a
-                price. Nothing is charged now, and asking commits you to nothing.
+                Tell us you're interested and we'll check that access can be
+                arranged, then come back with a price. Nothing is charged now,
+                and asking commits you to nothing.
               </p>
 
               <form id="inspectForm" class="pp-inspect-form">
@@ -2546,7 +2630,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <textarea id="inspNotes" rows="2"
                           placeholder="Timeline, whether you've spoken to an agent, what worries you about the property."></textarea>
                 <button type="submit" class="pp-inspect-btn" id="inspSubmit">
-                  Request an inspection
+                  Request a professional inspection
                 </button>
                 <p class="pp-inspect-note" id="inspMsg" hidden></p>
               </form>
@@ -2787,6 +2871,26 @@ document.addEventListener('DOMContentLoaded', () => {
     (function () {
       var form = document.getElementById('inspectForm');
       if (!form) return;
+
+      // Step 3 of "Interested in buying?" is the only way this panel opens — it
+      // ships with the `hidden` attribute set. Reveal, then scroll, then focus,
+      // in that order: a hidden element has no box, so scrollIntoView on it
+      // would measure zero and land in the wrong place.
+      var jump = document.querySelector('.step-inspect-link');
+      var panel = document.getElementById('inspect');
+      if (jump && panel) {
+        jump.addEventListener('click', function (e) {
+          e.preventDefault();
+          panel.hidden = false;
+          jump.setAttribute('aria-expanded', 'true');
+          panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          var first = form.querySelector('input, textarea');
+          // preventScroll: focus() would otherwise jump the page instantly and
+          // cancel the smooth scroll that just started.
+          if (first) first.focus({ preventScroll: true });
+        });
+      }
+
       var button = document.getElementById('inspSubmit');
       var message = document.getElementById('inspMsg');
       var emailField = document.getElementById('inspEmail');
@@ -2830,7 +2934,7 @@ document.addEventListener('DOMContentLoaded', () => {
               // again — a duplicate request is a second email about one lead.
               form.innerHTML = '';
               form.appendChild(message);
-              say('Thanks — we\'ll check availability and come back to you with a price. Nothing has been charged.', true);
+              say('Thanks — we\'ll come back to you with a price. Nothing has been charged.', true);
               return;
             }
             say(res.d.error || 'Something went wrong. Please try again.', false);
