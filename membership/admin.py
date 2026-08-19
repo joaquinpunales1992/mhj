@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from membership.models import (
+    InspectionRequest,
     Consultation,
     InterestRequest,
     PremiumRequest,
@@ -374,3 +375,49 @@ class ConsultationAdmin(admin.ModelAdmin):
             obj.listing.get_public_url,
             obj.listing.get_location_for_front(),
         )
+
+
+@admin.register(InspectionRequest)
+class InspectionRequestAdmin(admin.ModelAdmin):
+    """The inspection to-do list.
+
+    Every row needs a human: confirm the listing is still there, confirm the agent
+    will allow access, get a price, reply. Defaults to newest first and shows
+    whether a reply is owed, because a request that sits here loses its value when
+    the house sells.
+    """
+
+    list_display = ("created_at", "reply_owed", "email", "where", "status", "quoted_amount")
+    list_filter = ("status", "created_at")
+    search_fields = ("email", "name", "notes", "internal_notes",
+                     "listing_location", "listing_url")
+    readonly_fields = ("created_at", "updated_at", "user", "listing",
+                       "listing_url", "listing_location", "notes", "email", "name")
+    list_editable = ("status", "quoted_amount")
+    date_hierarchy = "created_at"
+    fieldsets = (
+        ("The request", {
+            "fields": ("created_at", "email", "name", "user", "notes"),
+        }),
+        ("Property", {
+            "fields": ("listing", "listing_location", "listing_url"),
+            "description": "Stored flat as well as by link, because listings get "
+                           "delisted and the link then goes blank.",
+        }),
+        ("Your handling", {
+            "fields": ("status", "quoted_amount", "internal_notes", "updated_at"),
+        }),
+    )
+
+    @admin.display(boolean=True, description="Reply owed")
+    def reply_owed(self, obj):
+        return obj.needs_reply
+
+    @admin.display(description="Property")
+    def where(self, obj):
+        if obj.listing_url:
+            return format_html(
+                '<a href="{}" target="_blank" rel="noopener">{}</a>',
+                obj.listing_url, obj.listing_location or "listing",
+            )
+        return obj.listing_location or "—"

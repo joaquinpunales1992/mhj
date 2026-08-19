@@ -488,3 +488,85 @@ class Consultation(models.Model):
             and self.hold_expires_at is not None
             and self.hold_expires_at <= timezone.now()
         )
+
+
+class InspectionRequest(models.Model):
+    """Somebody asking for a professional building inspection on a listing.
+
+    Deliberately not a payment. An inspection needs physical access to the house,
+    and these are aggregated listings — the seller's agent controls entry, not us.
+    So the request is a lead: we confirm the listing is still available and that
+    access is possible, then quote. Taking four figures up front for a house
+    nobody can get into would produce refunds at the worst possible moment.
+
+    The status field exists to be worked through, not for reporting: every request
+    needs a human to check availability, get a price from the inspector and reply.
+    `funnel` counts them, but this list is a to-do list.
+    """
+
+    STATUS_NEW = "new"
+    STATUS_CONTACTED = "contacted"
+    STATUS_QUOTED = "quoted"
+    STATUS_BOOKED = "booked"
+    STATUS_UNAVAILABLE = "unavailable"
+    STATUS_DECLINED = "declined"
+    STATUS_CHOICES = [
+        (STATUS_NEW, "New — needs a reply"),
+        (STATUS_CONTACTED, "Contacted"),
+        (STATUS_QUOTED, "Quoted"),
+        (STATUS_BOOKED, "Inspection booked"),
+        (STATUS_UNAVAILABLE, "Couldn't arrange access"),
+        (STATUS_DECLINED, "They decided against it"),
+    ]
+
+    email = models.EmailField()
+    name = models.CharField(max_length=120, blank=True)
+    user = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="inspection_requests",
+        help_text="Set when the requester was signed in.",
+    )
+    listing = models.ForeignKey(
+        "inventory.Property",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="inspection_requests",
+        help_text="The property they want inspected.",
+    )
+    # Kept alongside the FK because listings get delisted and the FK goes null —
+    # and the URL is the one thing that lets you work out what they asked about
+    # after the fact.
+    listing_url = models.URLField(max_length=500, blank=True)
+    listing_location = models.CharField(max_length=255, blank=True)
+    notes = models.TextField(
+        blank=True, help_text="What the requester told us."
+    )
+    internal_notes = models.TextField(
+        blank=True, help_text="Your notes. Never shown to the requester."
+    )
+    status = models.CharField(
+        max_length=16, choices=STATUS_CHOICES, default=STATUS_NEW, db_index=True
+    )
+    quoted_amount = models.DecimalField(
+        max_digits=9, decimal_places=2, null=True, blank=True,
+        help_text="What you quoted them, once you know.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Inspection request"
+        verbose_name_plural = "Inspection requests"
+
+    def __str__(self):
+        where = self.listing_location or "unknown location"
+        return f"{self.email} — {where} ({self.status})"
+
+    @property
+    def needs_reply(self):
+        return self.status == self.STATUS_NEW

@@ -114,3 +114,47 @@ def notify_user_expressed_interest(request):
     except Exception as e:
         print(f"Error: {e}")
         return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
+
+
+def notify_inspection_request(inspection):
+    """Email whoever handles inspections, the moment one is requested.
+
+    Sent immediately rather than batched because this lead decays: the listing can
+    sell while the request sits in a table nobody is watching, and then there is
+    nothing to inspect.
+
+    Deliberately plain text with everything needed to act in the body — the point
+    is to be able to reply from a phone without opening the admin.
+    """
+    from django.conf import settings
+    from django.core.mail import EmailMessage
+
+    lines = [
+        f"Inspection requested — #{inspection.pk}",
+        "",
+        f"  From:     {inspection.name or '(no name given)'} <{inspection.email}>",
+        f"  Account:  {'yes' if inspection.user else 'not signed in'}",
+    ]
+    if inspection.listing_location:
+        lines.append(f"  Property: {inspection.listing_location}")
+    if inspection.listing:
+        lines.append(f"  Price:    {inspection.listing.get_price_for_front}")
+    if inspection.listing_url:
+        lines.append(f"  Listing:  {inspection.listing_url}")
+    if inspection.notes:
+        lines += ["", "  They said:", f"    {inspection.notes}"]
+    lines += [
+        "",
+        "Next: check the listing is still available and that the agent will allow",
+        "access, then get a price from the inspector and reply with a quote.",
+        "",
+        "Nothing has been charged.",
+    ]
+
+    message = EmailMessage(
+        subject=f"Inspection request #{inspection.pk} — {inspection.listing_location or 'no location'}",
+        body="\n".join(lines),
+        to=[settings.CONSULT_NOTIFY_EMAIL],
+        reply_to=[inspection.email] if inspection.email else None,
+    )
+    return message.send(fail_silently=False)

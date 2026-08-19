@@ -4,11 +4,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 from django.contrib.auth.decorators import login_required
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.views.decorators.http import require_POST
 
+from inventory.models import Property
 from membership.models import SavedProperty, SavedSearch
 from membership.utils import notify_user_registered_via_email
 
@@ -160,6 +163,69 @@ def upgrade_pro(request):
             "next_url": request.GET.get("next", ""),
         },
     )
+
+
+@require_POST
+def request_inspection(request):
+    """Record a request for a professional inspection on a listing.
+
+    Takes no money on purpose. An inspection needs access to the house and these
+    are aggregated listings, so availability has to be confirmed before anyone can
+    honestly quote — see InspectionRequest.
+
+    Open to anonymous visitors with a valid email: this is the highest-intent
+    signal the site produces, and putting an account between someone and telling
+    us they want to spend several hundred dollars would cost more leads than the
+    spam it prevents.
+    """
+    from membership.models import InspectionRequest
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Malformed request."}, status=400)
+
+    email = (payload.get("email") or "").strip()[:254]
+    if not email and request.user.is_authenticated:
+        email = request.user.email
+    if not email:
+        email = (request.COOKIES.get("email") or "").strip()[:254]
+
+    try:
+        validate_email(email)
+    except ValidationError:
+        return JsonResponse(
+            {"error": "Please give an email address we can reply to."}, status=400
+        )
+
+    listing = None
+    raw_pk = str(payload.get("property_id") or "").strip()
+    if raw_pk.isdigit():
+        listing = Property.objects.filter(pk=raw_pk).first()
+
+    inspection = InspectionRequest.objects.create(
+        email=email,
+        name=(payload.get("name") or "").strip()[:120],
+        user=request.user if request.user.is_authenticated else None,
+        listing=listing,
+        # Stored flat as well as by FK: listings get delisted, the FK goes null,
+        # and then this is the only record of what they asked about.
+        listing_url=(f"https://akiyainjapan.com{listing.get_public_url}" if listing else ""),
+        listing_location=(listing.get_location_for_front() if listing else ""),
+        notes=(payload.get("notes") or "").strip()[:2000],
+    )
+    logger.info("Inspection requested by %s for listing %s", email, raw_pk or "-")
+
+    # Tell whoever handles these, immediately — the value of this lead decays fast
+    # if the listing sells while it sits in a table nobody is watching.
+    try:
+        from membership.utils import notify_inspection_request
+        notify_inspection_request(inspection)
+    except Exception as e:
+        logger.error("Inspection request %s saved but not emailed: %s",
+                     inspection.pk, e)
+
+    return JsonResponse({"ok": True})
 
 
 @require_POST

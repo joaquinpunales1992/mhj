@@ -1559,6 +1559,57 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-backlinks svg { width: 1em; height: 1em; flex: 0 0 auto; }
   .pp-backlinks-sep { color: var(--mhj-secondary); }
 
+  /* --- Inspection request ---------------------------------------------------
+     A white .pp-panel, not the newsletter's accent card: two coloured cards in
+     the same column compete, and the newsletter is the one selling something
+     today. This asks for a reply, so it reads as part of the page. */
+  .pp-inspect .pp-inspect-eyebrow {
+    margin: 0 0 0.4em;
+    font-size: 0.72em;
+    font-weight: 600;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--mhj-secondary);
+  }
+  .pp-inspect h3 { font-size: 1.2em; margin: 0 0 0.5em; }
+  .pp-inspect .pp-inspect-copy { margin: 0 0 0.8em; max-width: 54ch; }
+  .pp-inspect .pp-inspect-small { font-size: 0.9em; color: var(--mhj-secondary); }
+  /* colour stated explicitly: main.css is a dark theme and styles bare <label>
+     white, so on this white card the label text was invisible while the
+     `(optional)` span — which had its own colour — showed. Same trap as the
+     share icons, which came out white on a white pill. Any new control on this
+     page has to name its own colour. */
+  .pp-inspect-form label {
+    display: block;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin: 0.8em 0 0.25em;
+    color: var(--mhj-foreground);
+  }
+  .pp-inspect-form label span { font-weight: 400; color: var(--mhj-secondary); }
+  .pp-inspect-form input,
+  .pp-inspect-form textarea {
+    width: 100%; box-sizing: border-box; border: 1px solid var(--mhj-border);
+    border-radius: 8px; padding: 0.55em 0.7em; font-family: inherit;
+    font-size: 0.95em; background: #fff; color: var(--mhj-foreground);
+  }
+  .pp-inspect-form input:focus, .pp-inspect-form textarea:focus {
+    outline: 2px solid var(--mhj-primary); outline-offset: 1px;
+  }
+  /* Its own class rather than .primary, which main.css styles teal at a higher
+     specificity than this page's override. */
+  .pp-inspect-btn {
+    margin-top: 0.9em; display: inline-block; border: 0; cursor: pointer;
+    background-color: var(--mhj-primary); color: #fff !important;
+    font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.95em;
+    line-height: 1.2; padding: 0.8em 1.5em; border-radius: 10px; box-shadow: none;
+  }
+  .pp-inspect-btn:hover { background-color: var(--mhj-primary-dark); color: #fff !important; box-shadow: none; }
+  .pp-inspect-btn:disabled { opacity: 0.6; cursor: default; }
+  .pp-inspect-note { margin: 0.8em 0 0; font-size: 0.88em; }
+  .pp-inspect-note.is-ok { color: var(--mhj-primary); font-weight: 600; }
+  .pp-inspect-note.is-bad { color: #b3341f; font-weight: 600; }
+
   .pp-newsletter h3 {
     display: flex;
     /* flex-start, not center: this heading wraps to two lines in the sidebar,
@@ -2457,6 +2508,51 @@ document.addEventListener('DOMContentLoaded', () => {
             </details>
 
             {% comment %}
+              Inspection request — a lead, not a sale.
+
+              Placed after the buying-flow steps because that is where someone is
+              thinking about an offer; an inspection before that point is months
+              early. It takes no payment: the house has to be physically opened by
+              the seller's agent, and this is an aggregated listing, so
+              availability and access have to be confirmed before anyone can
+              honestly quote a price.
+
+              The copy is careful about two things — that a qualified inspector
+              does the work and we arrange it, and that no figure is promised
+              here. Both are the same boundary the consultation page draws.
+            {% endcomment %}
+            <div class="pp-panel pp-inspect">
+              <p class="pp-inspect-eyebrow">Before you commit</p>
+              <h3>Have this house professionally inspected</h3>
+              <p class="pp-inspect-copy">
+                An akiya can look sound and still need the roof, the foundations or
+                the wiring redone. A qualified Japanese inspector can look at this
+                property and tell you what you would actually be taking on before
+                you make an offer.
+              </p>
+              <p class="pp-inspect-copy pp-inspect-small">
+                Tell us you're interested and we'll check the listing is still
+                available and that access can be arranged, then come back with a
+                price. Nothing is charged now, and asking commits you to nothing.
+              </p>
+
+              <form id="inspectForm" class="pp-inspect-form">
+                {% if not user.is_authenticated and not user_email %}
+                  <label for="inspEmail">Your email</label>
+                  <input type="email" id="inspEmail" required autocomplete="email"
+                         placeholder="you@example.com">
+                {% endif %}
+                <label for="inspNotes">Anything we should know? <span>(optional)</span></label>
+                <textarea id="inspNotes" rows="2"
+                          placeholder="Timeline, whether you've spoken to an agent, what worries you about the property."></textarea>
+                <button type="submit" class="pp-inspect-btn" id="inspSubmit">
+                  Request an inspection
+                </button>
+                <p class="pp-inspect-note" id="inspMsg" hidden></p>
+              </form>
+            </div>
+
+            {% comment %}
               No <hr> here: .related-properties-container draws its own
               border-top, so this rendered two rules a few pixels apart.
             {% endcomment %}
@@ -2684,5 +2780,70 @@ document.addEventListener('DOMContentLoaded', () => {
   </script>
 
   <script src="{% static 'assets/js/units.js' %}"></script>
+  <script>
+    // Inspection request. Kept in its own script block on purpose: an error here
+    // must not abort the block that drives the gallery — which is exactly what
+    // happened once before when an include's newline landed inside a JS string.
+    (function () {
+      var form = document.getElementById('inspectForm');
+      if (!form) return;
+      var button = document.getElementById('inspSubmit');
+      var message = document.getElementById('inspMsg');
+      var emailField = document.getElementById('inspEmail');
+      var notesField = document.getElementById('inspNotes');
+      var ENDPOINT = '{% url "request_inspection" %}';
+      var PROPERTY_ID = '{{ property.pk }}';
+      var KNOWN_EMAIL = '{{ user_email|default:"" }}';
+
+      function say(text, ok) {
+        message.textContent = text;
+        message.className = 'pp-inspect-note ' + (ok ? 'is-ok' : 'is-bad');
+        message.hidden = false;
+      }
+
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var email = emailField ? emailField.value.trim() : KNOWN_EMAIL;
+        if (!email) { say('Please give an email address we can reply to.', false); return; }
+
+        button.disabled = true;
+        var original = button.textContent;
+        button.textContent = 'Sending…';
+
+        fetch(ENDPOINT, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({
+            email: email,
+            property_id: PROPERTY_ID,
+            notes: notesField ? notesField.value.trim() : ''
+          })
+        })
+          .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+          .then(function (res) {
+            if (res.ok) {
+              // Replace the form rather than leaving a button they may press
+              // again — a duplicate request is a second email about one lead.
+              form.innerHTML = '';
+              form.appendChild(message);
+              say('Thanks — we\'ll check availability and come back to you with a price. Nothing has been charged.', true);
+              return;
+            }
+            say(res.d.error || 'Something went wrong. Please try again.', false);
+            button.disabled = false;
+            button.textContent = original;
+          })
+          .catch(function () {
+            say('Could not reach us. Please check your connection and retry.', false);
+            button.disabled = false;
+            button.textContent = original;
+          });
+      });
+    })();
+  </script>
 </body>
 </html>

@@ -110,6 +110,11 @@ urlpatterns = [
         name="register_subscription",
     ),
     path(
+        "api/request-inspection",
+        membership_views.request_inspection,
+        name="request_inspection",
+    ),
+    path(
         "api/pro-checkout-started",
         membership_views.record_subscription_attempt,
         name="record_subscription_attempt",

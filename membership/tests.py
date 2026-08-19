@@ -737,3 +737,107 @@ class SubscriptionAttemptTests(TestCase):
         sub = Subscription.objects.get()
         self.assertEqual(sub.status, Subscription.STATUS_ACTIVE)
         self.assertEqual(sub.paypal_subscription_id, "I-APPROVED")
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class InspectionRequestTests(TestCase):
+    """The inspection lead capture.
+
+    It takes no money, so the risks are different from the paid flows: losing a
+    high-intent lead, or recording one we cannot reply to.
+    """
+
+    URL = "/api/request-inspection"
+
+    def setUp(self):
+        self.prop = Property.objects.create(
+            url="http://x/insp", price=1500, show_in_front=True,
+            location="Nagano City, Nagano Prefecture",
+        )
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+
+    def post(self, **body):
+        return self.client.post(self.URL, json.dumps(body),
+                                content_type="application/json")
+
+    def test_anonymous_with_an_email_is_accepted(self):
+        """The highest-intent signal on the site; an account requirement here
+        would cost more leads than the spam it prevents."""
+        r = self.post(email="buyer@example.com", property_id=self.prop.pk,
+                      notes="Worried about the roof.")
+        self.assertEqual(r.status_code, 200)
+        from membership.models import InspectionRequest
+        req = InspectionRequest.objects.get()
+        self.assertEqual(req.email, "buyer@example.com")
+        self.assertEqual(req.listing, self.prop)
+        self.assertEqual(req.status, InspectionRequest.STATUS_NEW)
+        self.assertTrue(req.needs_reply)
+        self.assertIn("roof", req.notes)
+
+    def test_the_property_is_recorded_flat_as_well_as_by_link(self):
+        """Listings get delisted and the FK goes null; without these the record
+        no longer says what they asked about."""
+        self.post(email="b@example.com", property_id=self.prop.pk)
+        from membership.models import InspectionRequest
+        req = InspectionRequest.objects.get()
+        self.assertIn("Nagano", req.listing_location)
+        self.assertIn(str(self.prop.pk), req.listing_url)
+        self.prop.delete()
+        req.refresh_from_db()
+        self.assertIsNone(req.listing, "FK is cleared")
+        self.assertIn("Nagano", req.listing_location, "but we still know where")
+
+    def test_signed_in_user_needs_no_email_field(self):
+        user = User.objects.create_user("insp@example.com", email="insp@example.com")
+        self.client.force_login(user)
+        r = self.post(property_id=self.prop.pk)
+        self.assertEqual(r.status_code, 200)
+        from membership.models import InspectionRequest
+        req = InspectionRequest.objects.get()
+        self.assertEqual(req.email, "insp@example.com")
+        self.assertEqual(req.user, user)
+
+    def test_a_bad_email_is_refused_with_a_usable_message(self):
+        r = self.post(email="not-an-email", property_id=self.prop.pk)
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("email", r.json()["error"].lower())
+        from membership.models import InspectionRequest
+        self.assertFalse(InspectionRequest.objects.exists())
+
+    def test_no_email_at_all_is_refused(self):
+        self.assertEqual(self.post(property_id=self.prop.pk).status_code, 400)
+
+    def test_malformed_json_does_not_500(self):
+        r = self.client.post(self.URL, "not json", content_type="application/json")
+        self.assertEqual(r.status_code, 400)
+
+    def test_it_notifies_someone(self):
+        from django.core import mail as django_mail
+        self.post(email="buyer@example.com", property_id=self.prop.pk,
+                  notes="Timeline is spring.")
+        self.assertEqual(len(django_mail.outbox), 1)
+        body = django_mail.outbox[0].body
+        self.assertIn("buyer@example.com", body)
+        self.assertIn("Nagano", body)
+        self.assertIn("spring", body)
+        self.assertIn("Nothing has been charged", body)
+
+    def test_a_failed_notification_does_not_lose_the_lead(self):
+        with patch("membership.utils.notify_inspection_request",
+                   side_effect=Exception("smtp down")):
+            r = self.post(email="buyer@example.com", property_id=self.prop.pk)
+        self.assertEqual(r.status_code, 200)
+        from membership.models import InspectionRequest
+        self.assertEqual(InspectionRequest.objects.count(), 1)
+
+    def test_it_charges_nothing(self):
+        """The whole point: no Consultation, no Subscription, no PayPal."""
+        self.post(email="buyer@example.com", property_id=self.prop.pk)
+        self.assertFalse(Consultation.objects.exists())
+        self.assertFalse(Subscription.objects.exists())
+
+    def test_a_request_without_a_property_still_records(self):
+        r = self.post(email="buyer@example.com")
+        self.assertEqual(r.status_code, 200)
+        from membership.models import InspectionRequest
+        self.assertEqual(InspectionRequest.objects.get().listing, None)

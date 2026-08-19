@@ -107,6 +107,33 @@ class Command(BaseCommand):
                     f"    {s.created_at:%d %b %H:%M}  {s.user.email or s.user.username}"
                 )
 
+        self.stdout.write(self.style.MIGRATE_HEADING(f"\nInspection requests — {label}"))
+        from membership.models import InspectionRequest
+
+        insp = InspectionRequest.objects.all()
+        if since:
+            insp = insp.filter(created_at__gte=since)
+        asked = insp.count()
+        self._row("asked for an inspection", asked)
+        self._row("still needs a reply", insp.filter(
+            status=InspectionRequest.STATUS_NEW).count(), asked)
+        self._row("quoted", insp.filter(
+            status=InspectionRequest.STATUS_QUOTED).count(), asked)
+        self._row("inspection booked", insp.filter(
+            status=InspectionRequest.STATUS_BOOKED).count(), asked, good=True)
+        self._row("no access / declined", insp.filter(
+            status__in=(InspectionRequest.STATUS_UNAVAILABLE,
+                        InspectionRequest.STATUS_DECLINED)).count(), asked)
+
+        owed = insp.filter(status=InspectionRequest.STATUS_NEW).order_by("created_at")
+        if owed.exists():
+            self.stdout.write("\n  Waiting on you — oldest first:")
+            for r in owed[:10]:
+                self.stdout.write(
+                    f"    {r.created_at:%d %b %H:%M}  {r.email:<32} "
+                    f"{r.listing_location or 'no location'}"
+                )
+
         if options["detail"]:
             self.stdout.write(self.style.MIGRATE_HEADING("\nEvery consultation attempt"))
             for b in bookings.order_by("-created_at")[:40]:
@@ -116,7 +143,7 @@ class Command(BaseCommand):
                     f"{b.name[:24]:<26} {b.email}"
                 )
 
-        if total == 0 and started == 0:
+        if total == 0 and started == 0 and asked == 0:
             self.stdout.write(self.style.WARNING(
                 "\n  Nothing in this window. If you expected traffic, check that "
                 "/consultation/ shows slots and /pro/ shows the subscribe button."
