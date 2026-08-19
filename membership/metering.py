@@ -2,7 +2,7 @@
 
 Three tiers, all configurable in settings:
 
-    anonymous    VIEW_LIMIT_ANONYMOUS (5) properties, open fields
+    anonymous    VIEW_LIMIT_ANONYMOUS (2) properties, open fields
     free account VIEW_LIMIT_FREE (25) properties, open fields
     pro          unlimited properties, open + premium fields
 

@@ -215,7 +215,13 @@ AGENT_NOTIFICATION_EMAILS = env.list("AGENT_NOTIFICATION_EMAILS", default=[])
 # membership.metering.LOCKED_FIELDS. Crawlers are exempt entirely; metering
 # Googlebot would cost the search traffic these pages exist to earn.
 # Set VIEW_LIMIT_FREE to 0 to give members unlimited views.
-VIEW_LIMIT_ANONYMOUS = env.int("VIEW_LIMIT_ANONYMOUS", default=5)
+# 2, not 5: at five the wall arrived so late most visitors never met it, and the
+# only thing it withholds is the two area figures, so it was not much of an ask
+# either way. Two still lets someone compare a pair of houses before being asked
+# for an account. Deliberately not lower — the first pageview is usually the one
+# arriving from search, and walling that is what Google treats as an intrusive
+# interstitial.
+VIEW_LIMIT_ANONYMOUS = env.int("VIEW_LIMIT_ANONYMOUS", default=2)
 VIEW_LIMIT_FREE = env.int("VIEW_LIMIT_FREE", default=25)
 
 # PRO SUBSCRIPTION (PayPal)
