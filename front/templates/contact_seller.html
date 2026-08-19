@@ -1037,6 +1037,10 @@ class ImageCarousel {
   init() {
     this.createIndicators();
     this.goToSlide(0);
+    // goToSlide(0) above returns early — index already equals currentIndex — so
+    // the first window has to be primed by hand or nothing is warmed until the
+    // visitor's first advance, which is the case this exists to cover.
+    this.warmNeighbours(0);
     this.addEventListeners();
     if (this.isAutoplayEnabled) this.startAutoplay();
     if (this.slides.length > 0) this.slides[0].classList.add('active');
@@ -1114,11 +1118,31 @@ class ImageCarousel {
     this.indicatorDots[index].classList.add('active');
     this.updateStatus(index);
     this.currentIndex = index;
+    this.warmNeighbours(index);
 
     setTimeout(() => {
       this.isTransitioning = false;
       this.slides[index].classList.remove('fade-in');
     }, this.transitionDuration);
+  }
+
+  /* Fetch the slides around the current one, so an advance shows a photo rather
+     than the shimmer placeholder.
+
+     The template marks only the first three eager; everything past that is lazy
+     and, because the track puts it thousands of pixels off-screen, would not be
+     fetched until it became the visible slide. Flipping `loading` on an image
+     that has not been fetched yet starts its request, so this walks a small
+     window instead: one behind for the prev button, two ahead for a click or
+     autoplay. Already-decoded images are skipped, which makes it idempotent —
+     it runs on every slide change. */
+  warmNeighbours(index) {
+    [-1, 1, 2].forEach((offset) => {
+      let i = (index + offset) % this.slideCount;
+      if (i < 0) i += this.slideCount;   // goToSlide wraps, so this must too
+      const img = this.slides[i] && this.slides[i].querySelector('img');
+      if (img && img.loading === 'lazy' && !img.complete) img.loading = 'eager';
+    });
   }
 
   prevSlide() { this.goToSlide(this.currentIndex - 1); }
@@ -2462,7 +2486,25 @@ document.addEventListener('DOMContentLoaded', () => {
                                    sizes="(max-width: 1023px) 100vw, 1010px"
                                    data-full="{{ image.file }}"
                                    onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.removeAttribute('srcset');this.src=this.dataset.full}"
-                                   alt="{{ image.alt|default:property.get_title_for_front }}" loading="lazy">
+                                   alt="{{ image.alt|default:property.get_title_for_front }}"
+                                   {% comment %}
+                                     The track lays every slide out side by side, so
+                                     photo 3 onwards sits past x=2000 and the lazy
+                                     heuristic never reaches it — measured: photos 3+
+                                     were still unfetched three seconds after load,
+                                     shimmering until you navigated to them.
+
+                                     Slide 1 is eager and high priority because it is
+                                     this page's LCP element, and `loading="lazy"` on
+                                     an LCP image delays the very paint it is measured
+                                     on. Slides 2-3 are eager as the ones autoplay and
+                                     a first click consume. Beyond that stays lazy —
+                                     eagerly fetching all 31 would be worse than the
+                                     shimmer — and ImageCarousel.warmNeighbours keeps
+                                     the moving window ahead of the visitor.
+                                   {% endcomment %}
+                                   {% if forloop.counter == 1 %}fetchpriority="high"{% endif %}
+                                   loading="{% if forloop.counter <= 3 %}eager{% else %}lazy{% endif %}">
                               {% if image.alt %}
                               <div class="slide-caption">
                                   <h2>{{ image.alt}}</h2>
