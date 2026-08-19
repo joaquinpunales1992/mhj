@@ -841,3 +841,52 @@ class InspectionRequestTests(TestCase):
         self.assertEqual(r.status_code, 200)
         from membership.models import InspectionRequest
         self.assertEqual(InspectionRequest.objects.get().listing, None)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class SignupTests(TestCase):
+    """Signing up with an email and a password, more than once.
+
+    This exists because of a specific outage: settings carried
+    ACCOUNT_USER_MODEL_USERNAME_FIELD = None, which tells allauth the user model
+    has no username field. We use Django's default User, whose `username` is
+    present, unique and non-nullable, so allauth left it empty — the first signup
+    stored '' and every one after it died with "UNIQUE constraint failed:
+    auth_user.username". One signup passes on a fresh database, which is why it
+    survived to production; the second is the test that matters.
+    """
+
+    URL = "/accounts/signup/"
+    PASSWORD = "sturdy-passphrase-42"
+
+    def signup(self, email):
+        return self.client.post(
+            self.URL,
+            {"email": email, "password1": self.PASSWORD, "password2": self.PASSWORD},
+        )
+
+    def test_a_second_signup_does_not_collide(self):
+        self.assertEqual(self.signup("first@example.com").status_code, 302)
+        self.client = Client()
+        self.assertEqual(self.signup("second@example.com").status_code, 302)
+        self.assertEqual(User.objects.count(), 2)
+
+    def test_every_user_gets_a_non_empty_unique_username(self):
+        for email in ("a@example.com", "b@example.com", "a@other.com"):
+            self.client = Client()
+            self.signup(email)
+        names = list(User.objects.values_list("username", flat=True))
+        self.assertNotIn("", names)
+        self.assertEqual(len(names), len(set(names)), f"duplicates in {names}")
+
+    def test_nobody_is_asked_for_a_username(self):
+        """The username is derived, never requested — the signup form has one
+        field for identity and it is the email."""
+        self.assertNotIn('name="username"', self.client.get(self.URL).content.decode())
+
+    def test_the_new_account_can_log_in_by_email(self):
+        self.signup("comeback@example.com")
+        c = Client()
+        c.post("/accounts/login/", {"login": "comeback@example.com",
+                                    "password": self.PASSWORD})
+        self.assertIn("_auth_user_id", c.session)

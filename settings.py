@@ -334,8 +334,16 @@ ACCOUNT_EMAIL_REQUIRED = True
 ACCOUNT_AUTHENTICATION_METHOD = "email"
 ACCOUNT_EMAIL_VERIFICATION = "optional"
 ACCOUNT_UNIQUE_EMAIL = True
+# Nobody is asked for a username; allauth derives one from the email address and
+# uniquifies it. What must NOT go here is
+# ACCOUNT_USER_MODEL_USERNAME_FIELD = None: that tells allauth this user model has
+# no username field at all, but we use Django's default User, whose `username` is
+# still present, still unique and still non-nullable. allauth therefore left it
+# empty, the first email signup stored '', and the second one died on
+# "UNIQUE constraint failed: auth_user.username". Google signups escaped it only
+# because SocialAccountAdapter.populate_user fills a blank username with the
+# email — the same bug, patched on one path out of two.
 ACCOUNT_USERNAME_REQUIRED = False
-ACCOUNT_USER_MODEL_USERNAME_FIELD = None
 SOCIALACCOUNT_LOGIN_ON_GET = True
 ACCOUNT_LOGOUT_ON_GET = True
 SOCIALACCOUNT_STORE_TOKENS = False
