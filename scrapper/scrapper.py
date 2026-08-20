@@ -8,6 +8,7 @@ import requests
 from deep_translator import GoogleTranslator
 
 from inventory.models import Property, PropertyImage
+from inventory.utils import parse_transit
 from scrapper.constants import MAX_PRICE_TO_PULL
 
 
@@ -217,6 +218,15 @@ def persist_property(property_data: dict) -> None:
         property_obj.parking = property_data.get("parking", "")
         property_obj.construction = property_data.get("building_age", "")
         property_obj.land_rights = property_data.get("land_rights", "")
+
+        # Derive the station fields here rather than in a later pass, so a newly
+        # scraped listing is filterable the moment it lands.
+        transit = parse_transit(property_obj.traffic)
+        property_obj.nearest_station = transit["station"]
+        property_obj.station_walk_minutes = transit["walk_minutes"]
+        property_obj.station_distance_km = transit["distance_km"]
+        property_obj.needs_bus = transit["needs_bus"]
+
         property_obj.save()
 
         for image_url in property_data.get("image_urls", []):

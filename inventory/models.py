@@ -42,6 +42,26 @@ class Property(TimestampMixin):
     location = models.CharField(max_length=255, default="")
     construction_date = models.CharField(max_length=255, default="")
     land_rights = models.CharField(max_length=255, default="")
+    # --- Derived from `traffic` by inventory.utils.parse_transit ------------
+    # Stored rather than parsed on read so the map and the listing filters can
+    # query on them. Repopulated by `manage.py parse_transit` and on scrape.
+    nearest_station = models.CharField(
+        max_length=120, blank=True, default="",
+        help_text="Nearest station named in `traffic`, without the word Station.",
+    )
+    station_walk_minutes = models.PositiveSmallIntegerField(
+        null=True, blank=True,
+        help_text="Minutes on foot from nearest_station. NULL means the listing "
+        "names no walkable station — usually because access is by bus.",
+    )
+    station_distance_km = models.FloatField(
+        null=True, blank=True,
+        help_text="Used when the listing gives a distance instead of a walk time.",
+    )
+    needs_bus = models.BooleanField(
+        default=False,
+        help_text="The transit description involves a bus, i.e. no walkable rail.",
+    )
     description = models.TextField(default="", blank=True)  # remarks
     construction = models.CharField(max_length=255, blank=True)
     show_in_front = models.BooleanField(default=True)

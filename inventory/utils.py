@@ -272,3 +272,131 @@ def scatter_offset(seed, spread=0.045):
     angle = idx * 2.399963229728653  # golden angle in radians
     radius = spread * math.sqrt((idx + 0.5) / positions)
     return radius * math.cos(angle), radius * math.sin(angle)
+
+
+# --- Transit parsing -------------------------------------------------------
+# The scraped `traffic` string is the richest unused field on a listing: it is
+# filled on 97.7% of properties and holds the fact buyers filter on first in
+# Japan — how far the nearest station is on foot.
+#
+# It arrives as free English prose from a machine translator, in at least four
+# shapes seen in the live data:
+#
+#     "13 minutes' walk from Ozai Station on the JR Nippo Main Line"
+#     "4 minutes on foot from Enshu Railway Driving School Mae Station"
+#     "JR Chitose Line Eniwa Station 4 minutes on foot"
+#     "JR Hakodate Main Line Goryokaku Station 4.8km"
+#
+# and, on about a third of listings, in a form that names no station walk at
+# all because there isn't one:
+#
+#     "Chuo Bus Get off at Mae, 5 minutes on foot"
+#
+# That last group is the reason this parser is deliberately conservative. A walk
+# time is only trusted when the same clause names a Station, so a house that is
+# five minutes from a *bus stop* — after a twenty minute bus ride — never gets
+# recorded as five minutes from a station. Claiming otherwise would be worse
+# than recording nothing, because the number would go into a filter people
+# trust. Bus-only listings get `needs_bus` instead, which is a useful fact in
+# its own right: it means no walkable rail access.
+
+_MINUTES = r"(\d{1,3})\s*(?:-|\s)?minutes?['’]?"
+
+# "13 minutes' walk from Ozai Station", "4 minutes on foot from X Station"
+_WALK_THEN_STATION = re.compile(
+    _MINUTES + r"\s*(?:walk|on foot)\s*(?:from|of)\s+(.{2,40}?)\s+Station", re.I
+)
+# "Eniwa Station 4 minutes on foot"
+_STATION_THEN_WALK = re.compile(
+    r"([A-Z][\w'’\- .]{1,40}?)\s+Station\s+" + _MINUTES + r"\s*(?:walk|on foot)", re.I
+)
+# "Goryokaku Station 4.8km" — distance instead of a time.
+_STATION_KM = re.compile(r"([A-Z][\w'’ .-]{1,40}?)\s+Station\s+([\d.]+)\s*km", re.I)
+_BUS = re.compile(r"\bbus\b", re.I)
+
+# Where a line name ends and the station name begins. The scraped text runs them
+# together — "JR Chitose Line Eniwa Station", "Enshu Railway Driving School Mae
+# Station" — so without this the "station" is recorded as "JR Chitose Line
+# Eniwa", which groups badly and reads worse.
+_LINE_PREFIX = re.compile(r"\b(?:Line|Liner|Shinkansen|Railway|Railroad)\b", re.I)
+
+
+# Words that cannot appear inside a station's name. When a capture contains one,
+# the regex has swallowed surrounding prose — "i Station 25 minutes bus ride from
+# Kitami" was a real result — and the match is discarded rather than stored as a
+# station nobody can look up.
+_NOT_A_STATION = re.compile(
+    r"\b(?:station|minutes?|bus|walk|on foot|from|get off|ride|train)\b|\d", re.I
+)
+
+
+def _is_plausible_station(name):
+    return bool(name) and len(name) <= 40 and not _NOT_A_STATION.search(name)
+
+
+def _station_name(raw):
+    """Trim a leading line/operator name off a captured station name."""
+    name = raw.strip(" ,.-")
+    matches = list(_LINE_PREFIX.finditer(name))
+    if matches:
+        remainder = name[matches[-1].end():].strip(" ,.-")
+        # Only when something is left: a few entries are the line name alone.
+        if remainder:
+            return remainder
+    return name
+
+
+def parse_transit(traffic):
+    """Pull the nearest station out of a scraped `traffic` string.
+
+    Returns a dict with:
+        station     str    name without the word "Station" ('' if unknown)
+        walk_minutes int   minutes on foot from that station, or None
+        distance_km float  straight distance when only a distance is given
+        needs_bus   bool   the string mentions a bus at all
+
+    Several stations are usually listed; the closest on foot wins, because that
+    is the one a buyer judges the property by.
+    """
+    result = {"station": "", "walk_minutes": None, "distance_km": None,
+              "needs_bus": False}
+    if not traffic:
+        return result
+
+    text = re.sub(r"\s+", " ", str(traffic))
+    result["needs_bus"] = bool(_BUS.search(text))
+
+    best = None
+
+    def consider(raw_station, minutes):
+        """Keep the closest walk, but only from a name that looks like a station.
+
+        Rejecting the pair rather than just the name matters: if the regex
+        mis-read the name it has probably mis-read which leg of the journey the
+        minutes belong to as well.
+        """
+        nonlocal best
+        station = _station_name(raw_station)
+        if not _is_plausible_station(station):
+            return
+        if best is None or minutes < best[1]:
+            best = (station, minutes)
+
+    for match in _WALK_THEN_STATION.finditer(text):
+        consider(match.group(2), int(match.group(1)))
+    for match in _STATION_THEN_WALK.finditer(text):
+        consider(match.group(1), int(match.group(2)))
+
+    if best:
+        result["station"] = best[0][:120]
+        result["walk_minutes"] = best[1]
+        return result
+
+    match = _STATION_KM.search(text)
+    if match:
+        station = _station_name(match.group(1))
+        if _is_plausible_station(station):
+            result["station"] = station[:120]
+            result["distance_km"] = float(match.group(2))
+
+    return result
