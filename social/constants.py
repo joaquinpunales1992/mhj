@@ -5,6 +5,11 @@ import os
 # for the (non-expiring) Page token it writes to social_access_token.json.
 PAGE_ACCESS_TOKEN = os.getenv("PAGE_ACCESS_TOKEN", "")
 PAGE_ID = "612249001976104"
+
+# One place to bump the Graph API version. Meta retires a version roughly two
+# years after release, and when it goes the posting calls fail rather than
+# degrade — so this is worth checking before it fails on its own.
+GRAPH_API_VERSION = "v19.0"
 INSTAGRAM_USER_ID = "17841473089014615"
 
 DOMAIN_CONTEXT = (
@@ -92,3 +97,16 @@ REEL_ENABLE_KEN_BURNS = False         # slow zoom on each photo
 REEL_KEN_BURNS_ZOOM = 0.08            # 8% zoom over each slide
 REEL_CROSSFADE = 0.4                  # seconds of crossfade between slides
 REEL_BRAND_TEXT = "akiyainjapan.com"  # persistent watermark
+
+# The price is the hook in this niche — a $15,000 house stops a scroll that no
+# amount of copy about quiet escapes will. So it goes at the top, large, where
+# the eye lands on frame one, and the AI phrase moves down to the lower band.
+REEL_HOOK_PRICE_FIRST = True
+# Longer place names are truncated rather than shrunk: moviepy raises if text
+# does not fit its caption box, and losing the whole overlay to a long address
+# would cost the watermark too.
+REEL_HOOK_PLACE_MAX_CHARS = 30
+
+# Reels also appear in the main feed and the profile grid. There is no reason to
+# publish into the Reels tab alone — it is the same video with less shelf space.
+REEL_SHARE_TO_FEED = True

@@ -84,7 +84,9 @@ def _reply_comment(comment_id: int, reply_message: str):
         logger.info("Replied successfully!")
         return response.json()
     else:
-        logger.error("Error replying:", response.text)
+        # logger takes %-style args, not print's comma list: the old form logged
+        # the bare string and swallowed the reason the reply failed.
+        logger.error("Error replying: %s", response.text)
         return None
 
 
@@ -137,10 +139,26 @@ def _reply_comments_instagram_reels():
                 continue
 
             cerebras_ai_client = CerebrasAI()
+            # The comment itself now goes into the prompt. It never did before,
+            # so every reply was the same generic "check our bio" regardless of
+            # what was asked — which reads as a bot and ends the conversation.
+            # A reply that answers the question gets answered back, and that
+            # exchange is worth more to the reel's reach than the reply is.
             ai_comment = cerebras_ai_client.generate_text(
                 prompt=(
-                    f"Generate a friendly response for a social media comment. Encourage the person to check the link in our bio.\n\n"
-                    "Output ONLY the caption. No bullet points, no quotes, no examples.\n\n"
+                    "You reply to comments as the owner of an account that lists "
+                    "cheap houses (akiya) in Japan for international buyers.\n\n"
+                    f"Their comment: {comment}\n\n"
+                    "Write ONE short reply, at most 200 characters:\n"
+                    "- Answer what they actually said. If it is a question you "
+                    "cannot answer from the comment alone, say what it depends on "
+                    "and invite them to ask.\n"
+                    "- Only mention the link in our bio when they are asking where "
+                    "to see the listing, the price or more photos.\n"
+                    "- Warm and plain-spoken. At most one emoji. No hashtags, no "
+                    "quotes, no sales pitch.\n"
+                    "- Never invent details about a specific house.\n"
+                    "Output ONLY the reply text."
                 )
             )
 
@@ -152,7 +170,9 @@ def _reply_comments_instagram_reels():
             SocialComment.objects.create(
                 post=reel_id,
                 comment_id=comment_id,
-                comment=reply_message,
+                # The text we sent, not the API's response object — the old code
+                # stored the raw dict in a 200-char field.
+                comment=(ai_comment or "")[:200],
                 replied=True if reply_message else False,
                 self_comment=False,
             )
@@ -160,4 +180,6 @@ def _reply_comments_instagram_reels():
 
 def reply_comments_instagram():
     _reply_comments_instagram_reels()
-    _reply_comments_instagram_post
+    # Called, not merely referenced. The bare name was a no-op that looked like
+    # a call, so whenever the post branch gets written it would never have run.
+    _reply_comments_instagram_post()

@@ -304,16 +304,25 @@ def generate_caption_for_post(
     land_area = _clean_area(property_land_area)
     hashtags = build_hashtags(location)
 
+    # Instagram truncates the caption at roughly 125 characters, and what used
+    # to sit in those characters was a soft lifestyle sentence while the price
+    # waited below the fold. The price and the place are the reason anyone stops
+    # scrolling on an akiya, so they go first and the copy follows.
+    lead = " · ".join(part for part in (str(property_price), location) if part)
+
     def _details_block():
-        lines = [f"💰 {property_price}", f"📍 {location}"]
+        # No longer repeats the price and location: they are the lead line now,
+        # and saying them twice in one caption reads like a template.
+        lines = []
         if building_area:
             lines.append(f"🏡 Building: {building_area}")
         if land_area:
             lines.append(f"🌳 Land: {land_area}")
-        lines.append(f"\n🔗 www.akiyainjapan.com{property_url}")
+        lines.append(f"🔗 www.akiyainjapan.com{property_url}")
         return "\n".join(lines) + f"\n\n{hashtags}"
 
     ai_caption = ""
+    selected_angle = ""
     if use_ai_caption:
         try:
             cerebras_ai_client = CerebrasAI()
@@ -355,22 +364,27 @@ def generate_caption_for_post(
                     "'hidden gem', 'hustle and bustle', 'boasts', 'slip away'.\n"
                     "- At most 1-2 tasteful emojis in the body.\n"
                     "- Do NOT invent features (bedrooms, condition, views) you weren't given.\n"
-                    "- Do NOT include hashtags, the price, or the address (added separately).\n"
+                    "- Do NOT include hashtags, the price, or the address: the caption "
+                    "already opens with a line stating the price and the location, so "
+                    "repeating either reads like a template.\n"
                     f"- Do NOT repeat this previous caption: {last_caption_generated}\n"
                     "Output ONLY the caption text."
                 )
             )
 
             ai_caption = _sanity_check_ai_caption(ai_caption)
-            caption = f"{ai_caption}\n\n{_details_block()}"
+            caption = f"{lead}\n\n{ai_caption}\n\n{_details_block()}"
             logger.info(f"Caption generated via AI: {caption}")
         except Exception as e:
-            caption = _details_block()
+            # The lead line is built here, not by the model, so a dead AI still
+            # produces a price-led caption rather than a bare details block.
+            caption = f"{lead}\n\n{_details_block()}"
+            selected_angle = ""
             logger.error(f"AI caption generation failed: {e}")
-        return ai_caption, caption
+        return ai_caption, caption, selected_angle
     else:
         logger.info("AI caption generation is disabled, using default caption format.")
-        return ai_caption, _details_block()
+        return ai_caption, f"{lead}\n\n{_details_block()}", ""
 
 
 def post_to_instagram(
@@ -378,7 +392,7 @@ def post_to_instagram(
 ):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
 
-    ai_caption, caption = generate_caption_for_post(
+    ai_caption, caption, caption_angle = generate_caption_for_post(
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
@@ -441,6 +455,11 @@ def post_to_instagram(
                 SocialPost.objects.create(
                     ai_caption=ai_caption,
                     caption=caption,
+                    caption_angle=caption_angle,
+                    # The published id, kept so insights can be read back later.
+                    # Discarding it is what made every earlier post
+                    # unattributable, including retrospectively.
+                    media_id=str(publish_response.json().get("id") or ""),
                     property_url=property.url,
                     social_media="instagram",
                 )
@@ -459,7 +478,7 @@ def post_to_facebook(
 ):
     property_image_urls = [image.file.url for image in property.images.all()][:5]
 
-    ai_caption, caption = generate_caption_for_post(
+    ai_caption, caption, caption_angle = generate_caption_for_post(
         property_location=property.location,
         property_url=property.get_public_url,
         property_price=property.get_price_for_front,
@@ -511,6 +530,8 @@ def post_to_facebook(
             SocialPost.objects.create(
                 ai_caption=ai_caption,
                 caption=caption,
+                caption_angle=caption_angle,
+                media_id=str(result.get("id") or ""),
                 property_url=property.url,
                 social_media="facebook",
             )
@@ -608,15 +629,20 @@ def post_instagram_reel():
         # Try candidates until one produces a video. A failed encode logs and
         # moves on instead of aborting the whole run.
         property_to_post_instagram_reel = None
+        # Defined before the loop so the row written at the end can read it even
+        # if the first candidate is the one that works.
+        video_meta = {}
         encode_attempts = delisted_skips = 0
         for candidate in candidates:
             if encode_attempts >= MAX_REEL_ATTEMPTS or delisted_skips >= MAX_DELISTED_SKIPS:
                 break
+            video_meta.clear()
             result = create_property_video(
                 candidate.pk,
                 output_path="property_video.mp4",
                 audio_path=audio_path,
                 duration_per_image=3,
+                meta=video_meta,
             )
             if result:
                 property_to_post_instagram_reel = candidate
@@ -653,7 +679,7 @@ def post_instagram_reel():
         video_url = "https://akiyainjapan.com/media/generated_videos/property_video.mp4"
         logger.info(f"Video URL for Instagram fetch: {video_url}")
 
-        ai_caption, caption = generate_caption_for_post(
+        ai_caption, caption, caption_angle = generate_caption_for_post(
             property_to_post_instagram_reel.location,
             property_to_post_instagram_reel.get_public_url,
             property_to_post_instagram_reel.get_price_for_front,
@@ -669,7 +695,9 @@ def post_instagram_reel():
             "media_type": "REELS",
             "video_url": video_url,
             "caption": caption,
-            "share_to_feed": False,
+            # Publishing into the Reels tab alone gave up the feed and the
+            # profile grid for nothing — same video, less shelf space.
+            "share_to_feed": REEL_SHARE_TO_FEED,
             "access_token": get_fresh_token(),
         }
         media_response = requests.post(media_url, data=media_payload)
@@ -706,10 +734,15 @@ def post_instagram_reel():
                     comment_response = requests.post(comment_url, data=comment_payload)
                     logger.info("Comment response: " + comment_response.text)
 
-                # Log the post
+                # Log the post. media_id, the caption angle and the burnt-in
+                # hook are what make this row answerable later: which of the six
+                # angles and which hook actually travelled.
                 SocialPost.objects.create(
                     ai_caption=ai_caption,
                     caption=caption,
+                    caption_angle=caption_angle,
+                    overlay_hook=video_meta.get("overlay_hook", ""),
+                    media_id=str(media_id or ""),
                     property_url=property_to_post_instagram_reel.url,
                     social_media="instagram",
                     content_type="reel",
@@ -756,15 +789,18 @@ def post_facebook_reel():
         audio_path = _get_random_mp3_full_path(exclude=last_reel_posted_sound_track)
 
         property_to_post_facebook_reel = None
+        fb_video_meta = {}
         encode_attempts = delisted_skips = 0
         for candidate in candidates:
             if encode_attempts >= MAX_REEL_ATTEMPTS or delisted_skips >= MAX_DELISTED_SKIPS:
                 break
+            fb_video_meta.clear()
             result = create_property_video(
                 candidate.pk,
                 output_path="property_video.mp4",
                 audio_path=audio_path,
                 duration_per_image=3,
+                meta=fb_video_meta,
             )
             if result:
                 property_to_post_facebook_reel = candidate
@@ -792,7 +828,7 @@ def post_facebook_reel():
         target_path = os.path.join(media_dir, "property_video.mp4")
         shutil.move("property_video.mp4", target_path)
 
-        ai_caption, caption = generate_caption_for_post(
+        ai_caption, caption, caption_angle = generate_caption_for_post(
             property_to_post_facebook_reel.location,
             property_to_post_facebook_reel.get_public_url,
             property_to_post_facebook_reel.get_price_for_front,
@@ -873,6 +909,9 @@ def post_facebook_reel():
             SocialPost.objects.create(
                 ai_caption=ai_caption,
                 caption=caption,
+                caption_angle=caption_angle,
+                overlay_hook=fb_video_meta.get("overlay_hook", ""),
+                media_id=str(video_id or ""),
                 property_url=property_to_post_facebook_reel.url,
                 social_media="facebook",
                 content_type="reel",
@@ -887,8 +926,21 @@ def post_facebook_reel():
 
 
 def create_property_video(
-    property_id: int, output_path: str, audio_path: str, duration_per_image: int = 3
+    property_id: int,
+    output_path: str,
+    audio_path: str,
+    duration_per_image: int = 3,
+    meta: dict = None,
 ):
+    """Build the reel. `meta`, when given, is filled with what was rendered.
+
+    An out-parameter rather than a richer return value because callers already
+    branch on this function's return (a path, None, or the NO_LIVE_IMAGES
+    sentinel), and the poster needs the burnt-in hook to store beside the post
+    so it can later be compared against the numbers it earned.
+    """
+    if meta is None:
+        meta = {}
     W, H = REEL_WIDTH, REEL_HEIGHT
     bold_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf")
     light_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf")
@@ -1056,16 +1108,44 @@ def create_property_video(
     top_clean = re.sub(r"[^A-Za-z0-9 &!'-]", "", raw_top or "").strip() if raw_top else ""
     video_top_text = top_clean[:24].strip() or "Link in Bio"
 
-    # Bottom info: price + cleaned location.
-    price = property.get_price_for_front
+    price = str(property.get_price_for_front or "")
     loc = _clean_location(property.get_location_for_front())
+    # Truncated, not shrunk: moviepy raises when text overflows its caption box,
+    # and that exception costs every overlay including the watermark.
+    place = loc[:REEL_HOOK_PLACE_MAX_CHARS].strip(" ,-")
 
-    overlays = [
-        clip,
-        _band(0.05, 0.11),
-        _centered_text(video_top_text, 0.05, 0.11, light_font, fs(60)),
-        _band(0.66, 0.17),
-        _centered_text(f"{price}\n{loc}", 0.66, 0.17, bold_font, fs(54)),
+    # What the reel is remembered by, and the thing to compare against the
+    # insights later.
+    meta["overlay_hook"] = video_top_text
+    meta["hook_price_first"] = REEL_HOOK_PRICE_FIRST
+
+    if REEL_HOOK_PRICE_FIRST:
+        # Frame one, top of the screen: the price, then where it is. The AI
+        # phrase moves to the lower band — it is atmosphere, not a hook, and it
+        # was occupying the only line anyone reads before deciding to scroll.
+        #
+        # The price is set as large as it can be without risking the caption box:
+        # an overflow raises, and that exception takes every overlay with it —
+        # including the watermark — leaving an unbranded reel to be posted.
+        price_size = fs(88) if len(price) <= 11 else fs(64)
+        overlays = [
+            clip,
+            _band(0.04, 0.16),
+            _centered_text(price, 0.05, 0.085, bold_font, price_size),
+            _centered_text(place, 0.135, 0.055, light_font, fs(40)),
+            _band(0.66, 0.13),
+            _centered_text(video_top_text, 0.665, 0.12, light_font, fs(52)),
+        ]
+    else:
+        overlays = [
+            clip,
+            _band(0.05, 0.11),
+            _centered_text(video_top_text, 0.05, 0.11, light_font, fs(60)),
+            _band(0.66, 0.17),
+            _centered_text(f"{price}\n{loc}", 0.66, 0.17, bold_font, fs(54)),
+        ]
+
+    overlays += [
         # Persistent brand watermark.
         TextClip(
             font=bold_font,
