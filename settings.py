@@ -263,6 +263,26 @@ CONSULT_PRICE_LABEL = env("CONSULT_PRICE_LABEL", default="US$25")
 CONSULT_PRICE = env("CONSULT_PRICE", default="25.00")
 CONSULT_CURRENCY = env("CONSULT_CURRENCY", default="USD")
 
+# --- Desk report -----------------------------------------------------------
+# A paid pre-purchase report compiled from the listing and our own inventory.
+# Deliverable without site access, which is what separates it from an inspection
+# (see membership.models.InspectionRequest) and lets it be charged for up front.
+#
+# PRICE is the number PayPal charges and must stay a bare decimal; the LABEL is
+# what the site says. Never write "$39" into an env value — django-environ
+# treats a leading "$" as a variable reference and recurses on it.
+DESK_REPORT_PRICE = env("DESK_REPORT_PRICE", default="39.00")
+DESK_REPORT_PRICE_LABEL = env("DESK_REPORT_PRICE_LABEL", default="US$39")
+DESK_REPORT_CURRENCY = env("DESK_REPORT_CURRENCY", default="USD")
+# What we promise on the page. Keep it honest: the municipal enquiry is a phone
+# call to a Japanese office that keeps office hours.
+DESK_REPORT_TURNAROUND_DAYS = env.int("DESK_REPORT_TURNAROUND_DAYS", default=3)
+# Which listing the public example is built from. 0 means "pick the most
+# complete live listing", so the example cannot go stale when a listing is
+# retired — but pin it once you have one you like.
+DESK_REPORT_SAMPLE_PK = env.int("DESK_REPORT_SAMPLE_PK", default=0)
+DESK_REPORT_NOTIFY_EMAIL = env("DESK_REPORT_NOTIFY_EMAIL", default=EMAIL_HOST_USER)
+
 # The agent takes these calls from Japan, so availability is defined in their
 # local time and converted for whoever is booking. Japan has no DST, but the
 # conversion goes through zoneinfo anyway so this stays correct if the window is

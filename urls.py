@@ -3,6 +3,7 @@ from front import views as front_views
 from membership.utils import notify_user_expressed_interest
 from membership import views as membership_views
 from membership import consultations as consultation_views
+from membership import desk_reports as desk_report_views
 from membership.paypal import webhook as paypal_webhook
 from django.urls import path, include
 from front import sitemap
@@ -39,6 +40,33 @@ urlpatterns = [
         name="consultation_cancelled",
     ),
     path("pricing/", front_views.pricing, name="pricing"),
+    # The paid desk report: the offer, a worked example on a real listing, and
+    # PayPal's two redirects back.
+    path(
+        "desk-report/",
+        desk_report_views.desk_report_offer,
+        name="desk_report_offer",
+    ),
+    path(
+        "desk-report/example/",
+        desk_report_views.desk_report_example,
+        name="desk_report_example",
+    ),
+    path(
+        "desk-report/order",
+        desk_report_views.order_desk_report,
+        name="order_desk_report",
+    ),
+    path(
+        "desk-report/ordered",
+        desk_report_views.desk_report_paid,
+        name="desk_report_paid",
+    ),
+    path(
+        "desk-report/cancelled",
+        desk_report_views.desk_report_cancelled,
+        name="desk_report_cancelled",
+    ),
     path("map/", front_views.map_view, name="map"),
     path(
         "api/map-properties.json",

@@ -639,3 +639,92 @@ class ProAttempt(models.Model):
     def __str__(self):
         who = self.email or (self.user and self.user.username) or "anonymous"
         return f"{who} — {self.get_source_display()} @ {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class DeskReportOrder(models.Model):
+    """Somebody paying for a pre-purchase desk report on a listing.
+
+    Unlike an inspection, this can honestly be charged for up front: it is desk
+    research on a published listing plus our own comparables, so nothing about
+    delivering it depends on physical access to the house (compare
+    InspectionRequest, which deliberately takes no money).
+
+    The lifecycle mirrors Consultation's, for the same reason: `pending` is an
+    order created and handed to PayPal, and only a captured payment becomes
+    `paid`. An approved-but-uncaptured order is somebody who reached the PayPal
+    button and stopped — treating that as payment would give the report away.
+
+    `delivered` is a separate state from `paid` on purpose. It is the only thing
+    that says a human did the three parts the generator cannot do, so the gap
+    between the two is the work queue.
+    """
+
+    STATUS_PENDING = "pending"
+    STATUS_PAID = "paid"
+    STATUS_DELIVERED = "delivered"
+    STATUS_CANCELLED = "cancelled"
+    STATUS_REFUNDED = "refunded"
+    STATUS_CHOICES = [
+        (STATUS_PENDING, "Awaiting payment"),
+        (STATUS_PAID, "Paid — report owed"),
+        (STATUS_DELIVERED, "Report sent"),
+        (STATUS_CANCELLED, "Cancelled at PayPal"),
+        (STATUS_REFUNDED, "Refunded"),
+    ]
+
+    email = models.EmailField()
+    name = models.CharField(max_length=120, blank=True, default="")
+    user = models.ForeignKey(
+        "auth.User", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="desk_report_orders",
+        help_text="Set when the buyer was signed in.",
+    )
+    listing = models.ForeignKey(
+        "inventory.Property", null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="desk_report_orders",
+        help_text="The listing the report is about.",
+    )
+    # Kept flat beside the FK for the same reason InspectionRequest does it: a
+    # delisted property nulls the FK, and then this is the only record of what
+    # was bought — which still has to be delivered.
+    listing_url = models.URLField(max_length=500, blank=True, default="")
+    listing_location = models.CharField(max_length=255, blank=True, default="")
+    buyer_notes = models.TextField(
+        blank=True, default="",
+        help_text="Anything the buyer asked us to look at specifically.",
+    )
+
+    status = models.CharField(
+        max_length=12, choices=STATUS_CHOICES, default=STATUS_PENDING, db_index=True
+    )
+    paypal_order_id = models.CharField(max_length=64, blank=True, db_index=True)
+    paypal_capture_id = models.CharField(max_length=64, blank=True)
+    amount = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=8, blank=True)
+
+    internal_notes = models.TextField(
+        blank=True, default="", help_text="Your notes. Never shown to the buyer."
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    delivered_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Desk report order"
+        verbose_name_plural = "Desk report orders"
+
+    def __str__(self):
+        where = self.listing_location or "unknown listing"
+        return f"{self.email} — {where} ({self.status})"
+
+    @property
+    def is_owed(self):
+        """Paid for and not yet sent. This is the work queue."""
+        return self.status == self.STATUS_PAID
+
+    @property
+    def days_owed(self):
+        if not (self.is_owed and self.paid_at):
+            return None
+        return (timezone.now() - self.paid_at).days

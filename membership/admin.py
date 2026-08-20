@@ -9,6 +9,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from membership.models import (
+    DeskReportOrder,
     InspectionRequest,
     Consultation,
     InterestRequest,
@@ -427,6 +428,45 @@ class ConsultationAdmin(admin.ModelAdmin):
             obj.listing.get_public_url,
             obj.listing.get_location_for_front(),
         )
+
+
+@admin.register(DeskReportOrder)
+class DeskReportOrderAdmin(admin.ModelAdmin):
+    """Paid desk reports, and how long each has been owed.
+
+    The list is a queue, not a report: every paid row is work outstanding until
+    it is marked delivered, and `owed_for` is there so nothing quietly ages.
+    """
+
+    list_display = ("created_at", "email", "listing_location", "status",
+                    "owed_for", "amount")
+    list_filter = ("status", "created_at")
+    search_fields = ("email", "name", "listing_url", "listing_location",
+                     "paypal_order_id")
+    list_editable = ("status",)
+    readonly_fields = ("created_at", "paid_at", "paypal_order_id",
+                       "paypal_capture_id", "amount", "currency", "user",
+                       "buyer_notes")
+    date_hierarchy = "created_at"
+
+    @admin.display(description="Owed for", ordering="paid_at")
+    def owed_for(self, obj):
+        days = obj.days_owed
+        if days is None:
+            return "—"
+        colour = "#b91c1c" if days >= 3 else "#92400e" if days >= 2 else "#166534"
+        return format_html(
+            '<b style="color:{}">{} day{}</b>', colour, days, "" if days == 1 else "s"
+        )
+
+    def save_model(self, request, obj, form, change):
+        # Stamp the delivery date from the status change, so "sent" and "when"
+        # cannot disagree.
+        if obj.status == DeskReportOrder.STATUS_DELIVERED and obj.delivered_at is None:
+            obj.delivered_at = timezone.now()
+        if obj.status != DeskReportOrder.STATUS_DELIVERED:
+            obj.delivered_at = None
+        super().save_model(request, obj, form, change)
 
 
 @admin.register(InspectionRequest)

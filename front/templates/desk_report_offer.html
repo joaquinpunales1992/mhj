@@ -1,0 +1,204 @@
+{% extends "content_base.html" %}
+{% block title %}Desk report — {{ price_label }} — My Akiya in Japan{% endblock %}
+{% block og_title %}Pre-purchase desk report — {{ price_label }}{% endblock %}
+{% block description %}Before you offer on a Japanese house, know what the listing does not say: whether it can be rebuilt, what the utilities are, and how the price compares locally. {{ price_label }}, within {{ turnaround_days }} working days.{% endblock %}
+{% block canonical %}https://akiyainjapan.com/desk-report/{% endblock %}
+{% block content %}
+
+<h1>Pre-purchase desk report</h1>
+<p class="lead">
+  A Japanese listing tells you the price and the floor plan. It rarely tells you
+  whether the house can be rebuilt, whether the water comes from a well, or
+  whether the price is sensible for the area. This report answers those
+  questions before you offer — {{ price_label }}, within
+  {{ turnaround_days }} working days.
+</p>
+
+{% comment %}
+  The example is the argument, so it comes before the feature list. It is the
+  generator's real output on a real listing, not a mock-up: a buyer can open that
+  listing themselves and see exactly what we added to it.
+{% endcomment %}
+{% if sample %}
+<div class="dr-example">
+  <div>
+    <p class="dr-example-label">See a real one first</p>
+    <p class="dr-example-title">{{ sample.title }}</p>
+    <p class="dr-example-meta">
+      {{ sample.get_price_for_front }} · {{ sample.get_location_for_front }}
+      {% if sample_report %}
+        · {{ sample_report.findings|length }} findings,
+        {{ sample_report.questions|length }} questions for the agent
+      {% endif %}
+    </p>
+  </div>
+  <a class="cta" href="{% url 'desk_report_example' %}">Read the example report</a>
+</div>
+{% endif %}
+
+<h2>What you get</h2>
+<ul>
+  <li><b>Every finding ranked by what it does to the purchase</b> — what can void
+      the deal, what changes the price, what is simply fine.</li>
+  <li><b>Rebuild and zoning position.</b> Whether the parcel sits in an
+      urbanization control area, what the setback and road frontage mean, and
+      what the coverage ratios allow.</li>
+  <li><b>Utilities.</b> Mains water and public sewer, or a well, a septic tank
+      and propane — the difference is the largest hidden cost in rural Japan.</li>
+  <li><b>Earthquake standard.</b> Whether the building predates the 1981 rules,
+      what reinforcement has been done, and whether the conformance certificate
+      that unlocks the tax reductions is reachable.</li>
+  <li><b>Price against the local market</b>, measured on {{ inventory_size }}
+      comparable listings we hold ourselves.</li>
+  <li><b>A call to the municipal office</b> about what may actually be built on
+      that parcel, with the answer recorded verbatim.</li>
+  <li><b>The Japanese remarks read properly</b> — not machine translated. Rebuild
+      restrictions and defect disclosures hide in that paragraph.</li>
+  <li><b>A written list of questions to put to the agent</b>, specific to this
+      property.</li>
+</ul>
+
+<h2>What it is not</h2>
+<p>
+  This is desk research. Nobody visits the property, and it is not a structural,
+  pest or boundary survey — for that you need an inspection, which needs physical
+  access the seller's agent controls. If you want one, we will help arrange it
+  separately, and we do not take money for it up front.
+</p>
+<p>
+  Where the listing is silent, the report says so rather than estimating. That is
+  the point of it: knowing what has not been disclosed is what stops you offering
+  blind.
+</p>
+
+<h2>{{ price_label }} per property</h2>
+<p>
+  One property, one report, within {{ turnaround_days }} working days. Paid
+  through PayPal — no card details touch this site.
+</p>
+
+<form id="dr-form" class="dr-form">
+  {% if listing %}
+    <p class="dr-form-listing">
+      Report on: <b>{{ listing.title }}</b> — {{ listing.get_location_for_front }}
+    </p>
+    <input type="hidden" name="listing" value="{{ listing.pk }}">
+  {% else %}
+    <label for="dr-url">Link to the property</label>
+    <input id="dr-url" name="listing_url" type="url" required
+           placeholder="https://www.homes.co.jp/... or a link from this site">
+  {% endif %}
+
+  <label for="dr-email">Your email</label>
+  <input id="dr-email" name="email" type="email" required
+         value="{{ user.email|default:'' }}" placeholder="where we send the report">
+
+  <label for="dr-name">Your name <span class="dr-optional">(optional)</span></label>
+  <input id="dr-name" name="name" type="text" autocomplete="name">
+
+  <label for="dr-notes">Anything specific you want checked
+    <span class="dr-optional">(optional)</span></label>
+  <textarea id="dr-notes" name="notes" rows="3"
+            placeholder="e.g. can I run it as a guesthouse? is the well shared?"></textarea>
+
+  <button class="cta" type="submit" id="dr-submit">Order for {{ price_label }}</button>
+  <p id="dr-error" class="dr-error" hidden></p>
+</form>
+
+<style>
+  .dr-example {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem 1.5rem;
+    align-items: center;
+    justify-content: space-between;
+    margin: 1.75rem 0 2.5rem;
+    padding: 1.25rem 1.4rem;
+    border: 1px solid var(--border, #e0e0e0);
+    border-left: 4px solid var(--primary, #2f5d8a);
+    border-radius: 8px;
+    background: var(--card, #fff);
+  }
+  .dr-example-label {
+    margin: 0 0 .35rem;
+    font-size: .78rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--muted, #6b7280);
+  }
+  .dr-example-title { margin: 0 0 .2rem; font-weight: 600; }
+  .dr-example-meta { margin: 0; font-size: .92rem; color: var(--muted, #6b7280); }
+  .dr-example .cta { margin-top: 0; }
+
+  .dr-form {
+    max-width: 32rem;
+    margin: 1.5rem 0 0;
+    display: flex;
+    flex-direction: column;
+    gap: .35rem;
+  }
+  .dr-form label { font-weight: 600; font-size: .92rem; margin-top: .8rem; }
+  .dr-optional { font-weight: 400; color: var(--muted, #6b7280); }
+  /* HTML5UP's main.css sets a width on inputs and a height on buttons; both are
+     overridden here so the field block lines up. */
+  .dr-form input, .dr-form textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: .55rem .7rem;
+    border: 1px solid var(--border, #d0d5dd);
+    border-radius: 6px;
+    font: inherit;
+    background: var(--card, #fff);
+    color: inherit;
+  }
+  .dr-form .cta { align-self: flex-start; border: 0; cursor: pointer; height: auto; }
+  .dr-form-listing {
+    margin: 0 0 .5rem;
+    padding: .7rem .9rem;
+    border-radius: 6px;
+    background: var(--tint, #f3f5f9);
+    font-size: .95rem;
+  }
+  .dr-error { color: #b91c1c; font-size: .92rem; margin: .6rem 0 0; }
+</style>
+
+<script>
+  (function () {
+    var form = document.getElementById('dr-form');
+    var button = document.getElementById('dr-submit');
+    var error = document.getElementById('dr-error');
+
+    form.addEventListener('submit', function (event) {
+      event.preventDefault();
+      error.hidden = true;
+      button.disabled = true;
+      button.textContent = 'Taking you to PayPal…';
+
+      fetch('{% url "order_desk_report" %}', {
+        method: 'POST',
+        headers: {
+          'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+        },
+        credentials: 'same-origin',
+        body: new FormData(form)
+      })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+        .then(function (result) {
+          if (result.ok && result.data.redirect) {
+            window.location = result.data.redirect;
+            return;
+          }
+          throw new Error(result.data.error || 'Something went wrong.');
+        })
+        .catch(function (err) {
+          // Never leave the button dead: the buyer must be able to try again.
+          button.disabled = false;
+          button.textContent = 'Order for {{ price_label }}';
+          error.textContent = err.message;
+          error.hidden = false;
+        });
+    });
+  })();
+</script>
+
+{% endblock %}

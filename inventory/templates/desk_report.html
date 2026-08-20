@@ -368,7 +368,12 @@
 
 <div class="sheet">
 
-  {% if draft %}
+  {% if sample %}
+  <div class="specimen">
+    <span>Example report · a real listing, shown in full</span>
+    <span>{% if price_label %}Yours for {{ price_label }}{% endif %}</span>
+  </div>
+  {% elif draft %}
   <div class="specimen">
     <span>Draft — {{ open_sections }} section{{ open_sections|pluralize }} still to complete</span>
     <span>Not for issue</span>
@@ -494,6 +499,28 @@
       {% for heading, instruction in human_sections %}
       <div class="finding is-unknown">
         <span class="sev">To write</span>
+        <div class="finding-body">
+          <h3>{{ heading }}</h3>
+          <p>{{ instruction }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if sample %}
+  <section>
+    <h2 class="rule">What a person adds to this</h2>
+    <p>
+      Everything above is compiled from the listing and our own inventory. The
+      report you receive also carries three things only a person can produce, and
+      they are the reason it is worth paying for.
+    </p>
+    <div class="findings">
+      {% for heading, instruction in human_sections %}
+      <div class="finding is-cleared">
+        <span class="sev">Included</span>
         <div class="finding-body">
           <h3>{{ heading }}</h3>
           <p>{{ instruction }}</p>

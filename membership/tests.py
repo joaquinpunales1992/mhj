@@ -1017,3 +1017,220 @@ class SignupTests(TestCase):
         c.post("/accounts/login/", {"login": "comeback@example.com",
                                     "password": self.PASSWORD})
         self.assertIn("_auth_user_id", c.session)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE="39.00",
+                   DESK_REPORT_PRICE_LABEL="US$39", DESK_REPORT_SAMPLE_PK=0)
+class DeskReportOfferTests(TestCase):
+    """Selling the report: the price, the example, and the order flow.
+
+    The example page matters more than it looks: it is the only proof a buyer has
+    of what {price} buys, so it renders the real generator rather than a
+    mock-up — and a test that it stays wired to the generator is what stops the
+    two drifting apart.
+    """
+
+    def setUp(self):
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        from django.core.cache import cache
+        cache.clear()
+        self.listing = Property.objects.create(
+            url="https://www.homes.co.jp/kodate/example/",
+            title="Detached house in Yokose, Oita City", price=2249,
+            floor_plan="3LDK", location="Yokoze, Oita City, Oita Prefecture",
+            building_area="110.78㎡", land_area="289.85㎡",
+            construction_date="1976年7月（築49年）",
+            city_planning="Urbanization control area",
+            land_rights="Ownership", land_category="Residence", equipment="",
+            road_condition="East 5.8m private road", handover="July 2025",
+        )
+
+    def test_the_offer_page_states_the_price(self):
+        page = self.client.get("/desk-report/")
+        self.assertEqual(page.status_code, 200)
+        body = page.content.decode()
+        self.assertIn("US$39", body)
+        self.assertIn("Read the example report", body)
+
+    def test_the_example_is_the_real_generator_output(self):
+        """Not a screenshot and not prose — the findings the rules produce."""
+        page = self.client.get("/desk-report/example/")
+        self.assertEqual(page.status_code, 200)
+        body = page.content.decode()
+        self.assertIn("Detached house in Yokose", body)
+        self.assertIn("Inside an urbanization control area", body)
+        self.assertIn("Water, sewer and gas are not disclosed", body)
+        self.assertIn("都市計画", body)
+
+    def test_the_example_is_labelled_as_one_and_never_as_a_draft(self):
+        body = self.client.get("/desk-report/example/").content.decode()
+        self.assertIn("Example report", body)
+        self.assertNotIn("Not for issue", body)
+        self.assertIn("What a person adds to this", body)
+
+    def test_the_example_survives_an_empty_inventory(self):
+        Property.objects.all().delete()
+        from django.core.cache import cache
+        cache.clear()
+        self.assertEqual(self.client.get("/desk-report/example/").status_code, 200)
+
+    def test_a_pinned_sample_wins(self):
+        other = Property.objects.create(
+            url="https://example.com/pinned", title="Pinned example house",
+            price=800, floor_plan="2DK", location="Oita Prefecture",
+        )
+        from django.core.cache import cache
+        cache.clear()
+        with override_settings(DESK_REPORT_SAMPLE_PK=other.pk):
+            body = self.client.get("/desk-report/example/").content.decode()
+        self.assertIn("Pinned example house", body)
+
+    def test_ordering_from_a_property_page_prefills_that_listing(self):
+        body = self.client.get(f"/desk-report/?listing={self.listing.pk}").content.decode()
+        self.assertIn("Detached house in Yokose", body)
+        self.assertIn(f'value="{self.listing.pk}"', body)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE="39.00",
+                   DESK_REPORT_CURRENCY="USD")
+class DeskReportOrderTests(TestCase):
+    """Taking the money. Mirrors the consultation flow, including its rule that
+    only a captured payment counts."""
+
+    def setUp(self):
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        self.listing = Property.objects.create(
+            url="https://example.com/order", title="A house", price=1200,
+            floor_plan="3LDK", location="Oita Prefecture",
+        )
+
+    def order(self, **fields):
+        payload = {"email": "buyer@example.com", "listing": self.listing.pk}
+        payload.update(fields)
+        return self.client.post("/desk-report/order", payload)
+
+    def test_an_order_sends_the_buyer_to_paypal_at_the_settings_price(self):
+        from membership.models import DeskReportOrder
+
+        with patch("membership.desk_reports.create_order",
+                   return_value=("ORDER-1", "https://paypal.test/approve")) as create:
+            response = self.order(notes="Can I run it as a guesthouse?")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["redirect"], "https://paypal.test/approve")
+        self.assertEqual(str(create.call_args.kwargs["amount"]), "39.00")
+
+        order = DeskReportOrder.objects.get()
+        self.assertEqual(order.status, DeskReportOrder.STATUS_PENDING)
+        self.assertEqual(order.paypal_order_id, "ORDER-1")
+        self.assertEqual(order.buyer_notes, "Can I run it as a guesthouse?")
+
+    def test_a_price_from_the_browser_is_ignored(self):
+        """The amount is read from settings; a posted one must not reach PayPal."""
+        with patch("membership.desk_reports.create_order",
+                   return_value=("ORDER-2", "https://paypal.test/a")) as create:
+            self.order(amount="1.00", price="1.00")
+        self.assertEqual(str(create.call_args.kwargs["amount"]), "39.00")
+
+    def test_an_order_needs_an_email_and_a_property(self):
+        from membership.models import DeskReportOrder
+
+        self.assertEqual(self.order(email="not-an-email").status_code, 400)
+        response = self.client.post("/desk-report/order",
+                                    {"email": "buyer@example.com"})
+        self.assertEqual(response.status_code, 400)
+        self.assertFalse(DeskReportOrder.objects.exists())
+
+    def test_paypal_refusing_does_not_leave_a_live_order(self):
+        from membership.models import DeskReportOrder
+        from membership.paypal_orders import PayPalError
+
+        with patch("membership.desk_reports.create_order",
+                   side_effect=PayPalError("no")):
+            response = self.order()
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(DeskReportOrder.objects.get().status,
+                         DeskReportOrder.STATUS_CANCELLED)
+
+    def test_only_a_captured_payment_becomes_paid(self):
+        from membership.models import DeskReportOrder
+
+        order = DeskReportOrder.objects.create(
+            email="buyer@example.com", listing=self.listing,
+            paypal_order_id="ORDER-3", amount=Decimal("39.00"), currency="USD",
+        )
+        approved_not_captured = {"paid": False, "capture_status": "PENDING",
+                                 "capture_id": "", "amount": None, "currency": None}
+        with patch("membership.desk_reports.capture_order",
+                   return_value=approved_not_captured):
+            page = self.client.get("/desk-report/ordered?token=ORDER-3")
+        self.assertEqual(page.status_code, 200)
+        order.refresh_from_db()
+        self.assertEqual(order.status, DeskReportOrder.STATUS_PENDING,
+                         "an uncaptured order must not become a paid one")
+
+    def test_a_captured_payment_marks_it_paid_and_emails_both_sides(self):
+        from django.core import mail
+
+        from membership.models import DeskReportOrder
+
+        order = DeskReportOrder.objects.create(
+            email="buyer@example.com", listing=self.listing,
+            listing_location="Oita", paypal_order_id="ORDER-4",
+            amount=Decimal("39.00"), currency="USD",
+        )
+        captured = {"paid": True, "capture_status": "COMPLETED",
+                    "capture_id": "CAP-1", "amount": "39.00", "currency": "USD"}
+        with patch("membership.desk_reports.capture_order", return_value=captured):
+            page = self.client.get("/desk-report/ordered?token=ORDER-4")
+
+        self.assertContains(page, "Ordered")
+        order.refresh_from_db()
+        self.assertEqual(order.status, DeskReportOrder.STATUS_PAID)
+        self.assertEqual(order.paypal_capture_id, "CAP-1")
+        self.assertIsNotNone(order.paid_at)
+        self.assertTrue(order.is_owed, "paid and undelivered is the work queue")
+        self.assertEqual(len(mail.outbox), 2, "buyer confirmation and our notice")
+
+    def test_reloading_the_confirmation_does_not_capture_twice(self):
+        from membership.models import DeskReportOrder
+
+        DeskReportOrder.objects.create(
+            email="buyer@example.com", paypal_order_id="ORDER-5",
+            status=DeskReportOrder.STATUS_PAID, paid_at=timezone.now(),
+        )
+        with patch("membership.desk_reports.capture_order") as capture:
+            self.client.get("/desk-report/ordered?token=ORDER-5")
+        capture.assert_not_called()
+
+    def test_an_unknown_token_is_a_404_not_a_crash(self):
+        page = self.client.get("/desk-report/ordered?token=NOPE")
+        self.assertEqual(page.status_code, 404)
+
+    def test_cancelling_at_paypal_marks_the_order_cancelled(self):
+        from membership.models import DeskReportOrder
+
+        order = DeskReportOrder.objects.create(
+            email="buyer@example.com", paypal_order_id="ORDER-6",
+        )
+        page = self.client.get("/desk-report/cancelled?token=ORDER-6")
+        self.assertContains(page, "Cancelled")
+        order.refresh_from_db()
+        self.assertEqual(order.status, DeskReportOrder.STATUS_CANCELLED)
+
+    def test_an_email_failure_does_not_lose_a_paid_order(self):
+        from membership.models import DeskReportOrder
+
+        order = DeskReportOrder.objects.create(
+            email="buyer@example.com", paypal_order_id="ORDER-7",
+            amount=Decimal("39.00"), currency="USD",
+        )
+        captured = {"paid": True, "capture_status": "COMPLETED",
+                    "capture_id": "CAP-2", "amount": "39.00", "currency": "USD"}
+        with patch("membership.desk_reports.capture_order", return_value=captured), \
+             patch("membership.desk_reports._notify",
+                   side_effect=RuntimeError("smtp down")):
+            page = self.client.get("/desk-report/ordered?token=ORDER-7")
+        self.assertContains(page, "Ordered")
+        order.refresh_from_db()
+        self.assertEqual(order.status, DeskReportOrder.STATUS_PAID)
