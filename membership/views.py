@@ -228,6 +228,77 @@ def request_inspection(request):
     return JsonResponse({"ok": True})
 
 
+def _log_pro_attempt(request, source):
+    """Append one row to the Pro attempt log (see models.ProAttempt).
+
+    Swallows its own errors on purpose: this is bookkeeping about a payment, and
+    a failure here must cost a log line rather than somebody's subscription.
+    """
+    from django.conf import settings
+
+    from membership.models import ProAttempt
+
+    user = request.user if request.user.is_authenticated else None
+    # Best-effort identity. The `email` cookie is set by the older lead flows and
+    # holds whatever was typed into them, so it is only trusted far enough to
+    # store — an invalid one is dropped rather than blowing up the insert.
+    email = (user.email if user else "") or (request.COOKIES.get("email") or "")
+    email = email.strip()[:254]
+    if email:
+        try:
+            validate_email(email)
+        except ValidationError:
+            email = ""
+
+    try:
+        payload = json.loads(request.body or "{}")
+    except json.JSONDecodeError:
+        payload = {}
+    from_url = str(payload.get("from") or request.META.get("HTTP_REFERER") or "")[:500]
+
+    try:
+        ProAttempt.objects.create(
+            user=user,
+            email=email,
+            source=source,
+            # Recorded per attempt, not read from settings at report time: the
+            # plan id will eventually be filled in, and then today's "wanted it
+            # while it was unbuyable" rows would silently reclassify themselves.
+            billing_configured=bool(
+                settings.PAYPAL_CLIENT_ID and settings.PAYPAL_PLAN_ID
+            ),
+            from_url=from_url,
+        )
+    except Exception as e:  # pragma: no cover - defensive
+        logger.error("Pro attempt (%s) not logged: %s", source, e)
+
+
+@require_POST
+def record_pro_interest(request):
+    """Log somebody trying to buy Pro when there is nothing to buy.
+
+    With no PayPal plan configured, /pro/ shows the waitlist rather than a
+    subscribe button, and record_subscription_attempt never fires — so the
+    people most worth knowing about, the ones who came to pay and found the
+    till closed, left no trace at all. This is that trace.
+
+    Writes only to ProAttempt. There is no PayPal subscription to mirror, and
+    inventing an APPROVAL_PENDING Subscription for a plan that does not exist
+    would put rows the site gates on into a table describing a purchase nobody
+    could have made.
+    """
+    if not request.user.is_authenticated:
+        return _login_required_json(request)
+
+    from membership.models import ProAttempt
+
+    _log_pro_attempt(request, ProAttempt.SOURCE_WAITLIST)
+    logger.info(
+        "Pro wanted, but not on sale: %s", request.user.email or request.user.pk
+    )
+    return JsonResponse({"ok": True})
+
+
 @require_POST
 def record_subscription_attempt(request):
     """Note that someone opened PayPal's subscribe flow, before they approve it.
@@ -248,7 +319,13 @@ def record_subscription_attempt(request):
     if not request.user.is_authenticated:
         return _login_required_json(request)
 
-    from membership.models import Subscription
+    from membership.models import ProAttempt, Subscription
+
+    # Logged before the Subscription bookkeeping and on every call, including the
+    # ones that return early below: the row is a click, not a state change, so a
+    # member clicking subscribe twice is two attempts — which is the number the
+    # funnel wants.
+    _log_pro_attempt(request, ProAttempt.SOURCE_CHECKOUT)
 
     existing = getattr(request.user, "subscription", None)
     if existing is not None:

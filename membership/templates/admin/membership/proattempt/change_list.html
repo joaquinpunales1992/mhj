@@ -1,0 +1,37 @@
+{% extends "admin/change_list.html" %}
+
+{% comment %}
+  Counts above the attempt list. The one that matters is "wanted it while it was
+  unbuyable": every one of those is a person who came to pay and found no
+  button, which is the argument for finishing the PayPal integration.
+{% endcomment %}
+
+{% block content_title %}
+  {{ block.super }}
+
+  <div style="margin: 12px 0 20px; padding: 14px 16px; background: #fff;
+              border: 1px solid #e0e0e0; border-radius: 6px;">
+    <div style="font-weight: 600; margin-bottom: 10px; font-size: 13px;
+                text-transform: uppercase; letter-spacing: .05em; color: #666;">
+      Attempts to pay for Pro
+    </div>
+    <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+      {% for label, count in pro_attempt_summary %}
+        <div style="flex: 1 1 150px; min-width: 150px; padding: 10px 12px;
+                    background: {% if count %}#f5f7fa{% else %}#fafafa{% endif %};
+                    border: 1px solid #e6e6e6; border-radius: 5px;">
+          <div style="font-size: 22px; font-weight: 600; line-height: 1.1;
+                      color: {% if count %}#1f2937{% else %}#c0c0c0{% endif %};">
+            {{ count }}
+          </div>
+          <div style="font-size: 11px; color: #6b7280; margin-top: 3px;">{{ label }}</div>
+        </div>
+      {% endfor %}
+    </div>
+    <p style="margin: 12px 0 0; font-size: 12px; color: #6b7280;">
+      A row here is a click, not a payment — nobody in this list has been
+      charged, and nobody here has Pro access. Who actually has access is in
+      Subscriptions.
+    </p>
+  </div>
+{% endblock %}

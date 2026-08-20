@@ -64,7 +64,7 @@
               'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
             },
             credentials: 'same-origin',
-            body: '{}'
+            body: JSON.stringify({ from: {% if next_url %}'{{ next_url }}'{% else %}document.referrer{% endif %} })
           }).catch(function () {});
           return actions.subscription.create({ plan_id: '{{ paypal_plan_id }}' });
         },
@@ -109,7 +109,54 @@
       Pro is opening shortly. Tell us you want it and we'll let you know the
       moment it's live — and you'll get the first month free for being early.
     </p>
-    <a class="cta" href="mailto:hello@akiyainjapan.com?subject=I%20want%20Pro">Tell us you want Pro</a>
+    {% comment %}
+      Still a mailto in the href, and the handler below cancels it: with JS the
+      click is recorded silently, and without JS it does what it always did.
+      A href="#" here would mean a no-JS visitor clicks and nothing happens —
+      the one outcome worse than not logging them.
+    {% endcomment %}
+    <a class="cta" id="pro-wanted"
+       href="mailto:hello@akiyainjapan.com?subject=I%20want%20Pro">Tell us you want Pro</a>
+    <p id="pro-wanted-done" hidden style="margin-top:1rem;font-weight:600;">
+      Noted{% if request.user.email %}, {{ request.user.email }}{% endif %} — you're
+      on the list, and you'll hear from us the day Pro opens.
+    </p>
+    <p id="pro-wanted-failed" hidden style="margin-top:1rem;font-size:.92rem;">
+      We couldn't record that — please email
+      <a href="mailto:hello@akiyainjapan.com?subject=I%20want%20Pro">hello@akiyainjapan.com</a>
+      and we'll add you by hand.
+    </p>
+
+    <script>
+      // Unlike the subscribe button, this click *is* the whole event — there is
+      // no PayPal step behind it to prove intent later. So it waits for the
+      // response and falls back to the mailto on failure, rather than
+      // fire-and-forget: a dropped request here loses the lead entirely.
+      document.getElementById('pro-wanted').addEventListener('click', function (event) {
+        event.preventDefault();
+        var button = this;
+        button.setAttribute('aria-disabled', 'true');
+        fetch('{% url "record_pro_interest" %}', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+          },
+          credentials: 'same-origin',
+          body: JSON.stringify({ from: {% if next_url %}'{{ next_url }}'{% else %}document.referrer{% endif %} })
+        })
+          .then(function (r) { return r.ok ? r.json() : Promise.reject(r.status); })
+          .then(function () {
+            button.hidden = true;
+            document.getElementById('pro-wanted-done').hidden = false;
+          })
+          .catch(function (err) {
+            button.removeAttribute('aria-disabled');
+            document.getElementById('pro-wanted-failed').hidden = false;
+            console.error('pro interest not recorded', err);
+          });
+      });
+    </script>
   {% endif %}
 {% endif %}
 

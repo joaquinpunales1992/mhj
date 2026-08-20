@@ -119,6 +119,13 @@ urlpatterns = [
         membership_views.record_subscription_attempt,
         name="record_subscription_attempt",
     ),
+    # The same signal from the other half of /pro/: somebody who wanted Pro
+    # while there was no plan to subscribe to.
+    path(
+        "api/pro-wanted",
+        membership_views.record_pro_interest,
+        name="record_pro_interest",
+    ),
     path("api/paypal-webhook", paypal_webhook, name="paypal_webhook"),
     path(
         "api/toggle-saved-property",

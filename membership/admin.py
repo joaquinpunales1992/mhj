@@ -13,6 +13,7 @@ from membership.models import (
     Consultation,
     InterestRequest,
     PremiumRequest,
+    ProAttempt,
     PropertyView,
     SavedProperty,
     SavedSearch,
@@ -289,6 +290,57 @@ class SubscriptionAdmin(admin.ModelAdmin):
     @admin.display(boolean=True, description="Access")
     def active(self, obj):
         return obj.is_active
+
+
+@admin.register(ProAttempt)
+class ProAttemptAdmin(admin.ModelAdmin):
+    """Everybody who tried to pay for Pro, whether or not Pro was on sale.
+
+    Read-only and deliberately next to Subscriptions rather than inside it: a
+    Subscription row is an entitlement the site gates on, while a row here is
+    just a click. The two must not be filed in the same drawer.
+
+    The number to look at is "wanted it while it was unbuyable" in the summary.
+    If that keeps climbing, the PayPal integration is the thing to finish.
+    """
+
+    list_display = ("created_at", "who", "source", "purchasable", "from_url")
+    list_filter = ("source", "billing_configured", "created_at")
+    search_fields = ("email", "user__email", "from_url")
+    date_hierarchy = "created_at"
+    readonly_fields = ("user", "email", "source", "billing_configured",
+                       "from_url", "created_at")
+
+    @admin.display(description="Who", ordering="email")
+    def who(self, obj):
+        return obj.email or (obj.user and obj.user.username) or "anonymous"
+
+    @admin.display(boolean=True, description="Could pay", ordering="billing_configured")
+    def purchasable(self, obj):
+        return obj.billing_configured
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def changelist_view(self, request, extra_context=None):
+        now = timezone.now()
+        attempts = ProAttempt.objects.all()
+        extra_context = extra_context or {}
+        extra_context["pro_attempt_summary"] = [
+            ("Attempts, all time", attempts.count()),
+            ("Last 7 days", attempts.filter(
+                created_at__gte=now - timedelta(days=7)).count()),
+            ("Last 30 days", attempts.filter(
+                created_at__gte=now - timedelta(days=30)).count()),
+            ("Wanted it while it was unbuyable", attempts.filter(
+                billing_configured=False).count()),
+            ("Distinct people", attempts.exclude(email="").values(
+                "email").distinct().count()),
+        ]
+        return super().changelist_view(request, extra_context=extra_context)
 
 
 @admin.register(PropertyView)

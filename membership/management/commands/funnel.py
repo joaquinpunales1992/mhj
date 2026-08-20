@@ -83,6 +83,37 @@ class Command(BaseCommand):
             self.stdout.write("\n  No calls booked ahead.")
 
         self.stdout.write(self.style.MIGRATE_HEADING(f"\nPro — {label}"))
+
+        # Every click on a pay-for-Pro button, whether or not there was anything
+        # behind it. Reported above the subscription numbers because it is the
+        # wider funnel: with no PayPal plan configured no Subscription row is
+        # ever created, so these are the only evidence that anyone wanted Pro.
+        from membership.models import ProAttempt
+
+        attempts = ProAttempt.objects.all()
+        if since:
+            attempts = attempts.filter(created_at__gte=since)
+        tried = attempts.count()
+        unbuyable = attempts.filter(billing_configured=False).count()
+        people = attempts.exclude(email="").values("email").distinct().count()
+
+        self._row("tried to pay", tried)
+        if tried:
+            self._row("distinct people", people, tried)
+            self._row("Pro wasn't on sale at the time", unbuyable, tried)
+
+        if unbuyable:
+            self.stdout.write(
+                "\n  Wanted Pro while it was unbuyable — the case for finishing\n"
+                "  the PayPal setup:"
+            )
+            for a in attempts.filter(billing_configured=False).order_by(
+                "-created_at"
+            )[:10]:
+                who = a.email or (a.user and a.user.username) or "anonymous"
+                self.stdout.write(f"    {a.created_at:%d %b %H:%M}  {who}")
+            self.stdout.write("")
+
         subs = Subscription.objects.all()
         if since:
             subs = subs.filter(created_at__gte=since)
@@ -143,7 +174,7 @@ class Command(BaseCommand):
                     f"{b.name[:24]:<26} {b.email}"
                 )
 
-        if total == 0 and started == 0 and asked == 0:
+        if total == 0 and started == 0 and asked == 0 and tried == 0:
             self.stdout.write(self.style.WARNING(
                 "\n  Nothing in this window. If you expected traffic, check that "
                 "/consultation/ shows slots and /pro/ shows the subscribe button."

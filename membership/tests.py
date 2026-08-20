@@ -19,7 +19,12 @@ from django.utils import timezone
 
 from inventory.models import Property
 from membership.metering import check_access
-from membership.models import Consultation, PropertyView, Subscription
+from membership.models import (
+    Consultation,
+    ProAttempt,
+    PropertyView,
+    Subscription,
+)
 
 WEBHOOK_URL = "/api/paypal-webhook"
 
@@ -737,6 +742,128 @@ class SubscriptionAttemptTests(TestCase):
         sub = Subscription.objects.get()
         self.assertEqual(sub.status, Subscription.STATUS_ACTIVE)
         self.assertEqual(sub.paypal_subscription_id, "I-APPROVED")
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"])
+class ProAttemptLogTests(TestCase):
+    """The log of people trying to pay for Pro.
+
+    Two things matter. It has to catch the attempts Subscription cannot
+    represent — the ones made while there is no PayPal plan to subscribe to,
+    which used to disappear entirely — and it must stay a log: no row here may
+    ever imply access.
+    """
+
+    def setUp(self):
+        self.user = User.objects.create_user("want@example.com",
+                                             email="want@example.com")
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+
+    def want(self, body="{}"):
+        return self.client.post("/api/pro-wanted", body,
+                                content_type="application/json")
+
+    def test_anonymous_is_refused(self):
+        self.assertEqual(self.want().status_code, 401)
+        self.assertFalse(ProAttempt.objects.exists())
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_wanting_pro_while_it_is_unbuyable_is_logged(self):
+        """The whole reason this exists: nothing to buy, and we still know."""
+        self.client.force_login(self.user)
+        self.assertEqual(self.want().status_code, 200)
+
+        attempt = ProAttempt.objects.get()
+        self.assertEqual(attempt.source, ProAttempt.SOURCE_WAITLIST)
+        self.assertEqual(attempt.email, "want@example.com")
+        self.assertFalse(attempt.billing_configured)
+        # No entitlement anywhere: not in Subscription, not in the metering.
+        self.assertFalse(Subscription.objects.exists())
+        from membership.metering import user_is_pro
+        self.assertFalse(user_is_pro(self.user))
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_repeat_clicks_are_separate_rows(self):
+        """A log, not a state machine — somebody asking twice is two data points."""
+        self.client.force_login(self.user)
+        self.want()
+        self.want()
+        self.assertEqual(ProAttempt.objects.count(), 2)
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_the_originating_page_is_kept(self):
+        self.client.force_login(self.user)
+        self.want(json.dumps({"from": "/japanese-houses/12/"}))
+        self.assertEqual(ProAttempt.objects.get().from_url, "/japanese-houses/12/")
+
+    @override_settings(PAYPAL_CLIENT_ID="AAA", PAYPAL_PLAN_ID="P-1")
+    def test_checkout_attempts_are_logged_too(self):
+        """One table covers both halves of /pro/, so the funnel is one number."""
+        self.client.force_login(self.user)
+        self.client.post("/api/pro-checkout-started", "{}",
+                         content_type="application/json")
+
+        attempt = ProAttempt.objects.get()
+        self.assertEqual(attempt.source, ProAttempt.SOURCE_CHECKOUT)
+        self.assertTrue(attempt.billing_configured,
+                        "a plan was configured, so this person could actually pay")
+
+    @override_settings(PAYPAL_CLIENT_ID="AAA", PAYPAL_PLAN_ID="P-1")
+    def test_an_active_member_clicking_again_is_logged_and_keeps_access(self):
+        Subscription.objects.create(
+            user=self.user, paypal_subscription_id="I-REAL",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+        self.client.force_login(self.user)
+        self.client.post("/api/pro-checkout-started", "{}",
+                         content_type="application/json")
+        self.assertEqual(ProAttempt.objects.count(), 1)
+        self.assertTrue(Subscription.objects.get().is_active)
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_a_junk_email_cookie_does_not_break_the_insert(self):
+        """The `email` cookie holds whatever an older form was given."""
+        self.client.force_login(self.user)
+        self.user.email = ""
+        self.user.save(update_fields=["email"])
+        self.client.cookies["email"] = "not-an-email"
+        self.assertEqual(self.want().status_code, 200)
+        self.assertEqual(ProAttempt.objects.get().email, "")
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_a_deleted_account_leaves_the_attempt_behind(self):
+        """Who wanted Pro survives them deleting the account, via the flat email."""
+        self.client.force_login(self.user)
+        self.want()
+        self.user.delete()
+        attempt = ProAttempt.objects.get()
+        self.assertIsNone(attempt.user)
+        self.assertEqual(attempt.email, "want@example.com")
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_the_admin_list_renders_with_its_summary(self):
+        """The changelist has a custom template and two computed columns, so a
+        typo in either only shows up when somebody opens the page."""
+        self.client.force_login(self.user)
+        self.want()
+        staff = User.objects.create_superuser("boss@example.com", "boss@example.com",
+                                              "x")
+        self.client.force_login(staff)
+        page = self.client.get("/admin/membership/proattempt/")
+        self.assertEqual(page.status_code, 200)
+        body = page.content.decode()
+        self.assertIn("Attempts to pay for Pro", body)
+        self.assertIn("Wanted it while it was unbuyable", body)
+        self.assertIn("want@example.com", body)
+
+    @override_settings(PAYPAL_CLIENT_ID="", PAYPAL_PLAN_ID="")
+    def test_the_waitlist_page_offers_the_button(self):
+        """With billing off, /pro/ must show the recorded CTA, not a dead link."""
+        self.client.force_login(self.user)
+        page = self.client.get("/pro/").content.decode()
+        self.assertIn('id="pro-wanted"', page)
+        self.assertIn("/api/pro-wanted", page)
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"])

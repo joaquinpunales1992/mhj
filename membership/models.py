@@ -570,3 +570,72 @@ class InspectionRequest(models.Model):
     @property
     def needs_reply(self):
         return self.status == self.STATUS_NEW
+
+
+class ProAttempt(models.Model):
+    """Somebody trying to pay for Pro — including when there was nothing to pay.
+
+    Separate from Subscription on purpose. A Subscription row means PayPal has a
+    subscription (or is about to), and the site gates access on it; this table
+    means only "a person wanted Pro at this moment", which is a different fact
+    and must never be confused with entitlement.
+
+    It exists because the interesting case is the one Subscription cannot
+    represent. With `PAYPAL_PLAN_ID` unset there is no plan to subscribe to, so
+    /pro/ shows the waitlist instead of a button — and before this table every
+    one of those people vanished without a record, which is exactly backwards:
+    demand recorded while the product is unbuyable is the evidence for whether
+    to finish the billing integration at all.
+
+    Append-only. Nothing reads it to make a decision, so a duplicate row is
+    harmless and losing one is not: every click gets a row, and repeat attempts
+    by the same person are a signal rather than noise.
+    """
+
+    SOURCE_CHECKOUT = "checkout"
+    SOURCE_WAITLIST = "waitlist"
+    SOURCE_CHOICES = [
+        (SOURCE_CHECKOUT, "Opened PayPal checkout"),
+        (SOURCE_WAITLIST, "Asked for Pro while it wasn't on sale"),
+    ]
+
+    user = models.ForeignKey(
+        "auth.User",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="pro_attempts",
+        help_text="Set when they were signed in. Goes null if the account is deleted.",
+    )
+    # Kept flat alongside the FK for the same reason InspectionRequest keeps the
+    # listing URL: a deleted account nulls the FK, and then this is the only way
+    # to know who wanted Pro.
+    email = models.EmailField(blank=True, default="")
+    source = models.CharField(
+        max_length=20,
+        choices=SOURCE_CHOICES,
+        default=SOURCE_CHECKOUT,
+        db_index=True,
+    )
+    billing_configured = models.BooleanField(
+        default=False,
+        help_text="Whether Pro could actually be bought at the time. False means "
+        "they wanted it and the site had nothing to sell them.",
+    )
+    from_url = models.CharField(
+        max_length=500,
+        blank=True,
+        default="",
+        help_text="The page they came from — usually the listing whose locked "
+        "fields sent them to /pro/.",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        verbose_name = "Pro attempt"
+        verbose_name_plural = "Pro attempts"
+
+    def __str__(self):
+        who = self.email or (self.user and self.user.username) or "anonymous"
+        return f"{who} — {self.get_source_display()} @ {self.created_at:%Y-%m-%d %H:%M}"
