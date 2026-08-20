@@ -42,6 +42,33 @@ class Property(TimestampMixin):
     location = models.CharField(max_length=255, default="")
     construction_date = models.CharField(max_length=255, default="")
     land_rights = models.CharField(max_length=255, default="")
+    # --- Present on SUUMO detail pages, previously ignored -------------------
+    # These are the rows a buyer of a 50-year-old house actually asks about, and
+    # they were on the page all along. Blank on listings whose source does not
+    # publish them, which is most of the pre-2024 stock.
+    renovation = models.CharField(
+        max_length=500, blank=True, default="",
+        help_text="リフォーム — what has been renovated and when.",
+    )
+    estimated_utility_cost = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="目安光熱費 — the listing's own estimate of monthly running cost.",
+    )
+    insulation_performance = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="断熱性能 — insulation grade. Decides whether a rural house is "
+        "habitable in winter.",
+    )
+    energy_performance = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="エネルギー消費性能 — energy rating.",
+    )
+    listed_on = models.DateField(
+        null=True, blank=True,
+        help_text="情報提供日 — when the listing was published. The real "
+        "days-on-market clock; created_at only records when we first saw it.",
+    )
+
     # --- Derived from `traffic` by inventory.utils.parse_transit ------------
     # Stored rather than parsed on read so the map and the listing filters can
     # query on them. Repopulated by `manage.py parse_transit` and on scrape.

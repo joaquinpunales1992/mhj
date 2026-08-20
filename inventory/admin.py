@@ -38,8 +38,21 @@ class PropertyAdmin(admin.ModelAdmin):
         "show_in_front",
         "featured",
         "premium",
+        "station",
     ]
-    search_fields = ["title", "premium", "featured"]
+    # Filters on the derived transit fields, because "which listings are near a
+    # station" is the question the parsing exists to answer and it should be
+    # answerable without a shell.
+    list_filter = ["needs_bus", "show_in_front", "featured", "premium"]
+    search_fields = ["title", "nearest_station", "location"]
+
+    @admin.display(description="Station", ordering="station_walk_minutes")
+    def station(self, obj):
+        if obj.station_walk_minutes is not None:
+            return f"{obj.nearest_station} · {obj.station_walk_minutes} min walk"
+        if obj.station_distance_km is not None:
+            return f"{obj.nearest_station} · {obj.station_distance_km} km"
+        return "bus only" if obj.needs_bus else "—"
 
     inlines = [
         PropertyImageInline,

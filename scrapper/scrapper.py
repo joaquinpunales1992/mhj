@@ -94,6 +94,28 @@ def parse_jpy_price(text: str) -> int | None:
     return oku * 100_000_000 + man * 10_000
 
 
+def parse_jp_date(text: str):
+    """Parse a Japanese listing date to a `date`, or None.
+
+    Handles '2026年8月19日', '2026/8/19' and '2026-08-19'. Like parse_jpy_price
+    this must run on the raw Japanese: the translator rewrites the string into
+    prose ("August 19, 2026") and sometimes drops the day entirely.
+    """
+    if not text:
+        return None
+    import datetime
+
+    match = re.search(r"(\d{4})\s*[年/\-.]\s*(\d{1,2})\s*[月/\-.]\s*(\d{1,2})", str(text))
+    if not match:
+        return None
+    year, month, day = (int(g) for g in match.groups())
+    try:
+        return datetime.date(year, month, day)
+    except ValueError:
+        # A listing dated 31 February is a scrape artefact, not a date.
+        return None
+
+
 def safe_translate(value: str | None, translator: GoogleTranslator | None = None) -> str:
     if not value:
         return ""
@@ -218,6 +240,11 @@ def persist_property(property_data: dict) -> None:
         property_obj.parking = property_data.get("parking", "")
         property_obj.construction = property_data.get("building_age", "")
         property_obj.land_rights = property_data.get("land_rights", "")
+        property_obj.renovation = property_data.get("renovation", "")
+        property_obj.estimated_utility_cost = property_data.get("estimated_utility_cost", "")
+        property_obj.insulation_performance = property_data.get("insulation_performance", "")
+        property_obj.energy_performance = property_data.get("energy_performance", "")
+        property_obj.listed_on = property_data.get("listed_on")
 
         # Derive the station fields here rather than in a later pass, so a newly
         # scraped listing is filterable the moment it lands.

@@ -8,7 +8,7 @@ from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 
 from scrapper.constants import PREFECTURE_JIS_CODE
-from scrapper.scrapper import fetch, parse_jpy_price, safe_translate
+from scrapper.scrapper import fetch, parse_jp_date, parse_jpy_price, safe_translate
 
 BASE_URL = "https://suumo.jp"
 
@@ -72,6 +72,13 @@ def _extract_table_data(soup: BeautifulSoup) -> dict[str, str]:
         "引渡可能時期", "土地の権利形態", "構造・工法", "用途地域", "地目",
         "建ぺい率・容積率", "その他制限事項", "その他概要・特記事項",
         "取引態様",
+        # Rows SUUMO has published for a while and we were walking past. For a
+        # 50-year-old house these are what a buyer asks about first: has it been
+        # renovated, is it warm, what does it cost to run — and when was the
+        # listing actually posted, which is a different date from when we
+        # happened to scrape it.
+        "リフォーム", "目安光熱費", "断熱性能", "エネルギー消費性能",
+        "情報提供日",
     ]
     data: dict[str, str] = {}
     for table in soup.find_all("table"):
@@ -83,6 +90,27 @@ def _extract_table_data(soup: BeautifulSoup) -> dict[str, str]:
                 if key in fields and key not in data:
                     data[key] = td.get_text(" ", strip=True)
     return data
+
+
+# その他概要・特記事項 packs several labelled segments into one cell, separated by
+# '、' — e.g. '担当者：担当者制、設備：都市ガス／公共水道／公共下水'. The 設備
+# segment is the one that matters: city gas versus propane, mains water versus a
+# well, public sewer versus a septic tank. On an old rural house those three
+# facts decide what the place costs to make habitable, and they were being stored
+# with "Person in charge: assigned agent" glued to the front.
+_EQUIPMENT_SEGMENT = re.compile(r"設備\s*[：:]\s*([^、,]+)")
+
+
+def _extract_equipment(raw: str) -> str:
+    """Pull the 設備 segment out of the notes cell. Run before translation.
+
+    Segmenting the Japanese is reliable; segmenting the translation is not — the
+    translator moves the labels around and sometimes merges the clauses.
+    """
+    if not raw:
+        return ""
+    match = _EQUIPMENT_SEGMENT.search(raw)
+    return match.group(1).strip() if match else ""
 
 
 def _split_ratios(combined: str) -> tuple[str, str]:
@@ -170,9 +198,17 @@ def parse_listing(url: str) -> dict | None:
         "floor_area_ratio": t(far),
         "current_status": "",
         "handover": t(table.get("引渡可能時期", "")),
-        "equipment": t(table.get("その他概要・特記事項", "")),
+        # Just the 設備 segment, not the whole notes cell — the rest is the
+        # agent's contact arrangement, and it is kept in `remarks` anyway.
+        "equipment": t(_extract_equipment(table.get("その他概要・特記事項", ""))),
         "transaction_type": t(table.get("取引態様", "")),
         "remarks": t(table.get("その他概要・特記事項", "")),
         "land_rights": t(table.get("土地の権利形態", "")),
+        "renovation": t(table.get("リフォーム", "")),
+        "estimated_utility_cost": t(table.get("目安光熱費", "")),
+        "insulation_performance": t(table.get("断熱性能", "")),
+        "energy_performance": t(table.get("エネルギー消費性能", "")),
+        # Parsed from the raw Japanese, not the translation: see parse_jp_date.
+        "listed_on": parse_jp_date(table.get("情報提供日", "")),
         "image_urls": image_urls,
     }
