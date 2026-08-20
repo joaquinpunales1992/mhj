@@ -95,10 +95,17 @@ class Command(BaseCommand):
                     "Run refresh_social_token first."
                 ))
             else:
-                fetched, skipped = refresh_insights(to_refresh, token)
+                fetched, skipped, problems = refresh_insights(to_refresh, token)
                 self._row("insights fetched now", fetched)
                 if skipped:
                     self._row("no numbers returned", skipped)
+                for message, count in problems[:3]:
+                    self.stdout.write(self.style.ERROR(
+                        f"    refused ({count}x): {message}"
+                    ))
+                    hint = self._hint_for(message)
+                    if hint:
+                        self.stdout.write(f"      → {hint}")
 
         measured = [p for p in with_id if p.insights_fetched_at is not None]
         if not measured:
@@ -142,6 +149,25 @@ class Command(BaseCommand):
         self.stdout.write("")
 
     # --- output helpers -----------------------------------------------------
+
+    def _hint_for(self, message):
+        """Turn Meta's error into the thing to actually go and do.
+
+        Error #10 is the one worth spelling out: publishing and reading insights
+        are separate permissions, so a token that posts perfectly well can still
+        be refused here — and the message alone does not say which permission is
+        missing.
+        """
+        lowered = (message or "").lower()
+        if "does not have permission" in lowered or "permissions error" in lowered:
+            return (
+                "the token is missing instagram_manage_insights. Grant it to the "
+                "app, mint a fresh long-lived user token into PAGE_ACCESS_TOKEN, "
+                "then run: manage.py refresh_social_token"
+            )
+        if "expired" in lowered or "session" in lowered or "invalid" in lowered:
+            return "the token is stale — run: manage.py refresh_social_token"
+        return ""
 
     def _label_price_bands(self, posts):
         """Attach a price band to each post, via the property it advertised."""

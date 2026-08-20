@@ -195,10 +195,50 @@ class InsightsFetchTests(TestCase):
 
         with patch("social.insights.requests.get",
                    side_effect=requests_module.ConnectionError("down")):
-            fetched, skipped = refresh_insights([self.post], "token")
+            fetched, skipped, problems = refresh_insights([self.post], "token")
         self.assertEqual((fetched, skipped), (0, 1))
+        self.assertEqual(problems, [], "a network drop is not a reportable refusal")
         self.post.refresh_from_db()
         self.assertIsNone(self.post.insights_fetched_at)
+
+    def test_a_permission_error_is_not_retried_as_a_metric_problem(self):
+        """(#10) is what a token that can publish but not read insights returns.
+        Dropping metrics cannot fix it, and retrying buries the only useful
+        sentence in the response."""
+        from social.insights import refresh_post_insights
+
+        error = {"error": {"code": 10, "message": "(#10) Application does not "
+                                                 "have permission for this action"}}
+        with patch("social.insights.requests.get",
+                   return_value=response(400, error)) as get:
+            self.assertFalse(refresh_post_insights(self.post, "token"))
+        self.assertEqual(get.call_count, 1, "no point asking again")
+
+    def test_the_refusal_reason_is_reported_once_per_kind(self):
+        """One missing permission refuses every post identically — the operator
+        needs the reason, not 900 copies of it."""
+        from social.insights import refresh_insights
+
+        other = SocialPost.objects.create(
+            caption="y", social_media="instagram", content_type="reel", media_id="2",
+        )
+        error = {"error": {"code": 10, "message": "(#10) Application does not "
+                                                 "have permission for this action"}}
+        with patch("social.insights.requests.get", return_value=response(400, error)):
+            fetched, skipped, problems = refresh_insights([self.post, other], "token")
+
+        self.assertEqual((fetched, skipped), (0, 2))
+        self.assertEqual(len(problems), 1)
+        self.assertEqual(problems[0][1], 2, "counted, not repeated")
+
+    def test_an_expired_token_is_not_retried_either(self):
+        from social.insights import refresh_post_insights
+
+        error = {"error": {"code": 190, "message": "Error validating access token"}}
+        with patch("social.insights.requests.get",
+                   return_value=response(400, error)) as get:
+            self.assertFalse(refresh_post_insights(self.post, "token"))
+        self.assertEqual(get.call_count, 1)
 
     def test_a_real_zero_is_kept_and_never_fetched_stays_null(self):
         """0 views is a result; NULL means nobody asked. Reporting them the same
@@ -290,6 +330,21 @@ class ReportCommandTests(TestCase):
         with patch("social.insights.requests.get") as get:
             self.run_command()
         get.assert_not_called()
+
+    def test_it_says_what_to_do_when_meta_refuses(self):
+        """A refusal that only appears in the logs is a refusal nobody acts on."""
+        SocialPost.objects.create(caption="x", social_media="instagram",
+                                  content_type="reel", media_id="1")
+        error = {"error": {"code": 10, "message": "(#10) Application does not "
+                                                 "have permission for this action"}}
+        out = StringIO()
+        with patch("social.utils.get_fresh_token", return_value="token"), \
+             patch("social.insights.requests.get", return_value=response(400, error)):
+            call_command("reel_insights", stdout=out)
+        output = out.getvalue()
+        self.assertIn("refused (1x)", output)
+        self.assertIn("instagram_manage_insights", output)
+        self.assertIn("refresh_social_token", output)
 
     def test_an_empty_window_says_so_rather_than_erroring(self):
         SocialPost.objects.create(caption="x", social_media="instagram",

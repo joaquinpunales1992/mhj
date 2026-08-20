@@ -72,6 +72,21 @@ FIELD_BY_METRIC = {
 # rejects. Bounded so a permanently unhappy endpoint cannot loop.
 MAX_METRIC_RETRIES = 3
 
+# Errors that have nothing to do with which metrics were asked for. Retrying
+# these while dropping metrics is pure waste — and worse, it buries the real
+# reason (a missing permission, an expired token) under a generic "no numbers
+# returned". Code 10 is the one that bites here: publishing works with
+# instagram_content_publish, but reading insights needs
+# instagram_manage_insights, which is granted separately.
+NON_METRIC_ERROR_CODES = {
+    10,   # application does not have permission for this action
+    190,  # access token expired/invalid
+    102,  # session invalid
+    104,  # missing access token
+    200,  # permissions error
+    3,    # unsupported operation on this object
+}
+
 
 def _metric_value(entry):
     """Pull the number out of one insights entry.
@@ -121,11 +136,15 @@ def _unsupported_metrics(error_message, requested):
     return [m for m in ("views", "plays", "ig_reels_avg_watch_time") if m in requested]
 
 
-def fetch_media_insights(media_id, token, metrics=None):
+def fetch_media_insights(media_id, token, metrics=None, problems=None):
     """Return {metric: value} for one published media, or {} if nothing came back.
 
     Never raises. A post whose insights cannot be read is not a reason to abort
     a refresh over the rest of them.
+
+    `problems`, when given, collects the reason each refusal happened, so the
+    caller can tell the operator what to fix instead of only reporting that
+    nothing arrived.
     """
     remaining = list(metrics or REEL_METRICS)
     url = f"https://graph.facebook.com/{GRAPH_API_VERSION}/{media_id}/insights"
@@ -153,16 +172,31 @@ def fetch_media_insights(media_id, token, metrics=None):
             return values
 
         message = ""
+        code = None
         try:
-            message = response.json().get("error", {}).get("message", "")
+            error = response.json().get("error", {}) or {}
+            message = error.get("message", "")
+            code = error.get("code")
         except ValueError:
             message = response.text
+
+        # A permission or token problem is not a metric problem: dropping
+        # metrics and asking again cannot fix it, and the retry hides the one
+        # piece of information worth surfacing.
+        if code in NON_METRIC_ERROR_CODES:
+            logger.warning("Insights for %s refused: %s", media_id, message)
+            if problems is not None:
+                problems.append(message)
+            return {}
+
         refused = _unsupported_metrics(message, remaining)
         if not refused:
             logger.warning(
                 "Insights for %s refused (%s): %s", media_id, response.status_code,
                 message,
             )
+            if problems is not None:
+                problems.append(message)
             return {}
         logger.info(
             "Dropping unsupported metric(s) %s for %s and retrying",
@@ -173,13 +207,13 @@ def fetch_media_insights(media_id, token, metrics=None):
     return {}
 
 
-def refresh_post_insights(post, token):
+def refresh_post_insights(post, token, problems=None):
     """Fetch and store the snapshot for one SocialPost. True if numbers landed."""
     if not post.media_id:
         return False
 
     metrics = REEL_METRICS if post.content_type == "reel" else POST_METRICS
-    values = fetch_media_insights(post.media_id, token, metrics)
+    values = fetch_media_insights(post.media_id, token, metrics, problems)
     if not values:
         return False
 
@@ -199,14 +233,25 @@ def refresh_post_insights(post, token):
 
 
 def refresh_insights(posts, token):
-    """Refresh a queryset of posts. Returns (fetched, skipped)."""
+    """Refresh a queryset of posts.
+
+    Returns (fetched, skipped, problems) — the distinct refusal messages, most
+    common first. One missing permission refuses every post identically, so the
+    caller prints the reason once rather than 900 times.
+    """
     fetched = skipped = 0
+    problems = []
     for post in posts:
-        if refresh_post_insights(post, token):
+        if refresh_post_insights(post, token, problems):
             fetched += 1
         else:
             skipped += 1
-    return fetched, skipped
+
+    seen = {}
+    for message in problems:
+        seen[message] = seen.get(message, 0) + 1
+    ranked = sorted(seen.items(), key=lambda pair: pair[1], reverse=True)
+    return fetched, skipped, ranked
 
 
 def group_by(posts, key):
