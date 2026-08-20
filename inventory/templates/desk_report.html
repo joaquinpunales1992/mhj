@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Desk report — {{ property.title }}</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  :root {
+    --paper:        #F4F6FA;
+    --card:         #FFFFFF;
+    --ink:          #171B26;
+    --ink-soft:     #454C60;
+    --ink-faint:    #6E768C;
+    --rule:         #D8DEEA;
+    --rule-soft:    #E8ECF4;
+    --accent:       #27386B;
+    --accent-soft:  #E7EBF5;
+    --critical:     #98393A;
+    --critical-bg:  #F8ECEB;
+    --caution:      #8A6520;
+    --caution-bg:   #F9F2E2;
+    --cleared:      #3B6B58;
+    --cleared-bg:   #E9F2EE;
+    --unknown:      #5A6072;
+    --unknown-bg:   #EDEFF4;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper:        #10131B;
+      --card:         #171B25;
+      --ink:          #E7EAF2;
+      --ink-soft:     #AFB6C7;
+      --ink-faint:    #838BA0;
+      --rule:         #2B313F;
+      --rule-soft:    #21262F;
+      --accent:       #A9BAE8;
+      --accent-soft:  #1D2434;
+      --critical:     #E39A98;
+      --critical-bg:  #2A1B1C;
+      --caution:      #DCBA75;
+      --caution-bg:   #272013;
+      --cleared:      #8FC4AC;
+      --cleared-bg:   #16241E;
+      --unknown:      #9BA2B4;
+      --unknown-bg:   #1C2029;
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --paper:        #10131B;
+    --card:         #171B25;
+    --ink:          #E7EAF2;
+    --ink-soft:     #AFB6C7;
+    --ink-faint:    #838BA0;
+    --rule:         #2B313F;
+    --rule-soft:    #21262F;
+    --accent:       #A9BAE8;
+    --accent-soft:  #1D2434;
+    --critical:     #E39A98;
+    --critical-bg:  #2A1B1C;
+    --caution:      #DCBA75;
+    --caution-bg:   #272013;
+    --cleared:      #8FC4AC;
+    --cleared-bg:   #16241E;
+    --unknown:      #9BA2B4;
+    --unknown-bg:   #1C2029;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .sheet {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem 5rem;
+  }
+
+  /* --- Masthead ------------------------------------------------------- */
+
+  .specimen {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1rem;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: .6rem .9rem;
+    margin-bottom: 2.25rem;
+    border: 1px dashed var(--rule);
+    background: var(--accent-soft);
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .74rem;
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 .75rem;
+  }
+
+  h1 {
+    font-family: Spectral, Georgia, serif;
+    font-weight: 600;
+    font-size: clamp(1.9rem, 4.5vw, 2.6rem);
+    line-height: 1.15;
+    letter-spacing: -.01em;
+    text-wrap: balance;
+    margin: 0 0 .35rem;
+  }
+
+  .subject-meta {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .84rem;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .docket {
+    /* Flex, not grid: a grid leaves empty cells on the last row and they read
+       as blank fields rather than as the end of the list. */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    border-top: none;
+  }
+
+  .docket > div {
+    flex: 1 1 150px;
+    background: var(--card);
+    padding: .8rem .9rem;
+  }
+
+  .docket dt {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .68rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 .2rem;
+  }
+
+  .docket dd {
+    margin: 0;
+    font-size: .95rem;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Verdict -------------------------------------------------------- */
+
+  .verdict {
+    margin: 2.5rem 0;
+    padding: 1.4rem 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--rule);
+    border-left: 4px solid var(--caution);
+  }
+
+  .verdict h2 {
+    font-family: Spectral, Georgia, serif;
+    font-size: 1.4rem;
+    font-weight: 600;
+    margin: 0 0 .5rem;
+    text-wrap: balance;
+  }
+
+  .verdict p { margin: 0; color: var(--ink-soft); max-width: 62ch; }
+
+  /* --- Sections ------------------------------------------------------- */
+
+  section { margin-top: 3rem; }
+
+  h2.rule {
+    font-family: Spectral, Georgia, serif;
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 1.25rem;
+    padding-bottom: .5rem;
+    border-bottom: 1px solid var(--ink);
+  }
+
+  h3 {
+    font-family: "IBM Plex Sans", sans-serif;
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 .3rem;
+  }
+
+  p { margin: 0 0 .9rem; max-width: 68ch; }
+  p:last-child { margin-bottom: 0; }
+
+  /* --- Findings ------------------------------------------------------- */
+
+  .findings { display: flex; flex-direction: column; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+
+  .finding {
+    display: grid;
+    grid-template-columns: 7rem 1fr;
+    gap: 0 1.1rem;
+    background: var(--card);
+    padding: 1rem 1.1rem;
+    border-left: 4px solid var(--rule);
+  }
+
+  .finding.is-critical { border-left-color: var(--critical); }
+  .finding.is-caution  { border-left-color: var(--caution); }
+  .finding.is-unknown  { border-left-color: var(--unknown); }
+  .finding.is-cleared  { border-left-color: var(--cleared); }
+
+  .sev {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .66rem;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-weight: 500;
+    align-self: start;
+    padding: .18rem .4rem;
+    justify-self: start;
+    border-radius: 2px;
+  }
+
+  .is-critical .sev { color: var(--critical); background: var(--critical-bg); }
+  .is-caution  .sev { color: var(--caution);  background: var(--caution-bg); }
+  .is-unknown  .sev { color: var(--unknown);  background: var(--unknown-bg); }
+  .is-cleared  .sev { color: var(--cleared);  background: var(--cleared-bg); }
+
+  .finding-body p { margin: 0 0 .55rem; font-size: .95rem; color: var(--ink-soft); }
+  .finding-body p:last-child { margin-bottom: 0; }
+  .finding-body strong { color: var(--ink); }
+
+  .source {
+    display: inline-flex;
+    align-items: baseline;
+    gap: .4rem;
+    margin-top: .5rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .72rem;
+    color: var(--ink-faint);
+  }
+
+  .source b { font-weight: 500; color: var(--accent); }
+
+  @media (max-width: 620px) {
+    .finding { grid-template-columns: 1fr; gap: .5rem; }
+  }
+
+  /* --- Data tables ---------------------------------------------------- */
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); background: var(--card); }
+
+  table { border-collapse: collapse; width: 100%; font-size: .92rem; }
+
+  th, td {
+    text-align: left;
+    padding: .6rem .9rem;
+    border-bottom: 1px solid var(--rule-soft);
+    vertical-align: top;
+  }
+
+  tbody tr:last-child th, tbody tr:last-child td { border-bottom: none; }
+
+  th {
+    font-weight: 500;
+    color: var(--ink-faint);
+    width: 34%;
+    font-size: .85rem;
+  }
+
+  td { font-variant-numeric: tabular-nums; }
+
+  td .jp {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .78rem;
+    color: var(--ink-faint);
+    display: block;
+  }
+
+  /* --- Price gauge ---------------------------------------------------- */
+
+  .gauge { margin: 1.25rem 0 .5rem; }
+
+  .gauge-track {
+    position: relative;
+    height: 8px;
+    background: var(--rule-soft);
+    border: 1px solid var(--rule);
+  }
+
+  .gauge-median, .gauge-mark {
+    position: absolute;
+    top: -5px;
+    bottom: -5px;
+    width: 2px;
+  }
+
+  .gauge-median { background: var(--ink-faint); }
+  .gauge-mark { background: var(--caution); width: 3px; }
+
+  .gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-top: .7rem;
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .74rem;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* --- Question list -------------------------------------------------- */
+
+  ol.asks { padding-left: 1.5rem; margin: 0; }
+  ol.asks li { margin-bottom: .7rem; max-width: 66ch; }
+  ol.asks li::marker { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-size: .85rem; }
+
+  ul.plain { margin: 0; padding-left: 1.15rem; }
+  ul.plain li { margin-bottom: .45rem; max-width: 66ch; color: var(--ink-soft); }
+
+  /* --- Method / colophon ---------------------------------------------- */
+
+  .method {
+    margin-top: 3rem;
+    padding: 1.4rem 1.5rem;
+    background: var(--card);
+    border: 1px solid var(--rule);
+  }
+
+  .method h2 {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .74rem;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 .9rem;
+  }
+
+  .method p, .method li { font-size: .88rem; color: var(--ink-soft); }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+
+<div class="sheet">
+
+  {% if draft %}
+  <div class="specimen">
+    <span>Draft — {{ open_sections }} section{{ open_sections|pluralize }} still to complete</span>
+    <span>Not for issue</span>
+  </div>
+  {% endif %}
+
+  <header class="masthead">
+    <p class="eyebrow">Pre-purchase desk report</p>
+    <h1>{{ property.title }}</h1>
+    <p class="subject-meta">
+      {{ property.location }}{% if property.floor_plan %} · {{ property.floor_plan }}{% endif %}{% if property.building_structure %} · {{ property.building_structure|lower }}{% endif %}
+    </p>
+  </header>
+
+  <dl class="docket">
+    <div><dt>Asking price</dt><dd>{{ property.get_price_for_front }}</dd></div>
+    <div><dt>¥ price</dt><dd>{{ property.price|floatformat:0 }}万円</dd></div>
+    {% if property.construction_date %}<div><dt>Built</dt><dd>{{ property.construction_date }}</dd></div>{% endif %}
+    {% if building_m2 %}<div><dt>Building</dt><dd>{{ building_m2|floatformat:2 }} m²</dd></div>{% endif %}
+    {% if land_m2 %}<div><dt>Land</dt><dd>{{ land_m2|floatformat:2 }} m²</dd></div>{% endif %}
+    <div><dt>Report date</dt><dd>{{ report_date|date:"j M Y" }}</dd></div>
+  </dl>
+
+  <div class="verdict">
+    <h2>
+      {% if blocking %}
+        {{ blocking|length }} question{{ blocking|length|pluralize }} to answer before offering
+      {% else %}
+        Nothing in the published record blocks an offer
+      {% endif %}
+    </h2>
+    <p>
+      {% if blocking %}
+        {% for finding in blocking %}{{ finding.title }}{% if not forloop.last %}; {% endif %}{% endfor %}.
+        Each is set out below with what to ask and who to ask.
+      {% else %}
+        The findings below are matters of price and plan rather than
+        showstoppers. The questions list still applies — no listing publishes
+        everything.
+      {% endif %}
+      {% if verdict %}</p><p>{{ verdict }}{% endif %}
+    </p>
+  </div>
+
+  <section>
+    <h2 class="rule">Findings</h2>
+    <div class="findings">
+      {% for finding in findings %}
+      <div class="finding is-{{ finding.severity }}">
+        <span class="sev">{{ finding.severity_label }}</span>
+        <div class="finding-body">
+          <h3>{{ finding.title }}</h3>
+          {% for paragraph in finding.body %}<p>{{ paragraph }}</p>{% endfor %}
+          {% if finding.source_label %}
+          <span class="source">{{ finding.source_label }} <b>{{ finding.source_value }}</b></span>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  {% if comparison %}
+  <section>
+    <h2 class="rule">Price in context</h2>
+    <p>
+      Measured against the {{ comparison.sample_size }} other listings we hold in
+      {{ comparison.area }}, this one is priced
+      {% if comparison.percentile >= 67 %}above{% elif comparison.percentile < 33 %}below{% else %}around{% endif %}
+      the middle of the market per square metre of building area.
+    </p>
+    <div class="gauge" role="img" aria-label="This listing is {{ comparison.value_per_m2_display }}; the local middle of the market is {{ comparison.area_range_display }}.">
+      <div class="gauge-track">
+        <div class="gauge-median" style="left: 50%;"></div>
+        <div class="gauge-mark" style="left: {{ comparison.percentile }}%;"></div>
+      </div>
+      <div class="gauge-labels">
+        <span>{{ comparison.area }} middle · {{ comparison.area_range_display }}</span>
+        <span>This listing · {{ comparison.value_per_m2_display }} ({{ comparison.band_label|lower }})</span>
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <section>
+    <h2 class="rule">The record, as published</h2>
+    <div class="table-wrap">
+      <table>
+        <tbody>
+          {% for row in record %}
+          <tr><th>{{ row.heading }}</th><td>{{ row.value }}<span class="jp">{{ row.source }}</span></td></tr>
+          {% endfor %}
+          <tr><th>Photographs on file</th><td>{{ photo_count }}</td></tr>
+          <tr><th>Source listing</th><td><a href="{{ property.url }}">{{ property.url }}</a></td></tr>
+        </tbody>
+      </table>
+    </div>
+    {% if withheld %}
+    <p style="margin-top:1rem;font-size:.9rem;color:var(--ink-faint);">
+      Published as blank by the source listing:
+      {% for row in withheld %}{{ row.heading|lower }}{% if not forloop.last %}, {% endif %}{% endfor %}.
+      Absence here is not evidence either way — it is a question for the agent.
+    </p>
+    {% endif %}
+  </section>
+
+  <section>
+    <h2 class="rule">Take these to the agent</h2>
+    <ol class="asks">
+      {% for question in questions %}<li>{{ question }}</li>{% endfor %}
+    </ol>
+  </section>
+
+  {% if draft %}
+  <section>
+    <h2 class="rule">Still to complete</h2>
+    <p>
+      Generated from the listing and our inventory. These three parts are the
+      report's value and a person writes them; until they are filled in, this is
+      a draft.
+    </p>
+    <div class="findings">
+      {% for heading, instruction in human_sections %}
+      <div class="finding is-unknown">
+        <span class="sev">To write</span>
+        <div class="finding-body">
+          <h3>{{ heading }}</h3>
+          <p>{{ instruction }}</p>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <div class="method">
+    <h2>Method and limits</h2>
+    <p>
+      This is desk research. Nobody has visited the property, and no part of this
+      report is a structural, pest or boundary survey. It is compiled from the
+      source listing as published, cross-referenced against
+      {{ inventory_size }} comparable listings in our own inventory.
+    </p>
+    <p>
+      Where the listing is silent, the report says so rather than estimating.
+      Statements about what a designation generally means are general, not a
+      determination about this parcel: only the relevant municipal office can
+      give that.
+    </p>
+    <p>
+      Figures converted at ¥1 = US${{ yen_to_usd }}. Per-square-metre comparison
+      uses building area. Listing first recorded in our inventory
+      {{ property.created_at|date:"j F Y" }}.
+    </p>
+  </div>
+
+</div>
+
+</body>
+</html>

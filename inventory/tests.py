@@ -147,3 +147,248 @@ class TransitBackfillTests(TestCase):
         property.refresh_from_db()
         self.assertIsNone(property.station_walk_minutes)
         self.assertIn("Dry run", out.getvalue())
+
+
+class DeskReportRuleTests(TestCase):
+    """The rules that turn stored fields into findings.
+
+    The assertions worth having here are the refusals: a rule that invents a
+    utilities arrangement, or promotes a designation into a determination, turns
+    a paid report into a liability.
+    """
+
+    def make(self, **fields):
+        defaults = dict(url="https://example.com/x", floor_plan="3LDK", price=2249)
+        defaults.update(fields)
+        return Property.objects.create(**defaults)
+
+    def findings(self, property):
+        from inventory.desk_report import build_report
+
+        return {f["title"]: f for f in build_report(property)["findings"]}
+
+    def severity_of(self, property, fragment):
+        for title, finding in self.findings(property).items():
+            if fragment.lower() in title.lower():
+                return finding["severity"]
+        return None
+
+    # --- deal-breakers ---------------------------------------------------
+
+    def test_an_urbanization_control_area_is_critical(self):
+        property = self.make(city_planning="Urbanization control area")
+        finding = self.findings(property)["Inside an urbanization control area"]
+        self.assertEqual(finding["severity"], "critical")
+        self.assertEqual(finding["source_label"], "都市計画")
+
+    def test_the_control_area_finding_asks_rather_than_concludes(self):
+        """It must not tell the reader they cannot rebuild — only the municipal
+        office can say that, and being wrong either kills a good purchase or
+        endorses a bad one."""
+        property = self.make(city_planning="市街化調整区域")
+        finding = self.findings(property)["Inside an urbanization control area"]
+        text = " ".join(finding["body"]).lower()
+        self.assertIn("in general", text)
+        self.assertIn("in writing", text)
+        self.assertTrue(finding["questions"])
+
+    def test_farmland_is_critical(self):
+        property = self.make(land_category="Farmland")
+        self.assertEqual(self.severity_of(property, "farmland"), "critical")
+
+    def test_leasehold_land_is_critical(self):
+        property = self.make(land_rights="Normal lease rights")
+        self.assertEqual(self.severity_of(property, "leasehold"), "critical")
+
+    def test_freehold_with_a_residential_category_clears(self):
+        property = self.make(land_rights="Ownership", land_category="Residence")
+        finding = self.findings(property)["Land tenure is freehold"]
+        self.assertEqual(finding["severity"], "cleared")
+        self.assertIn("not farmland", " ".join(finding["body"]))
+
+    # --- utilities -------------------------------------------------------
+
+    def test_a_missing_utilities_line_is_reported_as_missing(self):
+        property = self.make(equipment="")
+        finding = self.findings(property)["Water, sewer and gas are not disclosed"]
+        self.assertEqual(finding["severity"], "unknown")
+        self.assertIn("no value published", finding["source_value"])
+
+    def test_a_dash_counts_as_missing(self):
+        """homes.co.jp publishes '-' for this field, which is not an answer."""
+        property = self.make(equipment="-")
+        self.assertEqual(self.severity_of(property, "not disclosed"), "unknown")
+
+    def test_mains_services_clear(self):
+        property = self.make(equipment="City gas/public water supply/public sewage")
+        finding = self.findings(property)["On mains services"]
+        self.assertEqual(finding["severity"], "cleared")
+
+    def test_a_well_and_septic_tank_are_flagged_with_what_they_are(self):
+        property = self.make(equipment="プロパンガス／井戸／浄化槽")
+        finding = next(f for t, f in self.findings(property).items()
+                       if "Off-grid" in t)
+        self.assertEqual(finding["severity"], "caution")
+        joined = finding["title"] + " ".join(finding["body"])
+        self.assertIn("well", joined)
+        self.assertIn("septic", joined)
+        self.assertIn("propane", joined)
+
+    # --- age and structure -----------------------------------------------
+
+    def test_a_pre_1981_building_is_flagged(self):
+        property = self.make(construction_date="1976年7月（築49年）")
+        finding = self.findings(property)["Built 1976 — before the current earthquake standard"]
+        self.assertEqual(finding["severity"], "caution")
+
+    def test_the_age_parse_is_not_fooled_by_the_bracketed_age(self):
+        property = self.make(construction_date="2005年3月（築20年）")
+        self.assertIsNone(self.severity_of(property, "earthquake standard"),
+                          "a 2005 building is post-standard")
+
+    def test_documented_seismic_work_changes_the_advice(self):
+        with_work = self.make(
+            construction_date="1976年7月",
+            description="●Earthquake-resistant reinforcement work was carried out",
+        )
+        without = self.make(url="https://example.com/y", construction_date="1976年7月")
+        with_text = " ".join(
+            self.findings(with_work)["Built 1976 — before the current earthquake standard"]["body"]
+        )
+        without_text = " ".join(
+            self.findings(without)["Built 1976 — before the current earthquake standard"]["body"]
+        )
+        self.assertIn("Mitigated here", with_text)
+        self.assertIn("No reinforcement work is mentioned", without_text)
+
+    # --- access ----------------------------------------------------------
+
+    def test_a_short_walk_clears_and_a_long_one_cautions(self):
+        near = self.make(nearest_station="Numazu", station_walk_minutes=9)
+        far = self.make(url="https://example.com/z", nearest_station="Bungo Kokubun",
+                        station_walk_minutes=32)
+        self.assertEqual(self.severity_of(near, "walk"), "cleared")
+        self.assertEqual(self.severity_of(far, "walk"), "caution")
+
+    def test_bus_only_access_is_a_caution(self):
+        property = self.make(needs_bus=True, traffic="Chuo Bus Get off at Mae")
+        self.assertEqual(self.severity_of(property, "no walkable station"), "caution")
+
+    # --- staleness -------------------------------------------------------
+
+    def test_a_past_handover_date_is_flagged(self):
+        property = self.make(handover="July 2025")
+        finding = self.findings(property)["Stale listing"]
+        self.assertEqual(finding["severity"], "caution")
+        self.assertIn("in the past", " ".join(finding["body"]))
+
+    def test_a_future_handover_date_is_not_flagged(self):
+        property = self.make(handover="December 2030")
+        self.assertIsNone(self.severity_of(property, "stale"))
+
+    # --- assembly --------------------------------------------------------
+
+    def test_blocking_findings_are_the_critical_and_unstated_ones(self):
+        from inventory.desk_report import build_report
+
+        property = self.make(city_planning="Urbanization control area", equipment="")
+        report = build_report(property)
+        self.assertEqual(len(report["blocking"]), 2)
+        self.assertEqual(report["findings"][0]["severity"], "critical",
+                         "the worst finding must lead")
+
+    def test_every_report_carries_the_standard_questions(self):
+        from inventory.desk_report import STANDARD_QUESTIONS, build_report
+
+        report = build_report(self.make())
+        for question in STANDARD_QUESTIONS:
+            self.assertIn(question, report["questions"])
+
+    def test_questions_are_not_duplicated(self):
+        from inventory.desk_report import build_report
+
+        report = build_report(self.make(city_planning="Urbanization control area"))
+        self.assertEqual(len(report["questions"]), len(set(report["questions"])))
+
+    def test_blank_fields_are_listed_as_withheld_not_omitted(self):
+        from inventory.desk_report import build_report
+
+        report = build_report(self.make(equipment="", insulation_performance=""))
+        withheld = [row["heading"] for row in report["withheld"]]
+        self.assertIn("Utilities", withheld)
+        self.assertIn("Insulation", withheld)
+
+
+class DeskReportCommandTests(TestCase):
+    def setUp(self):
+        self.property = Property.objects.create(
+            url="https://example.com/report", title="Detached house in Yokose",
+            price=2249, floor_plan="3LDK", location="Oita City, Oita Prefecture",
+            building_area="110.78㎡", land_area="289.85㎡",
+            construction_date="1976年7月（築49年）",
+            city_planning="Urbanization control area", land_rights="Ownership",
+            land_category="Residence", equipment="",
+            road_condition="East 5.8m private road", handover="July 2025",
+            nearest_station="Bungo Kokubun", station_walk_minutes=32,
+        )
+
+    def test_it_writes_a_self_contained_html_report(self):
+        import os
+        import tempfile
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "report.html")
+            call_command("desk_report", self.property.pk, out=path, stdout=StringIO())
+            html = open(path, encoding="utf-8").read()
+
+        self.assertIn("Detached house in Yokose", html)
+        self.assertIn("Inside an urbanization control area", html)
+        self.assertIn("都市計画", html)
+        self.assertIn("Take these to the agent", html)
+        # No external assets beyond the font stylesheet the design depends on.
+        self.assertNotIn("<script", html)
+
+    def test_a_report_is_a_draft_until_the_human_sections_are_done(self):
+        import os
+        import tempfile
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        with tempfile.TemporaryDirectory() as directory:
+            draft_path = os.path.join(directory, "draft.html")
+            final_path = os.path.join(directory, "final.html")
+            call_command("desk_report", self.property.pk, out=draft_path,
+                         stdout=StringIO())
+            call_command("desk_report", self.property.pk, out=final_path,
+                         final=True, verdict="Worth pursuing at a lower price.",
+                         stdout=StringIO())
+            draft = open(draft_path, encoding="utf-8").read()
+            final = open(final_path, encoding="utf-8").read()
+
+        self.assertIn("Not for issue", draft)
+        self.assertIn("Still to complete", draft)
+        self.assertNotIn("Not for issue", final)
+        self.assertIn("Worth pursuing at a lower price.", final)
+
+    def test_the_text_view_summarises_without_writing_a_file(self):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out = StringIO()
+        call_command("desk_report", self.property.pk, text=True, stdout=out)
+        output = out.getvalue()
+        self.assertIn("CRITICAL", output)
+        self.assertIn("urbanization control area", output)
+        self.assertIn("questions for the agent", output)
+
+    def test_an_unknown_property_is_a_clean_error(self):
+        from django.core.management import call_command
+        from django.core.management.base import CommandError
+
+        with self.assertRaises(CommandError):
+            call_command("desk_report", 999999)
