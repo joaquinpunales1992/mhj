@@ -72,8 +72,8 @@ class CaptionTests(TestCase):
 
     def test_the_details_and_hashtags_survive(self):
         _, caption, _ = self.caption()
-        self.assertIn("🏡 Building: 78.5m²", caption)
-        self.assertIn("🌳 Land: 198.73m² (60.11 tsubo)", caption)
+        self.assertIn("🏡 Building: 78.5 m²", caption)
+        self.assertIn("🌳 Land: 198.73 m² (60.11 tsubo)", caption)
         self.assertIn("www.akiyainjapan.com/japanese-houses/1/", caption)
         self.assertIn("#akiya", caption)
         self.assertIn("#oita", caption, "location hashtag should be derived")
@@ -96,6 +96,52 @@ class CaptionTests(TestCase):
     def test_a_missing_location_does_not_leave_a_dangling_separator(self):
         _, caption, _ = self.caption(location="")
         self.assertTrue(caption.startswith("US$18,000\n"))
+
+
+class AreaCleaningTests(TestCase):
+    """The scraper machine-translates Japanese measurement notes, sometimes
+    absurdly, and every one of them was reaching live captions."""
+
+    def clean(self, value):
+        from social.utils import _clean_area
+
+        return _clean_area(value)
+
+    def test_the_measurement_basis_notes_are_dropped(self):
+        # 公簿 / 内法 / 実測 — the last one arriving as "crystal".
+        self.assertEqual(self.clean("101㎡ (public book)"), "101 m²")
+        self.assertEqual(self.clean("103.24㎡ (crystal)"), "103.24 m²")
+        self.assertEqual(self.clean("103.09㎡ (internal method)"), "103.09 m²")
+        self.assertEqual(self.clean("230.56㎡ (actual measurement)"), "230.56 m²")
+        self.assertEqual(self.clean("93.96m 2 （登記）"), "93.96 m²")
+
+    def test_an_unseen_mistranslation_is_dropped_too(self):
+        """The rule is 'a parenthetical with no digits is a note', so the next
+        invented translation needs no code change."""
+        self.assertEqual(self.clean("88.5㎡ (moon language)"), "88.5 m²")
+
+    def test_the_tsubo_figure_survives_including_as_ping(self):
+        """It carries a number, which is exactly what distinguishes it."""
+        self.assertEqual(
+            self.clean("72.71m 2 （21.99坪）（登記）"), "72.71 m² (21.99 tsubo)"
+        )
+        self.assertEqual(
+            self.clean("65.62m 2 (19.84 ping)"), "65.62 m² (19.84 tsubo)"
+        )
+
+    def test_the_points_tail_is_dropped(self):
+        """Carries digits, so the digit-free rule cannot catch it."""
+        self.assertEqual(
+            self.clean("267.65㎡ (public book) has a total of 1/4 points"), "267.65 m²"
+        )
+
+    def test_the_unit_spellings_all_normalise(self):
+        for raw in ("32.35m2", "51.14m 2", "103㎡", "174.03 m2"):
+            self.assertRegex(self.clean(raw), r"^[\d.]+ m²$", raw)
+
+    def test_an_empty_value_stays_empty(self):
+        self.assertEqual(self.clean(""), "")
+        self.assertEqual(self.clean(None), "")
 
 
 class InsightsFetchTests(TestCase):

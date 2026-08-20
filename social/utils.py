@@ -199,18 +199,48 @@ def _clean_location(location: str) -> str:
 
 
 def _clean_area(area: str) -> str:
-    """Normalise a scraped area string like '198.73m 2 （60.11坪）（登記）'.
+    """Normalise a scraped area string for a caption.
 
-    -> '198.73 m² (60.11 tsubo)'. Drops registration notes like （登記）.
+    '198.73m 2 （60.11坪）（登記）'  -> '198.73 m² (60.11 tsubo)'
+    '101㎡ (public book)'          -> '101 m²'
+    '103.24㎡ (crystal)'           -> '103.24 m²'
+
+    The parentheticals are Japanese measurement-basis notes that the scraper
+    machine-translated, some of them badly: 公簿 (registered area) comes through
+    as "public book", 内法 (inside-wall measurement) as "internal method", and
+    実測 (actual measurement) as either "actual measurement" or, memorably,
+    "crystal". They are noise in an Instagram caption whichever way they were
+    translated, so all of them go.
+
+    Rather than listing the mistranslations — the scraper will invent new ones —
+    any parenthetical without a digit in it is dropped. The one worth keeping,
+    the tsubo figure, always carries a number.
     """
     if not area:
         return ""
     area = str(area)
-    area = re.sub(r"（\s*登記\s*）|\(\s*登記\s*\)", "", area)  # drop registration note
-    area = re.sub(r"m\s*2|㎡", "m²", area)                      # 'm 2' / '㎡' -> 'm²'
-    # （60.11坪） -> (60.11 tsubo)
-    area = re.sub(r"[（(]\s*([\d.]+)\s*坪\s*[）)]", r"(\1 tsubo)", area)
-    return re.sub(r"\s+", " ", area).strip()
+
+    # Units first, so a converted 坪 figure keeps its digits and survives the
+    # parenthetical cull below.
+    area = re.sub(r"㎡|m\s*2\b|m\s*²", "m²", area)
+    # （60.11坪） -> (60.11 tsubo). '坪' is also scraped as the mistranslated
+    # "ping", so both spellings are converted.
+    area = re.sub(
+        r"[（(]\s*([\d.]+)\s*(?:坪|ping)\s*[）)]", r"(\1 tsubo)", area, flags=re.I
+    )
+
+    # Scraper tail seen on ~30 listings: 'has a total of 3/4 points'. Carries
+    # digits, so it needs removing by name before the digit-free rule runs.
+    area = re.sub(r"\bhas a total of\s*[\d/]+\s*points?\b", "", area, flags=re.I)
+
+    # Any remaining parenthetical with no digit in it is a measurement-basis
+    # note, whatever it was translated to.
+    area = re.sub(r"[（(][^\d（）()]*[）)]", "", area)
+
+    area = re.sub(r"\s+", " ", area)
+    # One space before the unit: '101m²' -> '101 m²'.
+    area = re.sub(r"([\d.])\s*m²", r"\1 m²", area)
+    return area.strip(" ,-")
 
 
 def _location_hashtags(location: str) -> list:
