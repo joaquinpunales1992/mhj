@@ -1821,7 +1821,26 @@ document.addEventListener('DOMContentLoaded', () => {
     font-size: 0.88em;
     color: var(--mhj-secondary);
   }
-  .pp-dr-form { display: flex; flex-direction: column; gap: 0.3em; max-width: 34rem; }
+  /* Two columns while the panel is wide enough for both, one when it is not.
+     The gap is generous because the two halves are doing different jobs. */
+  .pp-dr-cta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 0.6em 2.6em;
+  }
+  /* 34em, not 26em: at 26 the two columns fit inside a 798px panel and squeezed
+     the paragraph to 379px — narrower than it is when stacked, which is the
+     opposite of the point. Now they only sit side by side when there is room for
+     a readable paragraph beside the button. */
+  .pp-dr-cta-copy { flex: 1 1 34em; min-width: 0; }
+  .pp-dr-cta-copy > p:last-child { margin-bottom: 0; }
+  .pp-dr-actions { flex: 0 1 24em; min-width: 0; }
+
+  /* em, not rem: the root on this page is 10px, so the 34rem this used to say
+     was 340px rather than the ~540px it was meant to be — which is why the note
+     under the button wrapped after three words. em tracks the text it measures. */
+  .pp-dr-form { display: flex; flex-direction: column; gap: 0.3em; max-width: 38em; }
   /* main.css sets a fixed height on buttons; overridden so the button sizes to
      its own text. */
   .pp-dr-form .pp-deskreport-btn {
@@ -3012,79 +3031,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 {% endfor %}
               </ul>
 
-              <p class="pp-deskreport-copy pp-dr-locked">
-                {% if desk_preview.blocking %}
-                  {{ desk_preview.blocking|length }} of these
-                  {% if desk_preview.blocking|length == 1 %}is{% else %}are{% endif %}
-                  the kind of thing to settle <em>before</em> making an offer.
-                {% endif %}
-                The full report explains each one, says what it means for the
-                purchase and who to ask, checks the price against our
-                {{ inventory_size|default:"1,500+" }} comparable listings, and
-                comes with {{ desk_preview.question_count }} questions to put to
-                the agent.
-              </p>
-
               {% comment %}
-                Five states, and each says the true reason rather than a generic
-                "not available" — one of them ("your next one is in 6 days") is
-                good news and must not read like a refusal.
+                Two columns on a wide panel: the explanation on the left at a
+                reading measure, the action beside it rather than under it. The
+                copy cannot simply be stretched — past about 75 characters a
+                line gets hard to track — so the way to use a 960px panel is to
+                put something next to it. Wraps to one column when the panel is
+                too narrow to hold both.
               {% endcomment %}
-              {% if desk_already_requested %}
-                <p class="pp-dr-state pp-dr-state-good">
-                  We're preparing your report on this property — it'll reach you
-                  by email.
+              <div class="pp-dr-cta-row">
+                <div class="pp-dr-cta-copy">
+                <p class="pp-deskreport-copy pp-dr-locked">
+                  {% if desk_preview.blocking %}
+                    {{ desk_preview.blocking|length }} of these
+                    {% if desk_preview.blocking|length == 1 %}is{% else %}are{% endif %}
+                    the kind of thing to settle <em>before</em> making an offer.
+                  {% endif %}
+                  The full report explains each one, says what it means for the
+                  purchase and who to ask, checks the price against our
+                  {{ inventory_size|default:"1,500+" }} comparable listings, and
+                  comes with {{ desk_preview.question_count }} questions to put to
+                  the agent.
                 </p>
-              {% elif desk_allowance.can_claim %}
-                <form id="deskReportForm" class="pp-dr-form">
-                  <input type="hidden" name="listing" value="{{ property.pk }}">
-                  {% comment %}
-                    One button, nothing to fill in. An optional field asks a
-                    question the member does not have to answer, which is a
-                    reason to hesitate on the one action we want them to take —
-                    and they can reply to the confirmation email with anything
-                    specific, which the email invites.
-                  {% endcomment %}
-                  <button type="submit" class="pp-deskreport-btn" id="drSubmit">
-                    Get the full report on this house
-                  </button>
-                  <p class="pp-dr-note">
-                    Included with Pro — {{ desk_allowance.remaining }} of this
-                    month's {{ desk_allowance.per_month }} left. Within
-                    {{ turnaround_days|default:3 }} working days.
+  
+                {% comment %}
+                  Five states, and each says the true reason rather than a generic
+                  "not available" — one of them ("your next one is in 6 days") is
+                  good news and must not read like a refusal.
+                {% endcomment %}
+                </div>
+                <div class="pp-dr-actions">
+                {% if desk_already_requested %}
+                  <p class="pp-dr-state pp-dr-state-good">
+                    We're preparing your report on this property — it'll reach you
+                    by email.
                   </p>
-                  <p class="pp-dr-state" id="drMsg" hidden></p>
-                </form>
-              {% elif desk_allowance.blocked_by == "exhausted" %}
-                <p class="pp-dr-state">
-                  You've used all {{ desk_allowance.per_month }} of this month's
-                  reports.{% if desk_allowance.days_until_next %} The next one is
-                  available in {{ desk_allowance.days_until_next }}
-                  day{{ desk_allowance.days_until_next|pluralize }}.{% endif %}
-                  If it can't wait, email
-                  <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.
-                </p>
-              {% else %}
-                <a class="pp-deskreport-btn"
-                   href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
-                  Unlock with Pro — {{ desk_report_total }} reports included
-                </a>
-                <p class="pp-dr-note">
-                  {{ pro_price }}, cancel any time. {{ desk_report_total }} reports
-                  every month, on whichever houses you're serious about.
-                </p>
-              {% endif %}
+                {% elif desk_allowance.can_claim %}
+                  <form id="deskReportForm" class="pp-dr-form">
+                    <input type="hidden" name="listing" value="{{ property.pk }}">
+                    {% comment %}
+                      One button, nothing to fill in. An optional field asks a
+                      question the member does not have to answer, which is a
+                      reason to hesitate on the one action we want them to take —
+                      and they can reply to the confirmation email with anything
+                      specific, which the email invites.
+                    {% endcomment %}
+                    <button type="submit" class="pp-deskreport-btn" id="drSubmit">
+                      Get the full report on this house
+                    </button>
+                    <p class="pp-dr-note">
+                      Included with Pro — {{ desk_allowance.remaining }} of this
+                      month's {{ desk_allowance.per_month }} left. Within
+                      {{ turnaround_days|default:3 }} working days.
+                    </p>
+                    <p class="pp-dr-state" id="drMsg" hidden></p>
+                  </form>
+                {% elif desk_allowance.blocked_by == "exhausted" %}
+                  <p class="pp-dr-state">
+                    You've used all {{ desk_allowance.per_month }} of this month's
+                    reports.{% if desk_allowance.days_until_next %} The next one is
+                    available in {{ desk_allowance.days_until_next }}
+                    day{{ desk_allowance.days_until_next|pluralize }}.{% endif %}
+                    If it can't wait, email
+                    <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.
+                  </p>
+                {% else %}
+                  <a class="pp-deskreport-btn"
+                     href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
+                    Unlock with Pro — {{ desk_report_total }} reports included
+                  </a>
+                  <p class="pp-dr-note">
+                    {{ pro_price }}, cancel any time. {{ desk_report_total }} reports
+                    every month, on whichever houses you're serious about.
+                  </p>
+                {% endif %}
+  
+                {% comment %}
+                  A complete report, on a different house, in full.
+  
+                  An iframe rather than an include: the report is a whole document
+                  with its own typography and its own light/dark handling, and
+                  inlining it would put two stylesheets in a fight neither can win.
+                  Inside <details> and lazy-loaded, so it costs nothing until
+                  somebody asks for it — which is also the honest order, since the
+                  findings above are about the house they are actually looking at.
+                {% endcomment %}
+                </div>
+              </div>
 
-              {% comment %}
-                A complete report, on a different house, in full.
-
-                An iframe rather than an include: the report is a whole document
-                with its own typography and its own light/dark handling, and
-                inlining it would put two stylesheets in a fight neither can win.
-                Inside <details> and lazy-loaded, so it costs nothing until
-                somebody asks for it — which is also the honest order, since the
-                findings above are about the house they are actually looking at.
-              {% endcomment %}
               <details class="pp-dr-example">
                 <summary>See a complete report, on another house</summary>
                 <p class="pp-dr-example-note">
