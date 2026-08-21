@@ -1528,10 +1528,23 @@ document.addEventListener('DOMContentLoaded', () => {
     margin: 2em 0;
   }
   .pp-newsletter.pp-panel { text-align: left; }
-  .pp-newsletter h3 {
+  /* Panel headings that are sentences read as sentences.
+     #pp-layout's default h3 is uppercase with 0.1em tracking, which suits a
+     short label — "Interested in buying?" — and fights a nine-word sentence like
+     "We found 7 things worth knowing about this house". The newsletter opted out
+     on its own; the desk report and inspection panels inherited the label
+     treatment instead, so three adjacent panels were set three different ways.
+     One rule, so the next panel does not have to remember. */
+  .pp-newsletter h3,
+  .pp-deskreport h3,
+  .pp-inspect h3 {
     font-family: var(--font-display);
     font-weight: 500;
-    font-size: 1.15em;
+    /* rem, not em: these three panels sit in parents with different font sizes,
+       so the same declared em came out as 18.5px in one and 16.1px in the others
+       — two sizes of the same heading, stacked one above the other. The root on
+       this page is 10px, so 1.85rem is the ~18.5px the newsletter heading had. */
+    font-size: 1.85rem;
     text-transform: none;
     letter-spacing: normal;
     margin: 0 0 0.35em;
@@ -1685,7 +1698,7 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--mhj-secondary);
     margin: 0 0 0.4em;
   }
-  .pp-deskreport h3 { font-size: 1.2em; margin: 0 0 0.5em; }
+  .pp-deskreport h3 { margin: 0 0 0.5em; }
   .pp-deskreport .pp-deskreport-copy {
     margin: 0 0 1em;
     max-width: 62ch;
@@ -1843,7 +1856,7 @@ document.addEventListener('DOMContentLoaded', () => {
     text-transform: uppercase;
     color: var(--mhj-secondary);
   }
-  .pp-inspect h3 { font-size: 1.2em; margin: 0 0 0.5em; }
+  .pp-inspect h3 { margin: 0 0 0.5em; }
   .pp-inspect .pp-inspect-copy { margin: 0 0 0.8em; max-width: 54ch; }
   .pp-inspect .pp-inspect-small { font-size: 0.9em; color: var(--mhj-secondary); }
   /* colour stated explicitly: main.css is a dark theme and styles bare <label>
@@ -1904,7 +1917,8 @@ document.addEventListener('DOMContentLoaded', () => {
        rather than the top of the line box. */
     align-items: flex-start;
     gap: 0.45em;
-    font-size: 1.32em;
+    /* Size comes from the shared panel-heading rule above; setting it again here
+       is what made this heading a different size from its neighbours. */
   }
   .pp-newsletter h3 .pp-nl-icon { margin-top: 0.18em; }
   .pp-nl-icon {
