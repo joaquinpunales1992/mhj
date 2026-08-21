@@ -119,8 +119,21 @@
     /* Pro is the middle rung and the one most people want; give it the accent
        without making the others look unavailable. */
     .tier-featured { border-color: var(--primary); box-shadow: 0 2px 12px rgba(71,117,53,.10); }
+    /* The tier name is a label above a headline, not a heading in its own
+       right — the price is what the card is about. Set as one: an eyebrow in the
+       body face, exactly like the panels on a property page ("THE NEWSLETTER ·
+       INCLUDED WITH PRO"). It was the display face at 1.15rem, which put a light
+       serif eight pixels above a bold sans price and read as an accident rather
+       than a pairing. Prices are the body face everywhere else on the site —
+       property cards, map cards, the desk report — so the price stays put. */
     .tier-name {
-      font-family: var(--font-display); font-size: 1.15rem; margin: 0 0 .2rem;
+      font-family: var(--font-body);
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 0 0 .35rem;
     }
     .tier-price {
       font-size: 1.7rem; font-weight: 700; color: var(--primary);
