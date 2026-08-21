@@ -1,4 +1,7 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap');
+/* Font import removed: includes/brand.html loads Noto Serif JP and Work
+   Sans once, at the weights the site actually uses. This asked for a
+   different weight set and for Space Mono, which nothing used — and as
+   an @import it blocked rendering while it resolved. */
 
 /* Base Styles */
 :root {

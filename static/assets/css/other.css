@@ -1,5 +1,7 @@
 
-@import url("https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,300italic,400,400italic,600");
+/* Source Sans Pro import removed: the site's faces come from
+   includes/brand.html, and this pulled a third family into the
+   property page. */
 @import url("fontawesome-all.min.css");
 
 /*
@@ -88,7 +90,9 @@ input, select, textarea {
 		color: #5b5b5b;
 		font-size: 15pt;
 		line-height: 1.85em;
-		font-family: 'Source Sans Pro', sans-serif;
+		/* The site's body face — see includes/brand.html. This file set a third
+		   family, which is how the property page ended up mixing typefaces. */
+		font-family: var(--font-body, 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
 		font-weight: 300;
 	}
 
@@ -106,7 +110,9 @@ input, select, textarea {
 	input, textarea, select {
 		font-size: 15pt;
 		line-height: 1.85em;
-		font-family: 'Source Sans Pro', sans-serif;
+		/* The site's body face — see includes/brand.html. This file set a third
+		   family, which is how the property page ended up mixing typefaces. */
+		font-family: var(--font-body, 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
 		font-weight: 300;
 	}
 

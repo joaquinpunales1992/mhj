@@ -260,7 +260,13 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
   <meta name="twitter:description" content="{{ property.get_price_for_front }} · {{ property.get_location_for_front }}, Japan." />
   {% if share_img %}<meta name="twitter:image" content="{{ share_img.file }}" />{% endif %}
   {% endwith %}
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500&family=Space+Mono&family=Work+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+  {% comment %}
+    Fonts and tokens from the one place that owns them, like every other page.
+    This template used to carry its own link at a different weight set
+    (300;400;500 against brand's 400;500;600), so the two disagreed about which
+    weights existed — and it pulled Space Mono, which no rule here ever used.
+  {% endcomment %}
+  {% include "includes/brand.html" %}
   {% include "includes/image_loading.html" %}
   <link rel="stylesheet" href="{% static 'assets/css/property_detail.css' %}">
   <link rel="stylesheet" type="text/css" href="{% static 'assets/css/main.css' %}" />
@@ -387,7 +393,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
     }
     .share-card-title {
         margin: 0 0 16px;
-        font-family: 'Noto Serif JP', serif;
+        font-family: var(--font-display);
         font-weight: 500;
         color: #477535 !important; /* beat the #pp-layout h4 dark-color rule */
         font-size: 1.25rem;
@@ -397,7 +403,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
     .share-opt {
         display: flex; align-items: center; gap: 11px; width: 100%; text-align: left;
         background: #f6f5f1 !important; border: 1px solid rgba(71, 117, 53, 0.18); border-radius: 10px;
-        padding: 11px 14px; font-family: 'Work Sans', sans-serif; font-size: 1rem; font-weight: 500;
+        padding: 11px 14px; font-family: var(--font-body); font-size: 1rem; font-weight: 500;
         color: #2b2b2b !important; cursor: pointer; transition: background 0.15s ease; text-transform: none; letter-spacing: normal;
     }
     .share-opt:hover { background: #ece9e1 !important; }
@@ -449,7 +455,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
 }
 
 body {
-    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, sans-serif;
+    font-family: var(--font-body);
     background-color: var(--background-color);
     color: var(--text-color);
     line-height: 1.6;
@@ -836,7 +842,7 @@ input:checked + .toggle-slider:before {
       border-radius: 50%;
       text-align: center;
       line-height: 26px;
-      font-family: 'Work Sans', sans-serif;
+      font-family: var(--font-body);
       font-weight: 600;
       font-size: 13px;
       z-index: 1;
@@ -1360,7 +1366,7 @@ document.addEventListener('DOMContentLoaded', () => {
     border: 1px solid rgba(71, 117, 53, 0.4);
     border-radius: 999px;
     padding: 0.35em 0.85em;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.78em;
     font-weight: 600;
     color: var(--mhj-primary);
@@ -1474,7 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
        need it too. */
     color: #6f7570 !important;
     box-shadow: 0 1px 6px rgba(0, 0, 0, 0.28);
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.82em;
     font-weight: 600;
     line-height: 1;
@@ -1523,7 +1529,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   .pp-newsletter.pp-panel { text-align: left; }
   .pp-newsletter h3 {
-    font-family: 'Noto Serif JP', serif;
+    font-family: var(--font-display);
     font-weight: 500;
     font-size: 1.15em;
     text-transform: none;
@@ -1612,7 +1618,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-photo-gate-inner svg { width: 1.6em; height: 1.6em; margin-bottom: 0.4em; }
   .pp-photo-gate-count {
     margin: 0 0 0.3em;
-    font-family: 'Noto Serif JP', serif;
+    font-family: var(--font-display);
     font-size: 1.5em;
     line-height: 1.2;
     text-transform: none;
@@ -1621,7 +1627,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   .pp-photo-gate-copy {
     margin: 0 0 1.1em;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95em;
     line-height: 1.55;
     color: var(--mhj-secondary);
@@ -1634,7 +1640,7 @@ document.addEventListener('DOMContentLoaded', () => {
     border: 0;
     background-color: var(--mhj-primary);
     color: #fff !important;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.95em;
     line-height: 1.2;
@@ -1657,7 +1663,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-photo-gate-note {
     display: block;
     margin-top: 0.7em;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.8em;
     color: var(--mhj-secondary);
   }
@@ -1671,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', () => {
      step 1 leads with. Colours are stated outright for the same reason the step
      links state theirs — main.css is a dark theme and styles bare <a>. */
   .pp-deskreport .pp-deskreport-eyebrow {
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.78em;
     font-weight: 600;
     letter-spacing: 0.08em;
@@ -1710,9 +1716,11 @@ document.addEventListener('DOMContentLoaded', () => {
     border-radius: 0 6px 6px 0;
   }
   .pp-dr-finding .pp-dr-sev {
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.68em;
-    font-weight: 700;
+    /* 600, not 700: brand.html loads Work Sans up to 600, and asking for 700
+       makes the browser synthesise a bold rather than use a real one. */
+    font-weight: 600;
     letter-spacing: 0.07em;
     text-transform: uppercase;
     white-space: nowrap;
@@ -1733,7 +1741,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-dr-example { margin-top: 1.4em; }
   .pp-dr-example > summary {
     cursor: pointer;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.95em;
     color: var(--mhj-primary);
@@ -1799,7 +1807,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   .pp-deskreport-btn {
     display: inline-block;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.95em;
     line-height: 1.2;
@@ -1814,7 +1822,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-deskreport-link {
     display: inline-block;
     margin-left: 1em;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.92em;
     font-weight: 600;
     color: var(--mhj-primary);
@@ -1865,7 +1873,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-inspect-btn {
     margin-top: 0.9em; display: inline-block; border: 0; cursor: pointer;
     background-color: var(--mhj-primary); color: #fff !important;
-    font-family: 'Work Sans', sans-serif; font-weight: 600; font-size: 0.95em;
+    font-family: var(--font-body); font-weight: 600; font-size: 0.95em;
     line-height: 1.2; padding: 0.8em 1.5em; border-radius: 10px; box-shadow: none;
     /* The theme sets white-space:nowrap and a fixed height on every button, so
        this label — 305px on one line — hung out past the card's right edge below
@@ -1919,7 +1927,7 @@ document.addEventListener('DOMContentLoaded', () => {
     cursor: pointer;
     background-color: var(--mhj-primary);
     color: #fff;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-weight: 600;
     font-size: 0.95em;
     line-height: 1.2;
@@ -1968,8 +1976,8 @@ document.addEventListener('DOMContentLoaded', () => {
     display: inline-flex; align-items: center; justify-content: center;
     width: 16px; height: 16px; border-radius: 50%;
     background: var(--mhj-primary); color: #fff;
-    font-size: 11px; font-weight: 700; font-style: normal; line-height: 1;
-    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 11px; font-weight: 600; font-style: normal; line-height: 1;
+    font-family: var(--font-body);
   }
   .mhj-tip-text {
     visibility: hidden; opacity: 0; transition: opacity 0.15s ease;
@@ -1994,10 +2002,10 @@ document.addEventListener('DOMContentLoaded', () => {
   header h1,
   .related-properties-heading,
   .modal-title,
-  .buying-details summary h3 { font-family: 'Noto Serif JP', serif; font-weight: 500; }
+  .buying-details summary h3 { font-family: var(--font-display); font-weight: 500; }
 
   /* Brand wordmark + back link in the sidebar */
-  aside h1.font-serif { font-family: 'Noto Serif JP', serif; color: var(--mhj-primary); }
+  aside h1.font-serif { font-family: var(--font-display); color: var(--mhj-primary); }
 
   /* Primary buttons → solid sage green, rounded, with hover */
   .primary {
@@ -2017,7 +2025,7 @@ document.addEventListener('DOMContentLoaded', () => {
     --mhj-card: #ffffff;
   }
   body {
-    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family: var(--font-body);
     color: var(--mhj-foreground);
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
@@ -2026,7 +2034,7 @@ document.addEventListener('DOMContentLoaded', () => {
   #pp-layout header h1 { color: var(--mhj-foreground); line-height: 1.15; }
   #pp-layout h2, #pp-layout h3, #pp-layout h4, #pp-layout h5,
   .related-properties-heading, .modal-title {
-    font-family: 'Noto Serif JP', serif;
+    font-family: var(--font-display);
     font-weight: 500;
     color: var(--mhj-foreground);
   }
@@ -2043,7 +2051,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .buying-details .step h5,
   .related-property-card .property-location { color: var(--mhj-secondary); }
   /* CTAs use Work Sans like the upgrade page's .cta-btn */
-  .primary { font-family: 'Work Sans', sans-serif; font-weight: 600; }
+  .primary { font-family: var(--font-body); font-weight: 600; }
 
   /* Units / currency preference control */
   .unit-prefs {
@@ -2064,7 +2072,7 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--mhj-secondary);
   }
   .unit-prefs select {
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 1.2rem;
     font-weight: 500;
     text-transform: none;
@@ -2108,10 +2116,10 @@ document.addEventListener('DOMContentLoaded', () => {
      those headings fell through to the CDN Bootstrap defaults, and <small>
      renders at ~80%, which is why the descriptions looked faint and smaller
      than step 1's. Font families are literal here on purpose: this template
-     loads its own font link rather than includes/brand.html, so the
+     took its fonts from its own link rather than includes/brand.html, so the
      --font-* tokens are not defined on this page. */
   .buying-details .step h4 {
-    font-family: 'Noto Serif JP', serif;
+    font-family: var(--font-display);
     font-weight: 500;
     /* em, not rem: main.css sets body{font-size:15pt} (20px) while html stays
        at 16px, so on this page a rem value renders SMALLER than the
@@ -2127,7 +2135,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   .buying-details .step small {
     display: block;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 1em;
     line-height: 1.6;
     color: var(--mhj-secondary);
@@ -2141,12 +2149,12 @@ document.addEventListener('DOMContentLoaded', () => {
      filled CTA has to stay the obvious action in here.
 
      Colour and font-family are stated outright — main.css is a dark theme that
-     styles bare <a> for a dark background, and this page defines no --font-*
-     tokens because it loads its own font link. Same trap as the step <h4>s. */
+     styles bare <a> for a dark background. The face now comes from the shared
+     --font-* tokens rather than a literal repeated down the file. */
   .buying-details .step .step-inspect-link {
     display: inline-block;
     margin-top: 0.7em;
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 0.95em;
     font-weight: 600;
     line-height: 1.35;
@@ -2176,7 +2184,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* Body copy inside the CTA block. Was an <h5> inheriting heading styles. */
   .buying-details .step .cta-blurb {
-    font-family: 'Work Sans', sans-serif;
+    font-family: var(--font-body);
     font-size: 1em;
     line-height: 1.6;
     color: var(--mhj-foreground);
@@ -3171,11 +3179,11 @@ document.addEventListener('DOMContentLoaded', () => {
     /* main.css adds body bottom-padding for the home page's fixed bottom bar;
        this page has no such bar, so remove it to kill the trailing whitespace. */
     body { padding-bottom: 0 !important; }
-    .site-footer { background:#1f2224; color:#cfd2cf; font-family:'Work Sans',sans-serif; padding:40px 24px 24px; margin-top:2rem; text-align:left; }
+    .site-footer { background:#1f2224; color:#cfd2cf; font-family:var(--font-body); padding:40px 24px 24px; margin-top:2rem; text-align:left; }
     .site-footer-inner { max-width:1000px; margin:0 auto; display:flex; flex-wrap:wrap; gap:32px; text-align:left; }
     .site-footer-col { flex:1 1 220px; min-width:200px; display:flex; flex-direction:column; align-items:flex-start; gap:7px; }
     .site-footer-col p { color:#9a9d99 !important; font-size:14px !important; font-weight:400 !important; letter-spacing:normal !important; line-height:1.5; margin:5px 0 0; }
-    .site-footer-brand { font-family:'Noto Serif JP',serif !important; font-size:20px !important; font-weight:500 !important; letter-spacing:normal !important; color:#fff !important; text-decoration:none; }
+    .site-footer-brand { font-family:var(--font-display) !important; font-size:20px !important; font-weight:500 !important; letter-spacing:normal !important; color:#fff !important; text-decoration:none; }
     .site-footer-col h4 { color:#fff !important; font-size:13px !important; letter-spacing:.06em !important; text-transform:uppercase; margin-bottom:5px; font-weight:600 !important; }
     /* The site theme puts a border/box-shadow "underline" on every <a>;
        kill it inside the footer so the links don't show stray lines. */
@@ -3259,7 +3267,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     .map-dialog-head h4 {
       margin: 0;
-      font-family: 'Noto Serif JP', serif;
+      font-family: var(--font-display);
       font-weight: 500;
       /* em, not rem: main.css sets body{font-size:15pt} on this page. */
       font-size: 1em;

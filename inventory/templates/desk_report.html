@@ -12,9 +12,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Desk report — {{ property.title }}</title>
+{% comment %}
+  The site's two faces, requested with the identical URL includes/brand.html
+  uses so it is a cache hit rather than a third font download. This document was
+  designed standalone in Spectral and IBM Plex, which was defensible while it was
+  a file people opened on its own — but it is a page on the site now, embedded in
+  the property page, where three extra families made one product look like two.
+  The monospace labels use the system mono stack: they are small UI text, and a
+  webfont for them is not worth the request.
+{% endcomment %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;500&family=Work+Sans:wght@300;400;500;600&display=swap">
 
 <style>
   :root {
@@ -85,7 +94,7 @@
     margin: 0;
     background: var(--paper);
     color: var(--ink);
-    font-family: "IBM Plex Sans", system-ui, -apple-system, sans-serif;
+    font-family: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     font-size: 16px;
     line-height: 1.65;
     -webkit-font-smoothing: antialiased;
@@ -109,7 +118,7 @@
     margin-bottom: 2.25rem;
     border: 1px dashed var(--rule);
     background: var(--accent-soft);
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .72rem;
     letter-spacing: .04em;
     text-transform: uppercase;
@@ -119,7 +128,7 @@
   .masthead { border-bottom: 2px solid var(--ink); padding-bottom: 1.5rem; }
 
   .eyebrow {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .74rem;
     letter-spacing: .14em;
     text-transform: uppercase;
@@ -128,8 +137,10 @@
   }
 
   h1 {
-    font-family: Spectral, Georgia, serif;
-    font-weight: 600;
+    font-family: 'Noto Serif JP', Georgia, serif;
+    /* 500 is the weight the site loads, and what its own h1 uses. Asking for
+       600 would have the browser synthesise one. */
+    font-weight: 500;
     font-size: clamp(1.9rem, 4.5vw, 2.6rem);
     line-height: 1.15;
     letter-spacing: -.01em;
@@ -138,7 +149,7 @@
   }
 
   .subject-meta {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .84rem;
     color: var(--ink-soft);
     margin: 0;
@@ -164,7 +175,7 @@
   }
 
   .docket dt {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .68rem;
     letter-spacing: .08em;
     text-transform: uppercase;
@@ -190,9 +201,9 @@
   }
 
   .verdict h2 {
-    font-family: Spectral, Georgia, serif;
+    font-family: 'Noto Serif JP', Georgia, serif;
     font-size: 1.4rem;
-    font-weight: 600;
+    font-weight: 500;
     margin: 0 0 .5rem;
     text-wrap: balance;
   }
@@ -204,16 +215,16 @@
   section { margin-top: 3rem; }
 
   h2.rule {
-    font-family: Spectral, Georgia, serif;
+    font-family: 'Noto Serif JP', Georgia, serif;
     font-size: 1.25rem;
-    font-weight: 600;
+    font-weight: 500;
     margin: 0 0 1.25rem;
     padding-bottom: .5rem;
     border-bottom: 1px solid var(--ink);
   }
 
   h3 {
-    font-family: "IBM Plex Sans", sans-serif;
+    font-family: 'Work Sans', -apple-system, sans-serif;
     font-size: 1rem;
     font-weight: 600;
     margin: 0 0 .3rem;
@@ -241,7 +252,7 @@
   .finding.is-cleared  { border-left-color: var(--cleared); }
 
   .sev {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .66rem;
     letter-spacing: .08em;
     text-transform: uppercase;
@@ -266,7 +277,7 @@
     align-items: baseline;
     gap: .4rem;
     margin-top: .5rem;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .72rem;
     color: var(--ink-faint);
   }
@@ -302,7 +313,7 @@
   td { font-variant-numeric: tabular-nums; }
 
   td .jp {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .78rem;
     color: var(--ink-faint);
     display: block;
@@ -333,7 +344,7 @@
     display: flex;
     justify-content: space-between;
     margin-top: .7rem;
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .74rem;
     color: var(--ink-faint);
     font-variant-numeric: tabular-nums;
@@ -343,7 +354,7 @@
 
   ol.asks { padding-left: 1.5rem; margin: 0; }
   ol.asks li { margin-bottom: .7rem; max-width: 66ch; }
-  ol.asks li::marker { font-family: "IBM Plex Mono", monospace; color: var(--accent); font-size: .85rem; }
+  ol.asks li::marker { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); font-size: .85rem; }
 
   ul.plain { margin: 0; padding-left: 1.15rem; }
   ul.plain li { margin-bottom: .45rem; max-width: 66ch; color: var(--ink-soft); }
@@ -358,7 +369,7 @@
   }
 
   .method h2 {
-    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, 'Courier New', monospace;
     font-size: .74rem;
     letter-spacing: .12em;
     text-transform: uppercase;

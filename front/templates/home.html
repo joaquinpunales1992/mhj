@@ -344,7 +344,7 @@
 								padding: 0.6rem 1.55rem 0.6rem 0;
 								font-size: 0.95rem;
 								font-weight: 500;
-								font-family: 'Work Sans', -apple-system, sans-serif;
+								font-family: var(--font-body);
 								cursor: pointer;
 								width: auto;            /* override main.css `select { width: 100% }` */
 								max-width: 55vw;
@@ -412,10 +412,10 @@
 								position: relative; width: 100%; max-width: 340px;
 								background: #fff; color: #2b2b2b; border-radius: 14px;
 								padding: 22px 24px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
-								font-family: 'Work Sans', -apple-system, sans-serif;
+								font-family: var(--font-body);
 							}
 							.share-card h4 {
-								margin: 0 0 16px; font-family: 'Noto Serif JP', serif; font-weight: 500;
+								margin: 0 0 16px; font-family: var(--font-display); font-weight: 500;
 								color: #477535; font-size: 1.25rem; text-align: center;
 							}
 							.share-close {
@@ -433,7 +433,7 @@
 								display: flex !important; align-items: center; gap: 11px; width: 100%; text-align: left;
 								background: #f6f5f1 !important; border: 1px solid rgba(71, 117, 53, 0.18) !important; border-radius: 10px;
 								padding: 11px 14px !important; min-height: 0 !important; box-shadow: none !important;
-								font-family: 'Work Sans', sans-serif !important; font-size: 1rem !important; font-weight: 500 !important;
+								font-family: var(--font-body) !important; font-size: 1rem !important; font-weight: 500 !important;
 								text-transform: none !important; letter-spacing: normal !important;
 								color: #2b2b2b !important; cursor: pointer; transition: background 0.15s ease;
 							}
@@ -473,7 +473,7 @@
 								border-radius: 8px;
 								text-transform: none;
 								letter-spacing: normal;
-								font-family: 'Work Sans', sans-serif;
+								font-family: var(--font-body);
 								font-weight: 600;
 							}
 							#main .thumb button.primary:hover { background-color: #3a5f2b; }
@@ -637,7 +637,7 @@
 
 				{% if region_name %}
 				<header class="region-hero" style="width: 100%; max-width: 60rem; margin: 0 auto; padding: 2.25rem 1.25rem 1.25rem; text-align: center; box-sizing: border-box;">
-					<h1 style="font-family: 'Noto Serif JP', serif; font-weight: 500; text-transform: none; letter-spacing: normal; white-space: normal; overflow-wrap: break-word; font-size: clamp(1.3rem, 5vw, 2.5rem); line-height: 1.25; color: #fff; margin: 0 0 0.6rem;">Houses &amp; Akiya for Sale in {{ region_name }}, Japan</h1>
+					<h1 style="font-family: var(--font-display); font-weight: 500; text-transform: none; letter-spacing: normal; white-space: normal; overflow-wrap: break-word; font-size: clamp(1.3rem, 5vw, 2.5rem); line-height: 1.25; color: #fff; margin: 0 0 0.6rem;">Houses &amp; Akiya for Sale in {{ region_name }}, Japan</h1>
 					<p style="color: rgba(255,255,255,0.72); font-size: 1.02rem; line-height: 1.55; margin: 0 auto; max-width: 40rem;">Browse affordable homes and akiya in {{ region_name }} prefecture — we help you through the entire purchase process, from viewing to keys.</p>
 				</header>
 				{% endif %}
@@ -1067,7 +1067,7 @@
 				display: inline-flex; align-items: center; gap: 8px;
 				background-color: #477535; color: #fff !important; border: none; border-radius: 9999px;
 				height: auto; line-height: 1.2; padding: 14px 24px;
-				font-family: 'Source Sans Pro', Helvetica, sans-serif; font-size: 15px; font-weight: 600;
+				font-family: var(--font-body); font-size: 15px; font-weight: 600;
 				letter-spacing: normal; text-transform: none; white-space: nowrap; cursor: pointer;
 				box-shadow: 0 4px 14px rgba(0,0,0,0.3);
 			}
@@ -1080,7 +1080,7 @@
 			#eoi-overlay.open { display: flex; }
 			#eoi-box {
 				background: #fff; color: #333; width: 100%; max-width: 460px; border-radius: 10px;
-				padding: 28px; position: relative; font-family: 'Source Sans Pro', Helvetica, sans-serif;
+				padding: 28px; position: relative; font-family: var(--font-body);
 				max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.4);
 			}
 			#eoi-box h3 { margin: 0 0 8px; color: #477535; font-size: 22px; font-weight: 700; text-transform: none; letter-spacing: normal; }
