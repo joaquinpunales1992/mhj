@@ -1336,6 +1336,30 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         self.assertIn("preparing your report on this property", body)
         self.assertNotIn('id="drSubmit"', body)
 
+    def test_the_claim_form_asks_for_nothing(self):
+        """One button. An optional field asks a question the member does not have
+        to answer, right at the action we want them to take."""
+        Subscription.objects.create(
+            user=self.user, paypal_subscription_id="I-NOFIELD",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+        self.client.force_login(self.user)
+        body = self.page()
+        self.assertIn('id="drSubmit"', body)
+        self.assertNotIn('id="drNotes"', body)
+        # Scoped to this form: the inspection panel below keeps its own optional
+        # field, which is a lead form where the context is worth asking for.
+        form = body[body.index('id="deskReportForm"'):]
+        form = form[:form.index("</form>")]
+        self.assertNotIn("(optional)", form)
+        self.assertNotIn("<textarea", form)
+
+    def test_the_finding_count_is_hedged(self):
+        """The preview leaves out the rule that scans the prefecture, and the
+        full report adds more — so the count is a floor, not a total."""
+        self.assertIn("We found at least", self.page())
+
     def test_the_page_embeds_a_complete_report_on_another_house(self):
         """The warnings are about this house; the embed shows what the finished
         article looks like. Lazy and inside <details>, so it costs nothing until

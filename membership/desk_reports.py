@@ -334,7 +334,11 @@ def _notify(claim):
             f"Request #{claim.pk}\n"
             f"Member: {claim.name or '(no name)'} <{claim.email}>\n"
             f"Listing: {claim.listing_url or '(none given)'}\n"
-            f"Their notes: {claim.buyer_notes or '(none)'}\n\n"
+            # The property page no longer asks for notes, so this line only
+            # appears when something actually arrived — from a reply to the
+            # confirmation email, or a future surface that does ask.
+            + (f"Their notes: {claim.buyer_notes}\n" if claim.buyer_notes else "")
+            + "\n"
             f"Start with: manage.py desk_report {claim.listing_id or '<pk>'}\n"
             "Then the municipal enquiry, the Japanese remarks, and the verdict."
         ),

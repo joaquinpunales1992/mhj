@@ -1800,21 +1800,8 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--mhj-secondary);
   }
   .pp-dr-form { display: flex; flex-direction: column; gap: 0.3em; max-width: 34rem; }
-  .pp-dr-form label { font-size: 0.9em; font-weight: 600; }
-  .pp-dr-form label span { font-weight: 400; color: var(--mhj-secondary); }
-  /* main.css sets a width on textareas and a height on buttons; both are
-     overridden so the field and the button line up with the panel. */
-  .pp-dr-form textarea {
-    width: 100%;
-    max-width: 100%;
-    padding: 0.5em 0.65em;
-    border: 1px solid var(--mhj-border);
-    border-radius: 6px;
-    font: inherit;
-    background: #fff;
-    color: inherit;
-    margin-bottom: 0.6em;
-  }
+  /* main.css sets a fixed height on buttons; overridden so the button sizes to
+     its own text. */
   .pp-dr-form .pp-deskreport-btn {
     align-self: flex-start;
     border: 0;
@@ -2971,7 +2958,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 thing, so nobody could learn what it was called.
               {% endcomment %}
               <p class="pp-deskreport-eyebrow">Desk report · included with Pro</p>
-              <h3>We found {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }} worth knowing about this house</h3>
+              <h3>We found at least {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }} worth knowing about this house</h3>
 
               <ul class="pp-dr-findings">
                 {% for finding in desk_preview.titles %}
@@ -3008,10 +2995,13 @@ document.addEventListener('DOMContentLoaded', () => {
               {% elif desk_allowance.can_claim %}
                 <form id="deskReportForm" class="pp-dr-form">
                   <input type="hidden" name="listing" value="{{ property.pk }}">
-                  <label for="drNotes">Anything specific you want checked?
-                    <span>(optional)</span></label>
-                  <textarea id="drNotes" name="notes" rows="2"
-                            placeholder="e.g. could I run it as a guesthouse? is the well shared?"></textarea>
+                  {% comment %}
+                    One button, nothing to fill in. An optional field asks a
+                    question the member does not have to answer, which is a
+                    reason to hesitate on the one action we want them to take —
+                    and they can reply to the confirmation email with anything
+                    specific, which the email invites.
+                  {% endcomment %}
                   <button type="submit" class="pp-deskreport-btn" id="drSubmit">
                     Get the full report on this house
                   </button>
