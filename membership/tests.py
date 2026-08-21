@@ -1020,14 +1020,14 @@ class SignupTests(TestCase):
 
 
 @override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_SAMPLE_PK=0,
-                   DESK_REPORT_PRO_ALLOWANCE=3, DESK_REPORT_COOLDOWN_DAYS=30)
+                   DESK_REPORT_PRO_ALLOWANCE=3, DESK_REPORT_WINDOW_DAYS=30)
 class DeskReportAllowanceTests(TestCase):
     """Who may claim a report, and when.
 
-    Two limits with different jobs: one a month paces work we have to actually
-    do, three in total is the value of the subscription. The tests that matter
-    are the refusals and the one refusal that is good news — a cooldown has to
-    read as "yours in six days", not as "no".
+    Three a month on a rolling 30-day window. The tests that matter are the
+    refusals: that the third claim still works, that the fourth does not, that
+    the window really rolls, and that being out this month reads as "the next one
+    is in N days" rather than as a flat no.
     """
 
     def setUp(self):
@@ -1081,48 +1081,58 @@ class DeskReportAllowanceTests(TestCase):
         self.assertTrue(allowance["can_claim"])
         self.assertEqual(allowance["remaining"], 3)
 
-    def test_a_second_claim_inside_the_month_is_a_cooldown_not_a_refusal(self):
+    def test_all_three_can_be_claimed_in_the_same_week(self):
+        """Three a month means three, not one paced across the month."""
         self.make_pro()
+        for _ in range(2):
+            self.claim()
+        allowance = self.allowance()
+        self.assertTrue(allowance["can_claim"])
+        self.assertEqual(allowance["remaining"], 1)
+
+    def test_the_fourth_claim_in_a_month_is_refused_with_a_date(self):
+        self.make_pro()
+        self.claim(when=timezone.now() - timedelta(days=20))
+        self.claim(when=timezone.now() - timedelta(days=10))
         self.claim()
         allowance = self.allowance()
         self.assertFalse(allowance["can_claim"])
-        self.assertEqual(allowance["blocked_by"], "cooldown")
-        self.assertEqual(allowance["remaining"], 2, "they still have two left")
-        self.assertTrue(1 <= allowance["days_until_next"] <= 30)
-
-    def test_the_cooldown_lifts_after_thirty_days(self):
-        self.make_pro()
-        self.claim(when=timezone.now() - timedelta(days=31))
-        self.assertTrue(self.allowance()["can_claim"])
-
-    def test_three_claims_exhaust_the_allowance_whatever_the_dates(self):
-        self.make_pro()
-        for months in (3, 2, 1):
-            self.claim(when=timezone.now() - timedelta(days=31 * months))
-        allowance = self.allowance()
-        self.assertEqual(allowance["used"], 3)
-        self.assertEqual(allowance["remaining"], 0)
         self.assertEqual(allowance["blocked_by"], "exhausted")
+        self.assertEqual(allowance["used"], 3)
+        # The window rolls off the oldest claim, 20 days ago, so ~10 days.
+        self.assertTrue(8 <= allowance["days_until_next"] <= 12,
+                        allowance["days_until_next"])
+
+    def test_the_allowance_renews_as_the_window_rolls(self):
+        """Claims older than the window stop counting — this is the difference
+        between three a month and three ever."""
+        self.make_pro()
+        for _ in range(3):
+            self.claim(when=timezone.now() - timedelta(days=31))
+        allowance = self.allowance()
+        self.assertEqual(allowance["used"], 0)
+        self.assertEqual(allowance["remaining"], 3)
+        self.assertTrue(allowance["can_claim"])
 
     def test_a_declined_request_gives_the_allowance_back(self):
         """A listing we could not work on must not cost the member a report."""
         from membership.models import DeskReportRequest
 
         self.make_pro()
-        for months in (3, 2, 1):
-            self.claim(when=timezone.now() - timedelta(days=31 * months))
+        for _ in range(3):
+            self.claim()
         self.assertEqual(self.allowance()["remaining"], 0)
 
-        oldest = DeskReportRequest.objects.order_by("created_at").first()
-        oldest.status = DeskReportRequest.STATUS_DECLINED
-        oldest.save()
+        newest = DeskReportRequest.objects.order_by("-created_at").first()
+        newest.status = DeskReportRequest.STATUS_DECLINED
+        newest.save()
         self.assertEqual(self.allowance()["remaining"], 1)
 
-    def test_a_delivered_report_still_counts(self):
+    def test_a_delivered_report_still_counts_inside_the_window(self):
         from membership.models import DeskReportRequest
 
         self.make_pro()
-        self.claim(when=timezone.now() - timedelta(days=60),
+        self.claim(when=timezone.now() - timedelta(days=5),
                    status=DeskReportRequest.STATUS_DELIVERED)
         self.assertEqual(self.allowance()["used"], 1)
 
@@ -1130,7 +1140,7 @@ class DeskReportAllowanceTests(TestCase):
         from membership.desk_report_allowance import claim_error
 
         self.make_pro()
-        self.claim(when=timezone.now() - timedelta(days=40))
+        self.claim()
         error = claim_error(self.user, self.listing)
         self.assertIn("already asked", error)
         self.assertEqual(self.allowance()["remaining"], 2)
@@ -1202,15 +1212,21 @@ class DeskReportClaimTests(TestCase):
 
         self.make_pro()
         self.client.force_login(self.user)
-        self.assertEqual(self.post().status_code, 200)
-        second = Property.objects.create(
-            url="https://example.com/claim2", title="Another", price=900,
-            floor_plan="2DK", location="Oita Prefecture",
-        )
-        response = self.client.post("/api/request-desk-report",
-                                    {"listing": second.pk})
-        self.assertEqual(response.status_code, 409, "cooldown must be enforced")
-        self.assertEqual(DeskReportRequest.objects.count(), 1)
+        listings = [self.listing] + [
+            Property.objects.create(
+                url=f"https://example.com/claim{n}", title=f"House {n}", price=900,
+                floor_plan="2DK", location="Oita Prefecture",
+            )
+            for n in range(2, 5)
+        ]
+        codes = [
+            self.client.post("/api/request-desk-report",
+                             {"listing": listing.pk}).status_code
+            for listing in listings
+        ]
+        self.assertEqual(codes, [200, 200, 200, 409],
+                         "three a month, and the fourth refused server-side")
+        self.assertEqual(DeskReportRequest.objects.count(), 3)
 
     def test_claiming_emails_the_member_and_us(self):
         from django.core import mail
@@ -1293,7 +1309,8 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         self.assertIn("Get the full report on this house", body)
         # Collapse whitespace: the template wraps this sentence over four lines.
         import re as _re
-        self.assertIn("3 of 3 left", _re.sub(r"\s+", " ", body))
+        self.assertIn("3 of this month's 3 left",
+                      _re.sub(r"\s+", " ", body))
 
     def test_a_member_who_already_asked_sees_that_instead(self):
         from membership.models import DeskReportRequest
@@ -1312,6 +1329,15 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         # would be.
         self.assertIn("preparing your report on this property", body)
         self.assertNotIn('id="drSubmit"', body)
+
+    def test_the_page_embeds_a_complete_report_on_another_house(self):
+        """The warnings are about this house; the embed shows what the finished
+        article looks like. Lazy and inside <details>, so it costs nothing until
+        asked for."""
+        body = self.page()
+        self.assertIn("See a complete report, on another house", body)
+        self.assertIn('src="/desk-report/example/"', body)
+        self.assertIn('loading="lazy"', body)
 
     def test_a_sparse_listing_still_has_something_to_report(self):
         """A listing that publishes almost nothing is not a listing with nothing

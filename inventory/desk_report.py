@@ -93,7 +93,14 @@ def _has_value(value):
     return _clean(value).lower() not in _NO_VALUE
 
 
-def _finding(severity, title, body, source_label="", source_value="", questions=()):
+def _finding(severity, title, body, source_label="", source_value="",
+             questions=(), issue=""):
+    """One finding.
+
+    `issue` is the same fact phrased to sit inside a sentence — "whether the city
+    will permit a rebuild here" against a title of "Inside an urbanization
+    control area". Titles make poor prose, and draft_verdict needs prose.
+    """
     return {
         "severity": severity,
         "severity_label": SEVERITY_LABEL[severity],
@@ -102,6 +109,7 @@ def _finding(severity, title, body, source_label="", source_value="", questions=
         "source_label": source_label,
         "source_value": source_value,
         "questions": list(questions),
+        "issue": issue,
     }
 
 
@@ -139,6 +147,7 @@ def _rule_control_area(property):
         "都市計画", property.city_planning,
         ["Will the city permit a replacement dwelling on this parcel, given it "
          "sits in an urbanization control area? Ask for the answer in writing."],
+        issue="whether the city will permit a dwelling to be rebuilt here",
     )
 
 
@@ -159,6 +168,7 @@ def _rule_utilities(property):
             "設備", "— no value published",
             ["What are the water, sewer and gas arrangements — mains, well, "
              "septic tank, propane?"],
+            issue="what the water, sewer and gas arrangements are",
         )
 
     off_grid = [label for pattern, label in _OFF_GRID
@@ -201,6 +211,7 @@ def _rule_utilities(property):
          "water, sewer or gas arrangement. Treat it as undisclosed and ask."],
         "設備", equipment,
         ["What are the water, sewer and gas arrangements?"],
+        issue="what the water, sewer and gas arrangements are",
     )
 
 
@@ -291,6 +302,7 @@ def _rule_land_category(property):
         "地目", category,
         ["Has a change of land category been granted, or is one obtainable for "
          "this parcel?"],
+        issue="whether the land's agricultural category can be changed",
     )
 
 
@@ -310,6 +322,8 @@ def _rule_tenure(property):
             "土地権利", rights,
             ["What is the remaining leasehold term, the ground rent, and the "
              "landowner's position on rebuilding and resale?"],
+            issue="the leasehold terms — remaining years, ground rent, and "
+                  "consent to rebuild or resell",
         )
     if not rights or not re.search(r"所有権|ownership", rights, re.I):
         return None
@@ -535,8 +549,9 @@ HUMAN_SECTIONS = [
     ("The Japanese remarks, read properly", "The stored description is machine "
      "translated. Read the source listing's 備考 and note anything the "
      "translation lost — rebuild restrictions and defect disclosures hide here."),
-    ("Verdict", "Two or three sentences: is this worth pursuing, at what price, "
-     "and on what conditions."),
+    ("The verdict, written by a person", "The summary at the top is assembled "
+     "from the findings. Once the municipal answer is in, rewrite it as a "
+     "judgement: is this worth pursuing, at what price, and on what conditions."),
 ]
 
 
@@ -579,6 +594,64 @@ def preview(property):
             len(f["questions"]) for f in findings
         ),
     }
+
+
+def draft_verdict(report):
+    """Compose the verdict from the findings, for the worked example.
+
+    Assembled from findings that already fired rather than written freely: every
+    clause traces to a rule, so the example reads as a finished report without
+    asserting anything the data does not support. A real report's verdict is
+    written by a person — this is the sentence they start from, which is why the
+    command offers it as a default.
+    """
+    findings = report["findings"]
+    if not findings:
+        return ""
+
+    def phrase(finding):
+        return finding.get("issue") or finding["title"].lower()
+
+    critical = [f for f in report["blocking"] if f["severity"] == CRITICAL]
+    unstated = [f for f in report["blocking"] if f["severity"] == UNKNOWN]
+    cautions = [f for f in findings if f["severity"] == CAUTION]
+
+    sentences = []
+    if critical:
+        sentences.append(
+            "Do not offer on this until you know "
+            + _join([phrase(f) for f in critical])
+            + " — that decides whether the property is worth anything to you"
+        )
+        if unstated:
+            sentences.append(
+                "You also need to establish " + _join([phrase(f) for f in unstated])
+            )
+    elif unstated:
+        sentences.append(
+            "Worth pursuing once you establish "
+            + _join([phrase(f) for f in unstated])
+        )
+    else:
+        sentences.append("Nothing in the published record blocks an offer")
+
+    if cautions:
+        count = len(cautions)
+        sentences.append(
+            f"The {count} caution{'s' if count != 1 else ''} below "
+            f"{'are' if count != 1 else 'is'} a matter of price rather than a "
+            "reason to walk away"
+        )
+
+    return ". ".join(sentences) + "."
+
+
+def _join(items):
+    """'a', 'a and b', 'a, b and c' — for prose, not for lists."""
+    items = [i for i in items if i]
+    if len(items) <= 1:
+        return items[0] if items else ""
+    return ", ".join(items[:-1]) + " and " + items[-1]
 
 
 def build_report(property):

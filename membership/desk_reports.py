@@ -33,7 +33,7 @@ from django.utils import timezone
 from django.views.decorators.cache import cache_page
 from django.views.decorators.http import require_POST
 
-from inventory.desk_report import build_report
+from inventory.desk_report import build_report, draft_verdict
 from inventory.models import Property
 from inventory.utils import YEN_TO_USD
 from membership.desk_report_allowance import allowance_for, claim_error
@@ -78,6 +78,8 @@ _MANGLED_TITLE = re.compile(r"\d+\s*km|\bStation\b|\bminutes?\b", re.I)
 # without this every visit would redo the scan.
 _SAMPLE_CACHE_KEY = "desk_report_sample_pk"
 _SAMPLE_CACHE_SECONDS = 60 * 15
+# How many of the best candidates the daily rotation draws from.
+_SAMPLE_ROTATION = 5
 
 
 def _sample_candidates():
@@ -154,18 +156,26 @@ def _sample_property():
         return (demonstrative, filled, -listing.pk)
 
     candidates = [c for c in candidates if not _MANGLED_TITLE.search(c.title or "")]
-    chosen = max(candidates, key=score, default=None)
-    if chosen:
-        cache.set(_SAMPLE_CACHE_KEY, chosen.pk, _SAMPLE_CACHE_SECONDS)
+    if not candidates:
+        return None
+
+    # Rotate daily through the strongest few rather than fixing on one house
+    # forever: the example is more convincing when a returning visitor sees it on
+    # a different property, and it spreads the risk of the one chosen listing
+    # being delisted. Keyed on the date so the choice is stable within a day and
+    # the page cache stays useful.
+    ranked = sorted(candidates, key=score, reverse=True)[:_SAMPLE_ROTATION]
+    chosen = ranked[timezone.now().toordinal() % len(ranked)]
+    cache.set(_SAMPLE_CACHE_KEY, chosen.pk, _SAMPLE_CACHE_SECONDS)
     return chosen
 
 
 def _offer_context():
-    from membership.desk_report_allowance import _cooldown_days, _total_allowance
+    from membership.desk_report_allowance import _per_month, _window_days
 
     return {
-        "report_total": _total_allowance(),
-        "cooldown_days": _cooldown_days(),
+        "report_total": _per_month(),
+        "window_days": _window_days(),
         "pro_price": settings.PRO_PRICE_LABEL,
         "turnaround_days": settings.DESK_REPORT_TURNAROUND_DAYS,
         "inventory_size": Property.objects.filter(show_in_front=True).count(),
@@ -211,7 +221,10 @@ def desk_report_example(request):
         # offer page instead, so the example shows the finished shape.
         draft=False,
         sample=True,
-        verdict="",
+        # The example reads as a finished report, so it carries a verdict. It is
+        # composed from the findings themselves — see draft_verdict — rather than
+        # written for one listing, because the example rotates.
+        verdict=draft_verdict(report),
         inventory_size=Property.objects.filter(show_in_front=True).count(),
         yen_to_usd=YEN_TO_USD,
         pro_price=settings.PRO_PRICE_LABEL,

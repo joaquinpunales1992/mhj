@@ -272,10 +272,10 @@ CONSULT_CURRENCY = env("CONSULT_CURRENCY", default="USD")
 # specific house is the highest-intent signal on the site, and the referral that
 # may follow is worth far more than a one-off fee would have been.
 #
-# Two limits, for two different reasons — see
+# Three a month, renewing on a rolling 30-day window — see
 # membership.desk_report_allowance, where the reasoning lives with the numbers.
 DESK_REPORT_PRO_ALLOWANCE = env.int("DESK_REPORT_PRO_ALLOWANCE", default=3)
-DESK_REPORT_COOLDOWN_DAYS = env.int("DESK_REPORT_COOLDOWN_DAYS", default=30)
+DESK_REPORT_WINDOW_DAYS = env.int("DESK_REPORT_WINDOW_DAYS", default=30)
 # What we promise on the page. Keep it honest: the municipal enquiry is a phone
 # call to a Japanese office that keeps office hours.
 DESK_REPORT_TURNAROUND_DAYS = env.int("DESK_REPORT_TURNAROUND_DAYS", default=3)

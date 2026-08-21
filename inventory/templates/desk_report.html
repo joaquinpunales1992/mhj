@@ -406,7 +406,13 @@
       {% endif %}
     </h2>
     <p>
-      {% if blocking %}
+      {% comment %}
+        The verdict supersedes the enumeration: when there is one it says the
+        same thing in prose, and printing both reads like a template.
+      {% endcomment %}
+      {% if verdict %}
+        {{ verdict }}
+      {% elif blocking %}
         {% for finding in blocking %}{{ finding.title }}{% if not forloop.last %}; {% endif %}{% endfor %}.
         Each is set out below with what to ask and who to ask.
       {% else %}
@@ -414,7 +420,6 @@
         showstoppers. The questions list still applies — no listing publishes
         everything.
       {% endif %}
-      {% if verdict %}</p><p>{{ verdict }}{% endif %}
     </p>
   </div>
 
@@ -513,9 +518,10 @@
   <section>
     <h2 class="rule">What a person adds to this</h2>
     <p>
-      Everything above is compiled from the listing and our own inventory. The
-      report you receive also carries three things only a person can produce, and
-      they are the reason it is worth paying for.
+      Everything above is compiled from the listing and our own inventory —
+      including that opening summary, which is assembled from the findings
+      themselves. The report you receive also carries three things only a person
+      can produce, and they are the reason it is worth having.
     </p>
     <div class="findings">
       {% for heading, instruction in human_sections %}

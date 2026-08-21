@@ -11,8 +11,8 @@
   whether the house can be rebuilt, whether the water comes from a well, or
   whether the price is sensible for the area. This report answers those
   questions before you offer, and it is included with Pro —
-  {{ report_total }} reports, one a month, within {{ turnaround_days }} working
-  days each.
+  {{ report_total }} reports a month, each within {{ turnaround_days }} working
+  days.
 </p>
 
 {% comment %}
@@ -74,8 +74,8 @@
 
 <h2>Included with Pro</h2>
 <p>
-  Pro is {{ pro_price }}. It includes {{ report_total }} desk reports — one a
-  month, on whichever properties you are seriously considering — along with
+  Pro is {{ pro_price }}. It includes {{ report_total }} desk reports every
+  month, on whichever properties you are seriously considering, along with
   unlimited listings and the analysis on every property page.
 </p>
 <p>
@@ -87,17 +87,15 @@
 {% if allowance.is_pro %}
   <p class="dr-state">
     {% if allowance.can_claim %}
-      You have <b>{{ allowance.remaining }} of {{ allowance.total }}</b> reports
-      left. Open the property you want one on and ask from there — that way we
-      know which house you mean.
-    {% elif allowance.blocked_by == "cooldown" %}
-      One a month, so your next report is available in
-      <b>{{ allowance.days_until_next }} day{{ allowance.days_until_next|pluralize }}</b>.
-      You have {{ allowance.remaining }} of {{ allowance.total }} left.
+      You have <b>{{ allowance.remaining }} of this month's
+      {{ allowance.per_month }}</b> reports left. Open the property you want one
+      on and ask from there — that way we know which house you mean.
     {% else %}
-      You have used all {{ allowance.total }} of your reports. Email
-      <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a> if you
-      need another.
+      You have used all {{ allowance.per_month }} of this month's reports.{% if allowance.days_until_next %}
+      The next one is available in
+      <b>{{ allowance.days_until_next }} day{{ allowance.days_until_next|pluralize }}</b>.{% endif %}
+      If it can't wait, email
+      <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.
     {% endif %}
   </p>
 {% else %}

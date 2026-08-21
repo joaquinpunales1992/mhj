@@ -1727,6 +1727,38 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-deskreport .pp-dr-locked { margin: 0 0 1.1em; }
   .pp-deskreport .pp-dr-locked em { font-style: normal; font-weight: 600; }
 
+  .pp-dr-example { margin-top: 1.4em; }
+  .pp-dr-example > summary {
+    cursor: pointer;
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95em;
+    color: var(--mhj-primary);
+    list-style: none;
+  }
+  .pp-dr-example > summary::-webkit-details-marker { display: none; }
+  .pp-dr-example > summary::before { content: '▸ '; }
+  .pp-dr-example[open] > summary::before { content: '▾ '; }
+  .pp-dr-example-note {
+    margin: 0.8em 0;
+    font-size: 0.92em;
+    color: var(--mhj-secondary);
+    max-width: 58ch;
+  }
+  /* Tall enough to read rather than to peek at, and scrollable inside itself so
+     the listing page does not grow by a whole document. */
+  .pp-dr-example-frame {
+    width: 100%;
+    height: 620px;
+    border: 1px solid var(--mhj-border);
+    border-radius: 10px;
+    background: #fff;
+    display: block;
+  }
+  @media (max-width: 640px) {
+    .pp-dr-example-frame { height: 460px; }
+  }
+
   .pp-dr-state {
     margin: 0.9em 0 0;
     font-size: 0.93em;
@@ -2949,25 +2981,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     Get the full report on this house
                   </button>
                   <p class="pp-dr-note">
-                    Included with Pro — you have
-                    {{ desk_allowance.remaining }} of
-                    {{ desk_allowance.total }} left. Within
+                    Included with Pro — {{ desk_allowance.remaining }} of this
+                    month's {{ desk_allowance.per_month }} left. Within
                     {{ turnaround_days|default:3 }} working days.
                   </p>
                   <p class="pp-dr-state" id="drMsg" hidden></p>
                 </form>
-              {% elif desk_allowance.blocked_by == "cooldown" %}
-                <p class="pp-dr-state">
-                  One report a month — your next one is available in
-                  {{ desk_allowance.days_until_next }}
-                  day{{ desk_allowance.days_until_next|pluralize }}, and you have
-                  {{ desk_allowance.remaining }} of {{ desk_allowance.total }}
-                  left.
-                </p>
               {% elif desk_allowance.blocked_by == "exhausted" %}
                 <p class="pp-dr-state">
-                  You've used all {{ desk_allowance.total }} reports included with
-                  Pro. Email us if you need another —
+                  You've used all {{ desk_allowance.per_month }} of this month's
+                  reports.{% if desk_allowance.days_until_next %} The next one is
+                  available in {{ desk_allowance.days_until_next }}
+                  day{{ desk_allowance.days_until_next|pluralize }}.{% endif %}
+                  If it can't wait, email
                   <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.
                 </p>
               {% else %}
@@ -2976,14 +3002,36 @@ document.addEventListener('DOMContentLoaded', () => {
                   Unlock with Pro — {{ desk_report_total }} reports included
                 </a>
                 <p class="pp-dr-note">
-                  {{ pro_price }}, cancel any time. One report a month, up to
-                  {{ desk_report_total }}.
+                  {{ pro_price }}, cancel any time. {{ desk_report_total }} reports
+                  every month, on whichever houses you're serious about.
                 </p>
               {% endif %}
 
-              <a class="pp-deskreport-link" href="{% url 'desk_report_example' %}">
-                See a full report on another house
-              </a>
+              {% comment %}
+                A complete report, on a different house, in full.
+
+                An iframe rather than an include: the report is a whole document
+                with its own typography and its own light/dark handling, and
+                inlining it would put two stylesheets in a fight neither can win.
+                Inside <details> and lazy-loaded, so it costs nothing until
+                somebody asks for it — which is also the honest order, since the
+                findings above are about the house they are actually looking at.
+              {% endcomment %}
+              <details class="pp-dr-example">
+                <summary>See a complete report, on another house</summary>
+                <p class="pp-dr-example-note">
+                  A real listing, reported in full — findings, price against the
+                  local market, the published record, and the questions we send
+                  you to put to the agent. Yours looks like this.
+                </p>
+                <iframe class="pp-dr-example-frame"
+                        src="{% url 'desk_report_example' %}"
+                        title="A complete example desk report"
+                        loading="lazy"></iframe>
+                <a class="pp-deskreport-link"
+                   href="{% url 'desk_report_example' %}" target="_blank"
+                   rel="noopener">Open it in its own tab</a>
+              </details>
             </div>
             {% endif %}
 
