@@ -1091,6 +1091,38 @@ class DeskReportOfferTests(TestCase):
         self.assertIn(f'value="{self.listing.pk}"', body)
 
 
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE_LABEL="US$39")
+class DeskReportOnPropertyPageTests(TestCase):
+    """The property page is where most orders should start, so the link has to be
+    on it, priced, and carrying the listing through."""
+
+    def setUp(self):
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        self.listing = Property.objects.create(
+            url="https://example.com/onpage", title="A house in Oita",
+            price=1200, floor_plan="3LDK", location="Oita Prefecture",
+        )
+
+    def test_the_panel_links_to_the_offer_with_this_listing(self):
+        page = self.client.get(f"/japanese-houses/{self.listing.pk}/")
+        self.assertEqual(page.status_code, 200)
+        body = page.content.decode()
+        self.assertIn(f"/desk-report/?listing={self.listing.pk}", body)
+        self.assertIn("US$39", body)
+        self.assertIn("/desk-report/example/", body)
+
+    def test_the_panel_is_not_hidden(self):
+        """Unlike the inspection panel below it, this one is visible without
+        opening the buying steps — and it needs a flex order, or the mobile
+        layout floats it above the gallery."""
+        body = self.client.get(
+            f"/japanese-houses/{self.listing.pk}/"
+        ).content.decode()
+        panel = body[body.index('class="pp-panel pp-deskreport"'):][:400]
+        self.assertNotIn("hidden", panel)
+        self.assertIn("#pp-layout .pp-deskreport { order: 6; }", body)
+
+
 @override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE="39.00",
                    DESK_REPORT_CURRENCY="USD")
 class DeskReportOrderTests(TestCase):

@@ -1666,6 +1666,53 @@ document.addEventListener('DOMContentLoaded', () => {
   /* Stated outright rather than left to the UA sheet: main.css is an aggressive
      theme and a `display` on the element would beat the browser's built-in
      [hidden] rule, leaving a "hidden" panel on screen. */
+  /* Desk report panel. Deliberately quieter than the newsletter card and the
+     Pro gate: it is a real offer, but it must not out-shout the enquiry CTA that
+     step 1 leads with. Colours are stated outright for the same reason the step
+     links state theirs — main.css is a dark theme and styles bare <a>. */
+  .pp-deskreport .pp-deskreport-eyebrow {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.78em;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mhj-secondary);
+    margin: 0 0 0.4em;
+  }
+  .pp-deskreport h3 { font-size: 1.2em; margin: 0 0 0.5em; }
+  .pp-deskreport .pp-deskreport-copy {
+    margin: 0 0 1em;
+    max-width: 54ch;
+  }
+  .pp-deskreport-btn {
+    display: inline-block;
+    font-family: 'Work Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.95em;
+    line-height: 1.2;
+    padding: 0.7em 1.15em;
+    border: 0;
+    border-radius: 10px;
+    background: var(--mhj-primary);
+    color: #fff;
+    text-decoration: none;
+  }
+  .pp-deskreport-btn:hover { background: var(--mhj-primary-dark, #1f4a6d); color: #fff; }
+  .pp-deskreport-link {
+    display: inline-block;
+    margin-left: 1em;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.92em;
+    font-weight: 600;
+    color: var(--mhj-primary);
+    border-bottom: 0;
+    text-decoration: none;
+  }
+  .pp-deskreport-link:hover { text-decoration: underline; }
+  @media (max-width: 520px) {
+    .pp-deskreport-link { display: block; margin: 0.8em 0 0; }
+  }
+
   .pp-inspect[hidden] { display: none; }
   .pp-inspect .pp-inspect-eyebrow {
     margin: 0 0 0.4em;
@@ -2039,6 +2086,13 @@ document.addEventListener('DOMContentLoaded', () => {
     #pp-layout .pp-gallery { order: 4; }
     #pp-layout .pp-details { order: 5; }
     #pp-layout .pp-cta     { order: 6; }
+    /* Both of these follow the buying block, so they share its order value and
+       let DOM order separate them. Without an order they default to 0 and jump
+       above the gallery — which is where the desk report panel first landed, and
+       where the inspection panel has been landing unnoticed all along, because
+       it is hidden until step 3 asks for it. */
+    #pp-layout .pp-deskreport { order: 6; }
+    #pp-layout .pp-inspect { order: 6; }
     #pp-layout .pp-newsletter { order: 7; }
     /* Only the order here. The spacing and rule come from the
        .related-properties-container block above, whose !important beats this
@@ -2750,6 +2804,43 @@ document.addEventListener('DOMContentLoaded', () => {
                 <small>Congratulations! Your new home is ready for you!</small>
               </div>
             </details>
+
+            {% comment %}
+              Desk report — the paid product that needs no access.
+
+              Visible by default, unlike the inspection panel below it, because
+              the two sit at different points in the journey: this answers
+              "should I offer at all", which is a question someone has while
+              still reading the listing, whereas an inspection is for a house
+              they have nearly decided on.
+
+              It is also the honest ladder. US$39 of desk research on a listing
+              anyone can read, then — only if they are still interested — an
+              inspection that costs several hundred and needs the agent to open
+              the door. Offering the expensive one first would be the wrong way
+              round.
+
+              A link, not a form: the offer page carries the example, and nobody
+              should be asked to pay before seeing what they get.
+            {% endcomment %}
+            <div class="pp-panel pp-deskreport">
+              <p class="pp-deskreport-eyebrow">Before you offer</p>
+              <h3>What this listing does not tell you</h3>
+              <p class="pp-deskreport-copy">
+                Whether the house can legally be rebuilt, whether the water comes
+                from a well, whether the price makes sense for the area. We check
+                all of it against the listing, the municipal rules for that
+                parcel and our own {{ inventory_size|default:"1,500+" }}
+                comparable properties, and send you a written report.
+              </p>
+              <a class="pp-deskreport-btn"
+                 href="{% url 'desk_report_offer' %}?listing={{ property.pk }}">
+                Get a desk report — {{ desk_report_price }}
+              </a>
+              <a class="pp-deskreport-link" href="{% url 'desk_report_example' %}">
+                See a real example first
+              </a>
+            </div>
 
             {% comment %}
               Inspection request — a lead, not a sale.

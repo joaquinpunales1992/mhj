@@ -786,6 +786,7 @@ def property_detail(request, pk, user_just_registered=0):
             "saves_count": property.saved_by.count(),
             "pro_price": settings.PRO_PRICE_LABEL,
             "free_limit": settings.VIEW_LIMIT_FREE,
+            "desk_report_price": settings.DESK_REPORT_PRICE_LABEL,
         },
     )
 
