@@ -1,5 +1,13 @@
 <!doctype html>
-<html lang="en">
+{% comment %}
+  data-theme="light" when this is served as a page on the site: the site is a
+  light design, and an embed that follows the visitor's OS into dark mode reads
+  as a foreign object dropped into the listing. The stylesheet's dark blocks are
+  guarded on :root:not([data-theme="light"]), so this pins it. The file written
+  by `manage.py desk_report` has no such flag and stays theme-aware, which is
+  right for something read on its own or printed.
+{% endcomment %}
+<html lang="en"{% if force_light %} data-theme="light"{% endif %}>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -391,7 +399,7 @@
   <dl class="docket">
     <div><dt>Asking price</dt><dd>{{ property.get_price_for_front }}</dd></div>
     <div><dt>¥ price</dt><dd>{{ property.price|floatformat:0 }}万円</dd></div>
-    {% if property.construction_date %}<div><dt>Built</dt><dd>{{ property.construction_date }}</dd></div>{% endif %}
+    {% if built %}<div><dt>Built</dt><dd>{{ built }}</dd></div>{% endif %}
     {% if building_m2 %}<div><dt>Building</dt><dd>{{ building_m2|floatformat:2 }} m²</dd></div>{% endif %}
     {% if land_m2 %}<div><dt>Land</dt><dd>{{ land_m2|floatformat:2 }} m²</dd></div>{% endif %}
     <div><dt>Report date</dt><dd>{{ report_date|date:"j M Y" }}</dd></div>

@@ -1350,3 +1350,81 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         body = self.client.get(f"/japanese-houses/{blank.pk}/").content.decode()
         self.assertIn('id="deskreport"', body)
         self.assertIn("Water, sewer and gas are not disclosed", body)
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_SAMPLE_PK=0,
+                   DESK_REPORT_PRO_ALLOWANCE=3)
+class DeskReportExampleTests(TestCase):
+    """The worked example — the page the property panel frames.
+
+    It is the only proof a visitor has of what Pro buys, so it renders the real
+    generator rather than a mock-up, and the framing header matters as much as
+    the content: without it the embed shows "refused to connect" and nothing
+    about the page itself looks wrong.
+    """
+
+    def setUp(self):
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        from django.core.cache import cache
+        cache.clear()
+        self.listing = Property.objects.create(
+            url="https://www.homes.co.jp/kodate/example/",
+            title="Detached house in Yokose, Oita City", price=2249,
+            floor_plan="3LDK", location="Yokoze, Oita City, Oita Prefecture",
+            building_area="110.78㎡", land_area="289.85㎡",
+            construction_date="1976年7月（築49年）",
+            city_planning="Urbanization control area",
+            land_rights="Ownership", land_category="Residence", equipment="",
+            road_condition="East 5.8m private road", handover="July 2025",
+        )
+
+    def test_it_permits_being_framed_by_our_own_pages(self):
+        """Django's clickjacking default is DENY, which refuses even same-origin
+        frames. This is the header that makes the embed work at all."""
+        page = self.client.get("/desk-report/example/")
+        self.assertEqual(page.headers["X-Frame-Options"], "SAMEORIGIN")
+
+    def test_the_framing_header_survives_the_page_cache(self):
+        self.client.get("/desk-report/example/")
+        cached = self.client.get("/desk-report/example/")
+        self.assertEqual(cached.headers["X-Frame-Options"], "SAMEORIGIN")
+
+    def test_it_is_the_real_generator_output(self):
+        body = self.client.get("/desk-report/example/").content.decode()
+        self.assertIn("Detached house in Yokose", body)
+        self.assertIn("Inside an urbanization control area", body)
+        self.assertIn("都市計画", body)
+        self.assertIn("Take these to the agent", body)
+
+    def test_it_opens_with_a_verdict_composed_from_the_findings(self):
+        body = self.client.get("/desk-report/example/").content.decode()
+        self.assertIn("whether the city will permit a dwelling to be rebuilt",
+                      body)
+
+    def test_it_reads_as_finished_not_as_a_draft(self):
+        body = self.client.get("/desk-report/example/").content.decode()
+        self.assertIn("Example report", body)
+        self.assertNotIn("Not for issue", body)
+        self.assertIn("What a person adds to this", body)
+
+    def test_it_survives_an_empty_inventory(self):
+        Property.objects.all().delete()
+        from django.core.cache import cache
+        cache.clear()
+        self.assertEqual(self.client.get("/desk-report/example/").status_code, 200)
+
+    def test_a_pinned_sample_wins(self):
+        other = Property.objects.create(
+            url="https://example.com/pinned", title="Pinned example house",
+            price=800, floor_plan="2DK", location="Oita Prefecture",
+        )
+        from django.core.cache import cache
+        cache.clear()
+        with override_settings(DESK_REPORT_SAMPLE_PK=other.pk):
+            body = self.client.get("/desk-report/example/").content.decode()
+        self.assertIn("Pinned example house", body)
+
+    def test_the_offer_page_states_the_monthly_allowance(self):
+        body = self.client.get("/desk-report/").content.decode()
+        self.assertIn("3 reports", body)
+        self.assertNotIn("US$39", body)

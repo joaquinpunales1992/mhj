@@ -85,8 +85,19 @@ _SEISMIC_WORK = r"耐震|earthquake[- ]?resist|seismic"
 _NO_VALUE = {"", "-", "—", "無", "なし", "none", ".", ","}
 
 
+# Link text the scraper swallowed into the field it was next to. 225 of 1,583
+# construction dates end in "View renovation information", which is a button on
+# the source page, not a fact about the house — and it renders in the report's
+# headline docket, where it is the first thing anyone sees.
+_SCRAPED_UI_TEXT = re.compile(
+    r"\s*(?:View|See|Click)\s+[a-z ]{0,30}(?:information|details|more)\s*$",
+    re.I,
+)
+
+
 def _clean(value):
-    return (value or "").strip()
+    """Trim a scraped value for display, including the page furniture."""
+    return _SCRAPED_UI_TEXT.sub("", (value or "").strip()).strip(" ·,-")
 
 
 def _has_value(value):
@@ -678,6 +689,9 @@ def build_report(property):
 
     return {
         "property": property,
+        # Cleaned for the docket at the top of the report: the raw value often
+        # ends in the source page's own button text.
+        "built": _clean(property.construction_date),
         "findings": findings,
         "counts": counts,
         "blocking": [f for f in findings

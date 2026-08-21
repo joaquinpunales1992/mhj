@@ -31,6 +31,7 @@ from django.shortcuts import render
 from django.urls import reverse
 from django.utils import timezone
 from django.views.decorators.cache import cache_page
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
 from inventory.desk_report import build_report, draft_verdict
@@ -200,6 +201,11 @@ def desk_report_offer(request):
     ))
 
 
+# Framed by the property page's expandable panel, so it has to permit framing
+# from our own origin: Django's clickjacking middleware defaults to DENY, which
+# refuses even same-origin frames and shows the visitor "refused to connect".
+# Outside cache_page so the header is applied to cached responses too.
+@xframe_options_sameorigin
 @cache_page(60 * 15)
 def desk_report_example(request):
     """The example, rendered by the generator that produces the real thing.
@@ -221,6 +227,8 @@ def desk_report_example(request):
         # offer page instead, so the example shows the finished shape.
         draft=False,
         sample=True,
+        # Served as part of a light-themed site, not as a standalone document.
+        force_light=True,
         # The example reads as a finished report, so it carries a verdict. It is
         # composed from the findings themselves — see draft_verdict — rather than
         # written for one listing, because the example rotates.

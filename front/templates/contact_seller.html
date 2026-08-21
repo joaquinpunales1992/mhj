@@ -1682,7 +1682,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-deskreport h3 { font-size: 1.2em; margin: 0 0 0.5em; }
   .pp-deskreport .pp-deskreport-copy {
     margin: 0 0 1em;
-    max-width: 54ch;
+    max-width: 62ch;
   }
   /* The finding list. Severity is carried by a left stripe and a small label
      rather than by colour alone, so it survives being read in greyscale and by
@@ -1694,7 +1694,10 @@ document.addEventListener('DOMContentLoaded', () => {
     display: flex;
     flex-direction: column;
     gap: 0.45em;
-    max-width: 60ch;
+    /* Full panel width. Capped at a reading measure these read as a narrow
+       column stranded in a wide card, because each row is one short line rather
+       than a paragraph — the rows want to align with the card's edges the way
+       table rows do. */
   }
   .pp-dr-finding {
     display: flex;
@@ -1749,7 +1752,7 @@ document.addEventListener('DOMContentLoaded', () => {
      the listing page does not grow by a whole document. */
   .pp-dr-example-frame {
     width: 100%;
-    height: 620px;
+    height: 760px;
     border: 1px solid var(--mhj-border);
     border-radius: 10px;
     background: #fff;
