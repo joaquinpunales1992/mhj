@@ -1393,8 +1393,11 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         asked for."""
         body = self.page()
         self.assertIn("See a complete report, on another house", body)
-        self.assertIn('src="/desk-report/example/"', body)
-        self.assertIn('loading="lazy"', body)
+        # A dialog, and its iframe carries data-src rather than src: a visit that
+        # never opens the example must not fetch a whole second document.
+        self.assertIn('id="drExampleModal"', body)
+        self.assertIn('data-src="/desk-report/example/"', body)
+        self.assertNotIn('<iframe id="drExampleFrame" src=', body)
 
     def test_a_sparse_listing_still_has_something_to_report(self):
         """A listing that publishes almost nothing is not a listing with nothing

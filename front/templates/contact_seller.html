@@ -1778,36 +1778,40 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-deskreport .pp-dr-locked em { font-style: normal; font-weight: 600; }
 
   .pp-dr-example { margin-top: 1.4em; }
-  .pp-dr-example > summary {
-    cursor: pointer;
-    font-family: var(--font-body);
-    font-weight: 600;
-    font-size: 0.95em;
-    color: var(--mhj-primary);
-    list-style: none;
-  }
-  .pp-dr-example > summary::-webkit-details-marker { display: none; }
-  .pp-dr-example > summary::before { content: '▸ '; }
-  .pp-dr-example[open] > summary::before { content: '▾ '; }
   .pp-dr-example-note {
-    margin: 0.8em 0;
+    margin: 0 0 0.7em;
     font-size: 0.92em;
     color: var(--mhj-secondary);
-    max-width: 58ch;
+    /* Was 58ch, which set this sentence on four short lines under a full-width
+       panel. It is a lead-in to the button beneath it rather than body copy, so
+       it runs closer to the panel's own measure. */
+    max-width: 88ch;
   }
-  /* Tall enough to read rather than to peek at, and scrollable inside itself so
-     the listing page does not grow by a whole document. */
-  .pp-dr-example-frame {
-    width: 100%;
-    height: 760px;
-    border: 1px solid var(--mhj-border);
-    border-radius: 10px;
-    background: #fff;
-    display: block;
+  /* The trigger is a <button> because it opens a dialog, but it should read as
+     the link it replaced. main.css gives buttons a fixed height, a background
+     and uppercase tracking; all reset here. */
+  .pp-dr-example button.pp-deskreport-link {
+    background: none;
+    border: 0;
+    padding: 0;
+    height: auto;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 600;
+    font-size: 0.92em;
+    color: var(--mhj-primary);
+    letter-spacing: normal;
+    text-transform: none;
   }
-  @media (max-width: 640px) {
-    .pp-dr-example-frame { height: 460px; }
-  }
+  .pp-dr-example button.pp-deskreport-link::before { content: '\25B8  '; }
+
+  /* The example dialog reuses .map-dialog's frame, header and close button; only
+     the size differs, because a report is a tall document rather than a map. */
+  /* Compound selector, not .dr-dialog[open]: .map-dialog[open] sets max-width
+     too and its block sits later in the document, so at equal specificity it
+     won and this dialog came out at the map's 900px. */
+  .map-dialog.dr-dialog[open] { max-width: 1040px; }
+  .dr-dialog #drExampleFrame { height: min(78dvh, 900px); }
 
   .pp-dr-state {
     margin: 0.9em 0 0;
@@ -3108,32 +3112,34 @@ document.addEventListener('DOMContentLoaded', () => {
   
                 {% comment %}
                   A complete report, on a different house, in full.
-  
+
                   An iframe rather than an include: the report is a whole document
                   with its own typography and its own light/dark handling, and
                   inlining it would put two stylesheets in a fight neither can win.
-                  Inside <details> and lazy-loaded, so it costs nothing until
-                  somebody asks for it — which is also the honest order, since the
-                  findings above are about the house they are actually looking at.
+                  It opens in a dialog, and its src is only set on first open, so
+                  the findings above — which are about the house the reader is
+                  actually looking at — stay the page's own content.
                 {% endcomment %}
                 </div>
               </div>
 
-              <details class="pp-dr-example">
-                <summary>See a complete report, on another house</summary>
+              {% comment %}
+                A dialog rather than an inline collapse. Opened in place it
+                pushed the rest of the listing down by 760px and put a second
+                scrolling document inside the page's own; a modal shows the
+                report at the size it was designed for and gives the page back on
+                Escape. The iframe's src is set on first open, so a visit that
+                never asks for the example never fetches it.
+              {% endcomment %}
+              <div class="pp-dr-example">
                 <p class="pp-dr-example-note">
                   A real listing, reported in full — findings, price against the
                   local market, the published record, and the questions we send
                   you to put to the agent. Yours looks like this.
                 </p>
-                <iframe class="pp-dr-example-frame"
-                        src="{% url 'desk_report_example' %}"
-                        title="A complete example desk report"
-                        loading="lazy"></iframe>
-                <a class="pp-deskreport-link"
-                   href="{% url 'desk_report_example' %}" target="_blank"
-                   rel="noopener">Open it in its own tab</a>
-              </details>
+                <button type="button" class="pp-deskreport-link"
+                        data-open-dr-example>See a complete report, on another house</button>
+              </div>
             </div>
             {% endif %}
 
@@ -3291,6 +3297,18 @@ document.addEventListener('DOMContentLoaded', () => {
     requested on page load regardless of whether anyone opened the map. The
     src now genuinely lives in data-src and is set on first open.
   {% endcomment %}
+  <dialog id="drExampleModal" class="map-dialog dr-dialog"
+          aria-labelledby="drExampleLabel">
+    <header class="map-dialog-head">
+      <h4 id="drExampleLabel">Example desk report — a real listing, in full</h4>
+      <button type="button" class="map-dialog-close" data-close-dr-example
+              aria-label="Close">&times;</button>
+    </header>
+    <iframe id="drExampleFrame" data-src="{% url 'desk_report_example' %}"
+            title="A complete example desk report"
+            style="border:0; display:block; width:100%;"></iframe>
+  </dialog>
+
   <dialog id="mapModal" class="map-dialog" aria-labelledby="mapModalLabel">
     <header class="map-dialog-head">
       <h4 id="mapModalLabel">{{ property.display_location }}</h4>
@@ -3382,9 +3400,13 @@ document.addEventListener('DOMContentLoaded', () => {
       width: auto;
       text-transform: none;
       letter-spacing: normal;
-      color: var(--mhj-secondary);
+      /* !important like every other declaration in this rule: main.css sets
+         `color: #fff !important` on buttons site-wide, so without it the "×" was
+         white on a white header — an invisible close button on both this dialog
+         and the map one. */
+      color: var(--mhj-secondary) !important;
     }
-    .map-dialog-close:hover { color: var(--mhj-foreground); }
+    .map-dialog-close:hover { color: var(--mhj-foreground) !important; }
     .map-dialog-close:focus-visible {
       outline: 2px solid var(--mhj-primary) !important;
       outline-offset: 2px;
@@ -3418,6 +3440,27 @@ document.addEventListener('DOMContentLoaded', () => {
       dialog.addEventListener('click', function (e) {
         if (e.target === dialog) dialog.close();
       });
+
+      // --- The example desk report, in the same shape --------------------
+      var drModal = document.getElementById('drExampleModal');
+      var drFrame = document.getElementById('drExampleFrame');
+      if (drModal && drFrame) {
+        document.querySelectorAll('[data-open-dr-example]').forEach(function (el) {
+          el.addEventListener('click', function () {
+            // First open only: a visit that never asks for the example should
+            // never fetch a whole second document.
+            if (!drFrame.src) drFrame.src = drFrame.dataset.src;
+            if (typeof drModal.showModal === 'function') drModal.showModal();
+            else window.open(drFrame.dataset.src, '_blank');
+          });
+        });
+        drModal.querySelectorAll('[data-close-dr-example]').forEach(function (el) {
+          el.addEventListener('click', function () { drModal.close(); });
+        });
+        drModal.addEventListener('click', function (e) {
+          if (e.target === drModal) drModal.close();
+        });
+      }
     });
   </script>
 
