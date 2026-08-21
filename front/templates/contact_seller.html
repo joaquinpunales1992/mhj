@@ -1690,7 +1690,11 @@ document.addEventListener('DOMContentLoaded', () => {
      Pro gate: it is a real offer, but it must not out-shout the enquiry CTA that
      step 1 leads with. Colours are stated outright for the same reason the step
      links state theirs — main.css is a dark theme and styles bare <a>. */
-  .pp-deskreport .pp-deskreport-eyebrow {
+  /* Both panels' eyebrows, one rule. They were 0.78em/0.08em and
+     0.72em/0.11em — close enough to look like a mistake rather than a
+     distinction. */
+  .pp-deskreport .pp-deskreport-eyebrow,
+  .pp-inspect .pp-inspect-eyebrow {
     font-family: var(--font-body);
     font-size: 0.78em;
     font-weight: 600;
@@ -1839,7 +1843,7 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   /* Two columns while the panel is wide enough for both, one when it is not.
      The gap is generous because the two halves are doing different jobs. */
-  .pp-dr-cta-row {
+  .pp-cta-row {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
@@ -1849,9 +1853,9 @@ document.addEventListener('DOMContentLoaded', () => {
      the paragraph to 379px — narrower than it is when stacked, which is the
      opposite of the point. Now they only sit side by side when there is room for
      a readable paragraph beside the button. */
-  .pp-dr-cta-copy { flex: 1 1 34em; min-width: 0; }
-  .pp-dr-cta-copy > p:last-child { margin-bottom: 0; }
-  .pp-dr-actions { flex: 0 1 24em; min-width: 0; }
+  .pp-cta-copy { flex: 1 1 34em; min-width: 0; }
+  .pp-cta-copy > p:last-child { margin-bottom: 0; }
+  .pp-cta-actions { flex: 0 1 24em; min-width: 0; }
 
   /* em, not rem: the root on this page is 10px, so the 34rem this used to say
      was 340px rather than the ~540px it was meant to be — which is why the note
@@ -1896,22 +1900,18 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   .pp-inspect[hidden] { display: none; }
-  .pp-inspect .pp-inspect-eyebrow {
-    margin: 0 0 0.4em;
-    font-size: 0.72em;
-    font-weight: 600;
-    letter-spacing: 0.11em;
-    text-transform: uppercase;
-    color: var(--mhj-secondary);
-  }
   .pp-inspect h3 { margin: 0 0 0.5em; }
-  .pp-inspect .pp-inspect-copy { margin: 0 0 0.8em; max-width: 54ch; }
+  /* Same measure as the desk report's paragraph: two panels sitting one above
+     the other should not wrap at different widths. */
+  .pp-inspect .pp-inspect-copy { margin: 0 0 0.8em; max-width: 72ch; }
   .pp-inspect .pp-inspect-small { font-size: 0.9em; color: var(--mhj-secondary); }
   /* colour stated explicitly: main.css is a dark theme and styles bare <label>
      white, so on this white card the label text was invisible while the
      `(optional)` span — which had its own colour — showed. Same trap as the
      share icons, which came out white on a white pill. Any new control on this
      page has to name its own colour. */
+  /* em, not rem: the root on this page is 10px. Matches .pp-dr-form. */
+  .pp-inspect-form { max-width: 38em; }
   .pp-inspect-form label {
     display: block;
     font-size: 0.85em;
@@ -1920,6 +1920,9 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--mhj-foreground);
   }
   .pp-inspect-form label span { font-weight: 400; color: var(--mhj-secondary); }
+  /* No top margin on the first label, so this column starts level with the
+     paragraph beside it rather than 0.8em lower. */
+  .pp-inspect-form > label:first-child { margin-top: 0; }
   .pp-inspect-form input,
   .pp-inspect-form textarea {
     width: 100%; box-sizing: border-box; border: 1px solid var(--mhj-border);
@@ -3089,8 +3092,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 put something next to it. Wraps to one column when the panel is
                 too narrow to hold both.
               {% endcomment %}
-              <div class="pp-dr-cta-row">
-                <div class="pp-dr-cta-copy">
+              <div class="pp-cta-row">
+                <div class="pp-cta-copy">
                 <p class="pp-deskreport-copy pp-dr-locked">
                   {% if desk_preview.blocking %}
                     {{ desk_preview.blocking|length }} of these
@@ -3110,7 +3113,7 @@ document.addEventListener('DOMContentLoaded', () => {
                   good news and must not read like a refusal.
                 {% endcomment %}
                 </div>
-                <div class="pp-dr-actions">
+                <div class="pp-cta-actions">
                 {% if desk_already_requested %}
                   <p class="pp-dr-state pp-dr-state-good">
                     We're preparing your report on this property — it'll reach you
@@ -3218,18 +3221,28 @@ document.addEventListener('DOMContentLoaded', () => {
             <div class="pp-panel pp-inspect" id="inspect" hidden>
               <p class="pp-inspect-eyebrow">Before you commit</p>
               <h3>Have this house professionally inspected</h3>
-              <p class="pp-inspect-copy">
-                An akiya can look sound and still need the roof, the foundations or
-                the wiring redone. A qualified Japanese inspector can look at this
-                property and tell you what you would actually be taking on before
-                you make an offer.
-              </p>
-              <p class="pp-inspect-copy pp-inspect-small">
-                Tell us you're interested and we'll check that access can be
-                arranged, then come back with a price. Nothing is charged now,
-                and asking commits you to nothing.
-              </p>
-
+              {% comment %}
+                Laid out like the desk report panel above: explanation on the
+                left at a reading measure, the thing you do with it on the right,
+                stacking when the card is too narrow for both. The two panels sit
+                one above the other, so a different arrangement in each read as
+                two designs.
+              {% endcomment %}
+              <div class="pp-cta-row">
+                <div class="pp-cta-copy">
+                  <p class="pp-inspect-copy">
+                    An akiya can look sound and still need the roof, the
+                    foundations or the wiring redone. A qualified Japanese
+                    inspector can look at this property and tell you what you
+                    would actually be taking on before you make an offer.
+                  </p>
+                  <p class="pp-inspect-copy pp-inspect-small">
+                    Tell us you're interested and we'll check that access can be
+                    arranged, then come back with a price. Nothing is charged
+                    now, and asking commits you to nothing.
+                  </p>
+                </div>
+                <div class="pp-cta-actions">
               <form id="inspectForm" class="pp-inspect-form">
                 {% if not user.is_authenticated and not user_email %}
                   <label for="inspEmail">Your email</label>
@@ -3244,6 +3257,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 </button>
                 <p class="pp-inspect-note" id="inspMsg" hidden></p>
               </form>
+                </div>
+              </div>
             </div>
 
             {% comment %}
