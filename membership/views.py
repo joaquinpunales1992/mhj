@@ -160,6 +160,7 @@ def upgrade_pro(request):
             "subscription": subscription,
             "already_pro": bool(subscription and subscription.is_active),
             "free_limit": settings.VIEW_LIMIT_FREE,
+            "desk_report_total": settings.DESK_REPORT_PRO_ALLOWANCE,
             "next_url": request.GET.get("next", ""),
         },
     )

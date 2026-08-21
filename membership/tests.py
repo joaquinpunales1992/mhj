@@ -1019,250 +1019,308 @@ class SignupTests(TestCase):
         self.assertIn("_auth_user_id", c.session)
 
 
-@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE="39.00",
-                   DESK_REPORT_PRICE_LABEL="US$39", DESK_REPORT_SAMPLE_PK=0)
-class DeskReportOfferTests(TestCase):
-    """Selling the report: the price, the example, and the order flow.
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_SAMPLE_PK=0,
+                   DESK_REPORT_PRO_ALLOWANCE=3, DESK_REPORT_COOLDOWN_DAYS=30)
+class DeskReportAllowanceTests(TestCase):
+    """Who may claim a report, and when.
 
-    The example page matters more than it looks: it is the only proof a buyer has
-    of what {price} buys, so it renders the real generator rather than a
-    mock-up — and a test that it stays wired to the generator is what stops the
-    two drifting apart.
+    Two limits with different jobs: one a month paces work we have to actually
+    do, three in total is the value of the subscription. The tests that matter
+    are the refusals and the one refusal that is good news — a cooldown has to
+    read as "yours in six days", not as "no".
     """
 
     def setUp(self):
-        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
-        from django.core.cache import cache
-        cache.clear()
+        self.user = User.objects.create_user("pro@example.com",
+                                             email="pro@example.com")
         self.listing = Property.objects.create(
-            url="https://www.homes.co.jp/kodate/example/",
-            title="Detached house in Yokose, Oita City", price=2249,
-            floor_plan="3LDK", location="Yokoze, Oita City, Oita Prefecture",
-            building_area="110.78㎡", land_area="289.85㎡",
-            construction_date="1976年7月（築49年）",
-            city_planning="Urbanization control area",
-            land_rights="Ownership", land_category="Residence", equipment="",
-            road_condition="East 5.8m private road", handover="July 2025",
-        )
-
-    def test_the_offer_page_states_the_price(self):
-        page = self.client.get("/desk-report/")
-        self.assertEqual(page.status_code, 200)
-        body = page.content.decode()
-        self.assertIn("US$39", body)
-        self.assertIn("Read the example report", body)
-
-    def test_the_example_is_the_real_generator_output(self):
-        """Not a screenshot and not prose — the findings the rules produce."""
-        page = self.client.get("/desk-report/example/")
-        self.assertEqual(page.status_code, 200)
-        body = page.content.decode()
-        self.assertIn("Detached house in Yokose", body)
-        self.assertIn("Inside an urbanization control area", body)
-        self.assertIn("Water, sewer and gas are not disclosed", body)
-        self.assertIn("都市計画", body)
-
-    def test_the_example_is_labelled_as_one_and_never_as_a_draft(self):
-        body = self.client.get("/desk-report/example/").content.decode()
-        self.assertIn("Example report", body)
-        self.assertNotIn("Not for issue", body)
-        self.assertIn("What a person adds to this", body)
-
-    def test_the_example_survives_an_empty_inventory(self):
-        Property.objects.all().delete()
-        from django.core.cache import cache
-        cache.clear()
-        self.assertEqual(self.client.get("/desk-report/example/").status_code, 200)
-
-    def test_a_pinned_sample_wins(self):
-        other = Property.objects.create(
-            url="https://example.com/pinned", title="Pinned example house",
-            price=800, floor_plan="2DK", location="Oita Prefecture",
-        )
-        from django.core.cache import cache
-        cache.clear()
-        with override_settings(DESK_REPORT_SAMPLE_PK=other.pk):
-            body = self.client.get("/desk-report/example/").content.decode()
-        self.assertIn("Pinned example house", body)
-
-    def test_ordering_from_a_property_page_prefills_that_listing(self):
-        body = self.client.get(f"/desk-report/?listing={self.listing.pk}").content.decode()
-        self.assertIn("Detached house in Yokose", body)
-        self.assertIn(f'value="{self.listing.pk}"', body)
-
-
-@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE_LABEL="US$39")
-class DeskReportOnPropertyPageTests(TestCase):
-    """The property page is where most orders should start, so the link has to be
-    on it, priced, and carrying the listing through."""
-
-    def setUp(self):
-        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
-        self.listing = Property.objects.create(
-            url="https://example.com/onpage", title="A house in Oita",
-            price=1200, floor_plan="3LDK", location="Oita Prefecture",
-        )
-
-    def test_the_panel_links_to_the_offer_with_this_listing(self):
-        page = self.client.get(f"/japanese-houses/{self.listing.pk}/")
-        self.assertEqual(page.status_code, 200)
-        body = page.content.decode()
-        self.assertIn(f"/desk-report/?listing={self.listing.pk}", body)
-        self.assertIn("US$39", body)
-        self.assertIn("/desk-report/example/", body)
-
-    def test_the_panel_is_not_hidden(self):
-        """Unlike the inspection panel below it, this one is visible without
-        opening the buying steps — and it needs a flex order, or the mobile
-        layout floats it above the gallery."""
-        body = self.client.get(
-            f"/japanese-houses/{self.listing.pk}/"
-        ).content.decode()
-        panel = body[body.index('class="pp-panel pp-deskreport"'):][:400]
-        self.assertNotIn("hidden", panel)
-        self.assertIn("#pp-layout .pp-deskreport { order: 6; }", body)
-
-
-@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_PRICE="39.00",
-                   DESK_REPORT_CURRENCY="USD")
-class DeskReportOrderTests(TestCase):
-    """Taking the money. Mirrors the consultation flow, including its rule that
-    only a captured payment counts."""
-
-    def setUp(self):
-        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
-        self.listing = Property.objects.create(
-            url="https://example.com/order", title="A house", price=1200,
+            url="https://example.com/allowance", title="A house", price=1200,
             floor_plan="3LDK", location="Oita Prefecture",
         )
 
-    def order(self, **fields):
-        payload = {"email": "buyer@example.com", "listing": self.listing.pk}
+    def make_pro(self, user=None):
+        Subscription.objects.create(
+            user=user or self.user, paypal_subscription_id=f"I-{(user or self.user).pk}",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+
+    def claim(self, when=None, status=None, listing=None):
+        from membership.models import DeskReportRequest
+
+        request = DeskReportRequest.objects.create(
+            user=self.user, email=self.user.email,
+            listing=listing if listing is not None else self.listing,
+            status=status or DeskReportRequest.STATUS_REQUESTED,
+        )
+        if when:
+            DeskReportRequest.objects.filter(pk=request.pk).update(created_at=when)
+            request.refresh_from_db()
+        return request
+
+    def allowance(self):
+        from membership.desk_report_allowance import allowance_for
+
+        return allowance_for(self.user)
+
+    def test_a_free_account_has_no_allowance(self):
+        allowance = self.allowance()
+        self.assertFalse(allowance["is_pro"])
+        self.assertFalse(allowance["can_claim"])
+        self.assertEqual(allowance["blocked_by"], "not_pro")
+
+    def test_an_anonymous_visitor_has_no_allowance(self):
+        from django.contrib.auth.models import AnonymousUser
+        from membership.desk_report_allowance import allowance_for
+
+        self.assertEqual(allowance_for(AnonymousUser())["blocked_by"], "not_pro")
+
+    def test_a_new_pro_member_can_claim_immediately(self):
+        self.make_pro()
+        allowance = self.allowance()
+        self.assertTrue(allowance["can_claim"])
+        self.assertEqual(allowance["remaining"], 3)
+
+    def test_a_second_claim_inside_the_month_is_a_cooldown_not_a_refusal(self):
+        self.make_pro()
+        self.claim()
+        allowance = self.allowance()
+        self.assertFalse(allowance["can_claim"])
+        self.assertEqual(allowance["blocked_by"], "cooldown")
+        self.assertEqual(allowance["remaining"], 2, "they still have two left")
+        self.assertTrue(1 <= allowance["days_until_next"] <= 30)
+
+    def test_the_cooldown_lifts_after_thirty_days(self):
+        self.make_pro()
+        self.claim(when=timezone.now() - timedelta(days=31))
+        self.assertTrue(self.allowance()["can_claim"])
+
+    def test_three_claims_exhaust_the_allowance_whatever_the_dates(self):
+        self.make_pro()
+        for months in (3, 2, 1):
+            self.claim(when=timezone.now() - timedelta(days=31 * months))
+        allowance = self.allowance()
+        self.assertEqual(allowance["used"], 3)
+        self.assertEqual(allowance["remaining"], 0)
+        self.assertEqual(allowance["blocked_by"], "exhausted")
+
+    def test_a_declined_request_gives_the_allowance_back(self):
+        """A listing we could not work on must not cost the member a report."""
+        from membership.models import DeskReportRequest
+
+        self.make_pro()
+        for months in (3, 2, 1):
+            self.claim(when=timezone.now() - timedelta(days=31 * months))
+        self.assertEqual(self.allowance()["remaining"], 0)
+
+        oldest = DeskReportRequest.objects.order_by("created_at").first()
+        oldest.status = DeskReportRequest.STATUS_DECLINED
+        oldest.save()
+        self.assertEqual(self.allowance()["remaining"], 1)
+
+    def test_a_delivered_report_still_counts(self):
+        from membership.models import DeskReportRequest
+
+        self.make_pro()
+        self.claim(when=timezone.now() - timedelta(days=60),
+                   status=DeskReportRequest.STATUS_DELIVERED)
+        self.assertEqual(self.allowance()["used"], 1)
+
+    def test_asking_twice_about_the_same_house_is_refused_without_cost(self):
+        from membership.desk_report_allowance import claim_error
+
+        self.make_pro()
+        self.claim(when=timezone.now() - timedelta(days=40))
+        error = claim_error(self.user, self.listing)
+        self.assertIn("already asked", error)
+        self.assertEqual(self.allowance()["remaining"], 2)
+
+    def test_staff_are_pro_for_this_too(self):
+        """user_is_pro treats staff as Pro; the allowance must agree rather than
+        quietly diverge from the rest of the metering."""
+        staff = User.objects.create_user("staff@example.com",
+                                         email="staff@example.com", is_staff=True)
+        from membership.desk_report_allowance import allowance_for
+
+        self.assertTrue(allowance_for(staff)["is_pro"])
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_SAMPLE_PK=0,
+                   DESK_REPORT_PRO_ALLOWANCE=3, DESK_REPORT_COOLDOWN_DAYS=30)
+class DeskReportClaimTests(TestCase):
+    """The endpoint the property page posts to."""
+
+    def setUp(self):
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        self.user = User.objects.create_user("pro@example.com",
+                                             email="pro@example.com")
+        self.listing = Property.objects.create(
+            url="https://example.com/claim", title="A house in Oita", price=1200,
+            floor_plan="3LDK", location="Oita Prefecture",
+        )
+
+    def make_pro(self):
+        Subscription.objects.create(
+            user=self.user, paypal_subscription_id="I-CLAIM",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+
+    def post(self, **fields):
+        payload = {"listing": self.listing.pk}
         payload.update(fields)
-        return self.client.post("/desk-report/order", payload)
+        return self.client.post("/api/request-desk-report", payload)
 
-    def test_an_order_sends_the_buyer_to_paypal_at_the_settings_price(self):
-        from membership.models import DeskReportOrder
+    def test_anonymous_is_refused(self):
+        self.assertEqual(self.post().status_code, 401)
 
-        with patch("membership.desk_reports.create_order",
-                   return_value=("ORDER-1", "https://paypal.test/approve")) as create:
-            response = self.order(notes="Can I run it as a guesthouse?")
+    def test_a_free_account_is_told_it_is_a_pro_feature(self):
+        self.client.force_login(self.user)
+        response = self.post()
+        self.assertEqual(response.status_code, 409)
+        self.assertIn("Pro", response.json()["error"])
+
+    def test_a_pro_member_can_claim_and_gets_the_count_back(self):
+        from membership.models import DeskReportRequest
+
+        self.make_pro()
+        self.client.force_login(self.user)
+        response = self.post(notes="Could I run it as a guesthouse?")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json()["redirect"], "https://paypal.test/approve")
-        self.assertEqual(str(create.call_args.kwargs["amount"]), "39.00")
+        self.assertEqual(response.json()["remaining"], 2)
+        claim = DeskReportRequest.objects.get()
+        self.assertEqual(claim.user, self.user)
+        self.assertEqual(claim.listing, self.listing)
+        self.assertEqual(claim.buyer_notes, "Could I run it as a guesthouse?")
+        self.assertTrue(claim.is_owed)
 
-        order = DeskReportOrder.objects.get()
-        self.assertEqual(order.status, DeskReportOrder.STATUS_PENDING)
-        self.assertEqual(order.paypal_order_id, "ORDER-1")
-        self.assertEqual(order.buyer_notes, "Can I run it as a guesthouse?")
+    def test_the_allowance_is_rechecked_at_claim_time(self):
+        """The button's state was decided when the page was rendered, and two
+        tabs can both show it enabled."""
+        from membership.models import DeskReportRequest
 
-    def test_a_price_from_the_browser_is_ignored(self):
-        """The amount is read from settings; a posted one must not reach PayPal."""
-        with patch("membership.desk_reports.create_order",
-                   return_value=("ORDER-2", "https://paypal.test/a")) as create:
-            self.order(amount="1.00", price="1.00")
-        self.assertEqual(str(create.call_args.kwargs["amount"]), "39.00")
-
-    def test_an_order_needs_an_email_and_a_property(self):
-        from membership.models import DeskReportOrder
-
-        self.assertEqual(self.order(email="not-an-email").status_code, 400)
-        response = self.client.post("/desk-report/order",
-                                    {"email": "buyer@example.com"})
-        self.assertEqual(response.status_code, 400)
-        self.assertFalse(DeskReportOrder.objects.exists())
-
-    def test_paypal_refusing_does_not_leave_a_live_order(self):
-        from membership.models import DeskReportOrder
-        from membership.paypal_orders import PayPalError
-
-        with patch("membership.desk_reports.create_order",
-                   side_effect=PayPalError("no")):
-            response = self.order()
-        self.assertEqual(response.status_code, 502)
-        self.assertEqual(DeskReportOrder.objects.get().status,
-                         DeskReportOrder.STATUS_CANCELLED)
-
-    def test_only_a_captured_payment_becomes_paid(self):
-        from membership.models import DeskReportOrder
-
-        order = DeskReportOrder.objects.create(
-            email="buyer@example.com", listing=self.listing,
-            paypal_order_id="ORDER-3", amount=Decimal("39.00"), currency="USD",
+        self.make_pro()
+        self.client.force_login(self.user)
+        self.assertEqual(self.post().status_code, 200)
+        second = Property.objects.create(
+            url="https://example.com/claim2", title="Another", price=900,
+            floor_plan="2DK", location="Oita Prefecture",
         )
-        approved_not_captured = {"paid": False, "capture_status": "PENDING",
-                                 "capture_id": "", "amount": None, "currency": None}
-        with patch("membership.desk_reports.capture_order",
-                   return_value=approved_not_captured):
-            page = self.client.get("/desk-report/ordered?token=ORDER-3")
-        self.assertEqual(page.status_code, 200)
-        order.refresh_from_db()
-        self.assertEqual(order.status, DeskReportOrder.STATUS_PENDING,
-                         "an uncaptured order must not become a paid one")
+        response = self.client.post("/api/request-desk-report",
+                                    {"listing": second.pk})
+        self.assertEqual(response.status_code, 409, "cooldown must be enforced")
+        self.assertEqual(DeskReportRequest.objects.count(), 1)
 
-    def test_a_captured_payment_marks_it_paid_and_emails_both_sides(self):
+    def test_claiming_emails_the_member_and_us(self):
         from django.core import mail
 
-        from membership.models import DeskReportOrder
+        self.make_pro()
+        self.client.force_login(self.user)
+        self.post()
+        self.assertEqual(len(mail.outbox), 2)
 
-        order = DeskReportOrder.objects.create(
-            email="buyer@example.com", listing=self.listing,
-            listing_location="Oita", paypal_order_id="ORDER-4",
-            amount=Decimal("39.00"), currency="USD",
-        )
-        captured = {"paid": True, "capture_status": "COMPLETED",
-                    "capture_id": "CAP-1", "amount": "39.00", "currency": "USD"}
-        with patch("membership.desk_reports.capture_order", return_value=captured):
-            page = self.client.get("/desk-report/ordered?token=ORDER-4")
+    def test_an_email_failure_does_not_lose_the_claim(self):
+        from membership.models import DeskReportRequest
 
-        self.assertContains(page, "Ordered")
-        order.refresh_from_db()
-        self.assertEqual(order.status, DeskReportOrder.STATUS_PAID)
-        self.assertEqual(order.paypal_capture_id, "CAP-1")
-        self.assertIsNotNone(order.paid_at)
-        self.assertTrue(order.is_owed, "paid and undelivered is the work queue")
-        self.assertEqual(len(mail.outbox), 2, "buyer confirmation and our notice")
-
-    def test_reloading_the_confirmation_does_not_capture_twice(self):
-        from membership.models import DeskReportOrder
-
-        DeskReportOrder.objects.create(
-            email="buyer@example.com", paypal_order_id="ORDER-5",
-            status=DeskReportOrder.STATUS_PAID, paid_at=timezone.now(),
-        )
-        with patch("membership.desk_reports.capture_order") as capture:
-            self.client.get("/desk-report/ordered?token=ORDER-5")
-        capture.assert_not_called()
-
-    def test_an_unknown_token_is_a_404_not_a_crash(self):
-        page = self.client.get("/desk-report/ordered?token=NOPE")
-        self.assertEqual(page.status_code, 404)
-
-    def test_cancelling_at_paypal_marks_the_order_cancelled(self):
-        from membership.models import DeskReportOrder
-
-        order = DeskReportOrder.objects.create(
-            email="buyer@example.com", paypal_order_id="ORDER-6",
-        )
-        page = self.client.get("/desk-report/cancelled?token=ORDER-6")
-        self.assertContains(page, "Cancelled")
-        order.refresh_from_db()
-        self.assertEqual(order.status, DeskReportOrder.STATUS_CANCELLED)
-
-    def test_an_email_failure_does_not_lose_a_paid_order(self):
-        from membership.models import DeskReportOrder
-
-        order = DeskReportOrder.objects.create(
-            email="buyer@example.com", paypal_order_id="ORDER-7",
-            amount=Decimal("39.00"), currency="USD",
-        )
-        captured = {"paid": True, "capture_status": "COMPLETED",
-                    "capture_id": "CAP-2", "amount": "39.00", "currency": "USD"}
-        with patch("membership.desk_reports.capture_order", return_value=captured), \
-             patch("membership.desk_reports._notify",
+        self.make_pro()
+        self.client.force_login(self.user)
+        with patch("membership.desk_reports._notify",
                    side_effect=RuntimeError("smtp down")):
-            page = self.client.get("/desk-report/ordered?token=ORDER-7")
-        self.assertContains(page, "Ordered")
-        order.refresh_from_db()
-        self.assertEqual(order.status, DeskReportOrder.STATUS_PAID)
+            response = self.post()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(DeskReportRequest.objects.exists())
+
+    def test_a_claim_needs_a_property(self):
+        self.make_pro()
+        self.client.force_login(self.user)
+        self.assertEqual(
+            self.client.post("/api/request-desk-report", {}).status_code, 400
+        )
+
+
+@override_settings(ALLOWED_HOSTS=["testserver"], DESK_REPORT_SAMPLE_PK=0,
+                   DESK_REPORT_PRO_ALLOWANCE=3)
+class DeskReportPreviewOnPropertyPageTests(TestCase):
+    """The teaser. It shows what the report really found on this listing and
+    withholds the reasoning — so the test that matters is that the reasoning is
+    genuinely absent, not just visually hidden."""
+
+    def setUp(self):
+        self.client = Client(HTTP_USER_AGENT="Mozilla/5.0")
+        self.user = User.objects.create_user("pro@example.com",
+                                             email="pro@example.com")
+        self.listing = Property.objects.create(
+            url="https://example.com/preview", title="A house in Oita",
+            price=2249, floor_plan="3LDK", location="Oita Prefecture",
+            construction_date="1976年7月（築49年）",
+            city_planning="Urbanization control area", equipment="",
+            land_rights="Ownership", land_category="Residence",
+        )
+
+    def page(self):
+        return self.client.get(
+            f"/japanese-houses/{self.listing.pk}/"
+        ).content.decode()
+
+    def test_the_real_findings_are_shown_as_titles(self):
+        body = self.page()
+        self.assertIn("Inside an urbanization control area", body)
+        self.assertIn("Water, sewer and gas are not disclosed", body)
+        self.assertIn("before the current earthquake standard", body)
+
+    def test_the_reasoning_is_not_in_the_page_at_all(self):
+        """Withheld, not merely hidden: the explanation is what Pro buys."""
+        body = self.page()
+        self.assertNotIn("designated to stay undeveloped", body)
+        self.assertNotIn("It needs the city's planning department", body)
+
+    def test_a_visitor_without_pro_is_offered_pro(self):
+        body = self.page()
+        self.assertIn("Unlock with Pro", body)
+        # The form, not its label: the button's text also lives in the script
+        # that handles the claim, which is on the page for every tier.
+        self.assertNotIn('id="drSubmit"', body)
+
+    def test_a_pro_member_is_offered_the_report(self):
+        Subscription.objects.create(
+            user=self.user, paypal_subscription_id="I-PREVIEW",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+        self.client.force_login(self.user)
+        body = self.page()
+        self.assertIn("Get the full report on this house", body)
+        # Collapse whitespace: the template wraps this sentence over four lines.
+        import re as _re
+        self.assertIn("3 of 3 left", _re.sub(r"\s+", " ", body))
+
+    def test_a_member_who_already_asked_sees_that_instead(self):
+        from membership.models import DeskReportRequest
+
+        Subscription.objects.create(
+            user=self.user, paypal_subscription_id="I-PREVIEW2",
+            status=Subscription.STATUS_ACTIVE,
+            current_period_end=timezone.now() + timedelta(days=20),
+        )
+        DeskReportRequest.objects.create(
+            user=self.user, email=self.user.email, listing=self.listing,
+        )
+        self.client.force_login(self.user)
+        body = self.page()
+        # Literal template text, so it is not HTML-escaped the way a variable
+        # would be.
+        self.assertIn("preparing your report on this property", body)
+        self.assertNotIn('id="drSubmit"', body)
+
+    def test_a_sparse_listing_still_has_something_to_report(self):
+        """A listing that publishes almost nothing is not a listing with nothing
+        to say about it — the silence is itself the finding, and the panel should
+        show it rather than going quiet on the least-documented houses."""
+        blank = Property.objects.create(
+            url="https://example.com/blank", title="Nothing known", price=500,
+            floor_plan="1K", location="Oita Prefecture",
+        )
+        body = self.client.get(f"/japanese-houses/{blank.pk}/").content.decode()
+        self.assertIn('id="deskreport"', body)
+        self.assertIn("Water, sewer and gas are not disclosed", body)

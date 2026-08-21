@@ -540,6 +540,47 @@ HUMAN_SECTIONS = [
 ]
 
 
+# The price rule is the only one that queries: it compares against every listing
+# in the prefecture. Excluded from the preview so a property page can show real
+# findings without paying for that scan on every view.
+_QUERYING_RULES = (_rule_price_position,)
+
+
+def preview_findings(property):
+    """The findings only, cheaply, for the teaser on a property page.
+
+    Real findings for the property being viewed — not a generic sample — because
+    the honest way to sell the report is to show what it actually found on this
+    house and withhold the reasoning, rather than to describe the report in the
+    abstract and hope.
+    """
+    findings = [rule(property) for rule in RULES if rule not in _QUERYING_RULES]
+    findings = [f for f in findings if f]
+    findings.sort(key=lambda f: SEVERITY_ORDER.index(f["severity"]))
+    return findings
+
+
+def preview(property):
+    """Teaser context: the counts, the titles, and nothing that explains them."""
+    findings = preview_findings(property)
+    return {
+        "findings": findings,
+        "counts": {severity: sum(1 for f in findings if f["severity"] == severity)
+                   for severity in SEVERITY_ORDER},
+        "blocking": [f for f in findings
+                     if f["severity"] in (CRITICAL, UNKNOWN)],
+        # Titles are shown; bodies, sources and questions are what Pro unlocks.
+        "titles": [
+            {"severity": f["severity"], "severity_label": f["severity_label"],
+             "title": f["title"]}
+            for f in findings
+        ],
+        "question_count": len(STANDARD_QUESTIONS) + sum(
+            len(f["questions"]) for f in findings
+        ),
+    }
+
+
 def build_report(property):
     """Everything the template needs. No side effects, no network."""
     findings = [rule(property) for rule in RULES]

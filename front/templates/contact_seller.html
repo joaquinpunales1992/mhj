@@ -1684,6 +1684,84 @@ document.addEventListener('DOMContentLoaded', () => {
     margin: 0 0 1em;
     max-width: 54ch;
   }
+  /* The finding list. Severity is carried by a left stripe and a small label
+     rather than by colour alone, so it survives being read in greyscale and by
+     someone who cannot separate the hues. */
+  .pp-dr-findings {
+    list-style: none;
+    margin: 0 0 1em;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45em;
+    max-width: 60ch;
+  }
+  .pp-dr-finding {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.55em;
+    padding: 0.5em 0.7em;
+    border-left: 3px solid var(--mhj-border);
+    background: #f7f8fa;
+    border-radius: 0 6px 6px 0;
+  }
+  .pp-dr-finding .pp-dr-sev {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 0.68em;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+  .pp-dr-finding .pp-dr-title { font-size: 0.95em; line-height: 1.35; }
+  .pp-dr-critical { border-left-color: #9a3b34; }
+  .pp-dr-critical .pp-dr-sev { color: #8c332d; }
+  .pp-dr-unknown { border-left-color: #6b7280; }
+  .pp-dr-unknown .pp-dr-sev { color: #565d6b; }
+  .pp-dr-caution { border-left-color: #8a6520; }
+  .pp-dr-caution .pp-dr-sev { color: #7a5a1c; }
+  .pp-dr-cleared { border-left-color: #3b6b58; }
+  .pp-dr-cleared .pp-dr-sev { color: #35604f; }
+
+  .pp-deskreport .pp-dr-locked { margin: 0 0 1.1em; }
+  .pp-deskreport .pp-dr-locked em { font-style: normal; font-weight: 600; }
+
+  .pp-dr-state {
+    margin: 0.9em 0 0;
+    font-size: 0.93em;
+    color: var(--mhj-secondary);
+    max-width: 56ch;
+  }
+  .pp-dr-state-good { color: #35604f; font-weight: 600; }
+  .pp-dr-note {
+    margin: 0.7em 0 0;
+    font-size: 0.88em;
+    color: var(--mhj-secondary);
+  }
+  .pp-dr-form { display: flex; flex-direction: column; gap: 0.3em; max-width: 34rem; }
+  .pp-dr-form label { font-size: 0.9em; font-weight: 600; }
+  .pp-dr-form label span { font-weight: 400; color: var(--mhj-secondary); }
+  /* main.css sets a width on textareas and a height on buttons; both are
+     overridden so the field and the button line up with the panel. */
+  .pp-dr-form textarea {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.5em 0.65em;
+    border: 1px solid var(--mhj-border);
+    border-radius: 6px;
+    font: inherit;
+    background: #fff;
+    color: inherit;
+    margin-bottom: 0.6em;
+  }
+  .pp-dr-form .pp-deskreport-btn {
+    align-self: flex-start;
+    border: 0;
+    cursor: pointer;
+    height: auto;
+  }
+
   .pp-deskreport-btn {
     display: inline-block;
     font-family: 'Work Sans', sans-serif;
@@ -2806,41 +2884,108 @@ document.addEventListener('DOMContentLoaded', () => {
             </details>
 
             {% comment %}
-              Desk report — the paid product that needs no access.
+              Desk report — included with Pro, and previewed honestly.
 
-              Visible by default, unlike the inspection panel below it, because
-              the two sit at different points in the journey: this answers
-              "should I offer at all", which is a question someone has while
-              still reading the listing, whereas an inspection is for a house
-              they have nearly decided on.
+              The panel shows the findings the generator actually produced for
+              THIS listing: severity and title, with the reasoning, the sources
+              and the questions withheld. Showing real findings and hiding the
+              explanation is a fair trade; describing the report in the abstract
+              and hoping would not be, and a made-up sample would be worse than
+              either.
 
-              It is also the honest ladder. US$39 of desk research on a listing
-              anyone can read, then — only if they are still interested — an
-              inspection that costs several hundred and needs the agent to open
-              the door. Offering the expensive one first would be the wrong way
-              round.
+              Visible to everyone, unlike the inspection panel below it, because
+              "should I offer at all" is a question someone has while still
+              reading the listing. What changes by tier is the button, not the
+              findings.
 
-              A link, not a form: the offer page carries the example, and nobody
-              should be asked to pay before seeing what they get.
+              Query-free: the preview leaves out the one rule that scans the
+              prefecture, so this costs nothing on a page that gets the traffic.
             {% endcomment %}
-            <div class="pp-panel pp-deskreport">
+            {% if desk_preview.findings %}
+            <div class="pp-panel pp-deskreport" id="deskreport">
               <p class="pp-deskreport-eyebrow">Before you offer</p>
-              <h3>What this listing does not tell you</h3>
-              <p class="pp-deskreport-copy">
-                Whether the house can legally be rebuilt, whether the water comes
-                from a well, whether the price makes sense for the area. We check
-                all of it against the listing, the municipal rules for that
-                parcel and our own {{ inventory_size|default:"1,500+" }}
-                comparable properties, and send you a written report.
+              <h3>We found {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }} worth knowing about this house</h3>
+
+              <ul class="pp-dr-findings">
+                {% for finding in desk_preview.titles %}
+                  <li class="pp-dr-finding pp-dr-{{ finding.severity }}">
+                    <span class="pp-dr-sev">{{ finding.severity_label }}</span>
+                    <span class="pp-dr-title">{{ finding.title }}</span>
+                  </li>
+                {% endfor %}
+              </ul>
+
+              <p class="pp-deskreport-copy pp-dr-locked">
+                {% if desk_preview.blocking %}
+                  {{ desk_preview.blocking|length }} of these
+                  {% if desk_preview.blocking|length == 1 %}is{% else %}are{% endif %}
+                  the kind of thing to settle <em>before</em> making an offer.
+                {% endif %}
+                The full report explains each one, says what it means for the
+                purchase and who to ask, checks the price against our
+                {{ inventory_size|default:"1,500+" }} comparable listings, and
+                comes with {{ desk_preview.question_count }} questions to put to
+                the agent.
               </p>
-              <a class="pp-deskreport-btn"
-                 href="{% url 'desk_report_offer' %}?listing={{ property.pk }}">
-                Get a desk report — {{ desk_report_price }}
-              </a>
+
+              {% comment %}
+                Five states, and each says the true reason rather than a generic
+                "not available" — one of them ("your next one is in 6 days") is
+                good news and must not read like a refusal.
+              {% endcomment %}
+              {% if desk_already_requested %}
+                <p class="pp-dr-state pp-dr-state-good">
+                  We're preparing your report on this property — it'll reach you
+                  by email.
+                </p>
+              {% elif desk_allowance.can_claim %}
+                <form id="deskReportForm" class="pp-dr-form">
+                  <input type="hidden" name="listing" value="{{ property.pk }}">
+                  <label for="drNotes">Anything specific you want checked?
+                    <span>(optional)</span></label>
+                  <textarea id="drNotes" name="notes" rows="2"
+                            placeholder="e.g. could I run it as a guesthouse? is the well shared?"></textarea>
+                  <button type="submit" class="pp-deskreport-btn" id="drSubmit">
+                    Get the full report on this house
+                  </button>
+                  <p class="pp-dr-note">
+                    Included with Pro — you have
+                    {{ desk_allowance.remaining }} of
+                    {{ desk_allowance.total }} left. Within
+                    {{ turnaround_days|default:3 }} working days.
+                  </p>
+                  <p class="pp-dr-state" id="drMsg" hidden></p>
+                </form>
+              {% elif desk_allowance.blocked_by == "cooldown" %}
+                <p class="pp-dr-state">
+                  One report a month — your next one is available in
+                  {{ desk_allowance.days_until_next }}
+                  day{{ desk_allowance.days_until_next|pluralize }}, and you have
+                  {{ desk_allowance.remaining }} of {{ desk_allowance.total }}
+                  left.
+                </p>
+              {% elif desk_allowance.blocked_by == "exhausted" %}
+                <p class="pp-dr-state">
+                  You've used all {{ desk_allowance.total }} reports included with
+                  Pro. Email us if you need another —
+                  <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.
+                </p>
+              {% else %}
+                <a class="pp-deskreport-btn"
+                   href="{% url 'upgrade_pro' %}?next={{ request.path|urlencode }}">
+                  Unlock with Pro — {{ desk_report_total }} reports included
+                </a>
+                <p class="pp-dr-note">
+                  {{ pro_price }}, cancel any time. One report a month, up to
+                  {{ desk_report_total }}.
+                </p>
+              {% endif %}
+
               <a class="pp-deskreport-link" href="{% url 'desk_report_example' %}">
-                See a real example first
+                See a full report on another house
               </a>
             </div>
+            {% endif %}
 
             {% comment %}
               Inspection request — a lead, not a sale.
@@ -3153,6 +3298,51 @@ document.addEventListener('DOMContentLoaded', () => {
           if (first) first.focus({ preventScroll: true });
         });
       }
+
+      // --- Desk report claim -------------------------------------------
+      // Posts and swaps the panel in place. A page reload would lose the
+      // reader's position on a long listing, and the whole point of the panel is
+      // that they are mid-read.
+      (function () {
+        var drForm = document.getElementById('deskReportForm');
+        if (!drForm) return;
+        var drButton = document.getElementById('drSubmit');
+        var drMsg = document.getElementById('drMsg');
+
+        drForm.addEventListener('submit', function (event) {
+          event.preventDefault();
+          drMsg.hidden = true;
+          drButton.disabled = true;
+          drButton.textContent = 'Requesting…';
+
+          fetch('{% url "request_desk_report" %}', {
+            method: 'POST',
+            headers: {
+              'X-CSRFToken': (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || ''
+            },
+            credentials: 'same-origin',
+            body: new FormData(drForm)
+          })
+            .then(function (r) {
+              return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+            })
+            .then(function (result) {
+              if (!result.ok) throw new Error(result.data.error || 'Something went wrong.');
+              drForm.innerHTML =
+                '<p class="pp-dr-state pp-dr-state-good">Requested — we\'ll email ' +
+                'your report on this property to ' + result.data.email + ' within ' +
+                result.data.days + ' working days. ' + result.data.remaining +
+                ' of your reports left.</p>';
+            })
+            .catch(function (err) {
+              // Never leave the button dead: they must be able to try again.
+              drButton.disabled = false;
+              drButton.textContent = 'Get the full report on this house';
+              drMsg.textContent = err.message;
+              drMsg.hidden = false;
+            });
+        });
+      })();
 
       var button = document.getElementById('inspSubmit');
       var message = document.getElementById('inspMsg');

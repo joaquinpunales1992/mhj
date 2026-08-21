@@ -1,20 +1,23 @@
-"""Selling the pre-purchase desk report.
+"""The desk report as a Pro benefit.
 
-Four pages: the offer, a real worked example, PayPal's return, PayPal's cancel.
+Three pages: the offer, a real worked example, and the claim endpoint the
+property page posts to.
+
+It used to be a US$39 product. Charging for it was optimising the wrong number:
+somebody asking us to research a specific house is the highest-intent signal on
+the site, and the referral that may follow a purchase is worth orders of
+magnitude more than a one-off fee. So it is included with Pro — one report a
+month, three per subscription — and the property page shows what the report
+actually found on the listing being viewed, with the reasoning withheld.
 
 The example is the whole marketing argument, so it is not a screenshot or a
-mock-up — it is the generator's actual output on a real listing, rendered live.
+mock-up: it is the generator's real output on a real listing, rendered live.
 Anything else would drift from the product, and a buyer comparing the two would
 be right to distrust the difference.
 
-Payment is taken up front, which the inspection flow deliberately does not do.
-The difference is access: an inspection needs someone inside a house the seller's
-agent controls, while every input to this report is a published listing plus our
-own comparables. Nothing about delivering it can be blocked by a third party, so
-charging for it in advance is honest.
-
-The price always comes from settings, never from the request — a price that
-arrives from the browser is a price the browser can edit.
+Allowance rules and their reasoning live in membership.desk_report_allowance.
+They are re-checked here at the moment of claiming, never trusted from the page —
+the button's state was decided when the page was rendered.
 """
 
 import logging
@@ -33,21 +36,10 @@ from django.views.decorators.http import require_POST
 from inventory.desk_report import build_report
 from inventory.models import Property
 from inventory.utils import YEN_TO_USD
-from membership.models import DeskReportOrder
-from membership.paypal_orders import PayPalError, capture_order, create_order
+from membership.desk_report_allowance import allowance_for, claim_error
+from membership.models import DeskReportRequest
 
 logger = logging.getLogger(__name__)
-
-
-def _price():
-    try:
-        return Decimal(str(settings.DESK_REPORT_PRICE))
-    except (InvalidOperation, TypeError):
-        return Decimal("39.00")
-
-
-def _abs(request, name):
-    return request.build_absolute_uri(reverse(name))
 
 
 # Used only to pick the sample listing when one has not been pinned in settings.
@@ -169,8 +161,12 @@ def _sample_property():
 
 
 def _offer_context():
+    from membership.desk_report_allowance import _cooldown_days, _total_allowance
+
     return {
-        "price_label": settings.DESK_REPORT_PRICE_LABEL,
+        "report_total": _total_allowance(),
+        "cooldown_days": _cooldown_days(),
+        "pro_price": settings.PRO_PRICE_LABEL,
         "turnaround_days": settings.DESK_REPORT_TURNAROUND_DAYS,
         "inventory_size": Property.objects.filter(show_in_front=True).count(),
     }
@@ -190,6 +186,7 @@ def desk_report_offer(request):
         listing=listing,
         sample=sample,
         sample_report=build_report(sample) if sample else None,
+        allowance=allowance_for(request.user),
     ))
 
 
@@ -217,32 +214,21 @@ def desk_report_example(request):
         verdict="",
         inventory_size=Property.objects.filter(show_in_front=True).count(),
         yen_to_usd=YEN_TO_USD,
-        price_label=settings.DESK_REPORT_PRICE_LABEL,
+        pro_price=settings.PRO_PRICE_LABEL,
     ))
 
 
 @require_POST
-def order_desk_report(request):
-    """Record the order, then hand the buyer to PayPal.
+def request_desk_report(request):
+    """A Pro member claims a report on a listing.
 
-    JSON so the form can show an error in place rather than losing what was
-    typed to a page reload.
+    Returns JSON so the property page can swap the panel in place rather than
+    reloading the listing and losing the reader's position.
     """
-    email = (request.POST.get("email") or "").strip()[:254]
-    if not email and request.user.is_authenticated:
-        email = request.user.email
-    name = (request.POST.get("name") or "").strip()[:120]
-    notes = (request.POST.get("notes") or "").strip()[:2000]
-
-    from django.core.exceptions import ValidationError
-    from django.core.validators import validate_email
-
-    try:
-        validate_email(email)
-    except ValidationError:
+    if not request.user.is_authenticated:
         return JsonResponse(
-            {"error": "Please give an email address we can send the report to."},
-            status=400,
+            {"error": "Please sign in.", "login_url": reverse("account_login")},
+            status=401,
         )
 
     listing = None
@@ -253,153 +239,82 @@ def order_desk_report(request):
 
     if not (listing or listing_url):
         return JsonResponse(
-            {"error": "Which property is this about? Paste its link, or order "
-                      "from the property's own page."},
+            {"error": "Which property is this about?"}, status=400
+        )
+
+    # Re-checked here, not trusted from the page: the button's state was decided
+    # when the page was rendered, and two tabs can both show it enabled.
+    refusal = claim_error(request.user, listing)
+    if refusal:
+        return JsonResponse({"error": refusal}, status=409)
+
+    email = (request.user.email or "").strip()
+    if not email:
+        return JsonResponse(
+            {"error": "Your account has no email address for us to send it to. "
+                      "Add one in your account settings."},
             status=400,
         )
 
-    price, currency = _price(), settings.DESK_REPORT_CURRENCY
     with transaction.atomic():
-        order = DeskReportOrder.objects.create(
+        claim = DeskReportRequest.objects.create(
             email=email,
-            name=name,
-            user=request.user if request.user.is_authenticated else None,
+            name=(request.user.get_full_name() or "")[:120],
+            user=request.user,
             listing=listing,
             listing_url=(
                 f"https://akiyainjapan.com{listing.get_public_url}"
                 if listing else listing_url
             ),
             listing_location=(listing.get_location_for_front() if listing else ""),
-            buyer_notes=notes,
-            amount=price,
-            currency=currency,
+            buyer_notes=(request.POST.get("notes") or "").strip()[:2000],
         )
 
-    where = order.listing_location or "a listing"
     try:
-        order_id, approve_url = create_order(
-            amount=price,
-            currency=currency,
-            description=f"Pre-purchase desk report — {where}",
-            return_url=_abs(request, "desk_report_paid"),
-            cancel_url=_abs(request, "desk_report_cancelled"),
-            reference=order.pk,
-            idempotency_key=f"deskreport-{order.pk}",
-        )
-    except PayPalError as e:
-        order.status = DeskReportOrder.STATUS_CANCELLED
-        order.internal_notes = f"PayPal would not start checkout: {e}"
-        order.save(update_fields=["status", "internal_notes"])
-        logger.error("Could not start desk report checkout for %s: %s", order.pk, e)
-        return JsonResponse(
-            {"error": "Payment could not be started. Please try again, or email "
-                      "hello@akiyainjapan.com."},
-            status=502,
-        )
-
-    order.paypal_order_id = order_id
-    order.save(update_fields=["paypal_order_id"])
-    return JsonResponse({"redirect": approve_url})
-
-
-def desk_report_paid(request):
-    """PayPal's return_url: ?token=<order id>. Capture, then confirm."""
-    order_id = (request.GET.get("token") or "").strip()
-    order = (DeskReportOrder.objects.filter(paypal_order_id=order_id).first()
-             if order_id else None)
-
-    if order is None:
-        logger.warning("Desk report return with unknown order token %r", order_id)
-        return render(request, "desk_report_result.html",
-                      dict(_offer_context(), state="unknown"), status=404)
-
-    # Reloading the confirmation must not capture twice.
-    if order.status in (DeskReportOrder.STATUS_PAID,
-                        DeskReportOrder.STATUS_DELIVERED):
-        return render(request, "desk_report_result.html",
-                      dict(_offer_context(), state="paid", order=order))
-
-    try:
-        payment = capture_order(order_id)
-    except PayPalError as e:
-        logger.error("Desk report capture failed for %s: %s", order.pk, e)
-        return render(request, "desk_report_result.html",
-                      dict(_offer_context(), state="failed", order=order),
-                      status=502)
-
-    if not payment["paid"]:
-        logger.warning("Desk report %s not paid: capture status %s",
-                       order.pk, payment.get("capture_status"))
-        return render(request, "desk_report_result.html",
-                      dict(_offer_context(), state="pending", order=order))
-
-    with transaction.atomic():
-        order.status = DeskReportOrder.STATUS_PAID
-        order.paid_at = timezone.now()
-        order.paypal_capture_id = payment["capture_id"]
-        if payment["amount"]:
-            try:
-                order.amount = Decimal(payment["amount"])
-            except InvalidOperation:
-                pass
-        if payment["currency"]:
-            order.currency = payment["currency"]
-        order.save()
-
-    # The money is in and the row is saved; an email failure must not look like
-    # a failed purchase.
-    try:
-        _notify(order)
+        _notify(claim)
     except Exception as e:
-        logger.error("Desk report %s is paid but its emails failed: %s",
-                     order.pk, e)
+        # The claim is saved; an email failure must not look like a refusal.
+        logger.error("Desk report request %s saved but not emailed: %s",
+                     claim.pk, e)
 
-    return render(request, "desk_report_result.html",
-                  dict(_offer_context(), state="paid", order=order))
-
-
-def desk_report_cancelled(request):
-    """PayPal's cancel_url. Mark it abandoned so the funnel can see it."""
-    order_id = (request.GET.get("token") or "").strip()
-    if order_id:
-        DeskReportOrder.objects.filter(
-            paypal_order_id=order_id, status=DeskReportOrder.STATUS_PENDING
-        ).update(status=DeskReportOrder.STATUS_CANCELLED)
-    return render(request, "desk_report_result.html",
-                  dict(_offer_context(), state="cancelled"))
+    remaining = allowance_for(request.user)
+    return JsonResponse({
+        "ok": True,
+        "days": settings.DESK_REPORT_TURNAROUND_DAYS,
+        "email": email,
+        "remaining": remaining["remaining"],
+    })
 
 
-def _notify(order):
-    """Tell the buyer it is coming, and tell us it is owed."""
+def _notify(claim):
+    """Tell the member it is coming, and tell us it is owed."""
     from membership.utils import notification_email
 
     days = settings.DESK_REPORT_TURNAROUND_DAYS
-    where = order.listing_location or order.listing_url or "the listing"
+    where = claim.listing_location or claim.listing_url or "the listing"
 
     notification_email(
         subject="Your desk report is being prepared",
         body=(
-            f"Thanks — payment received for a pre-purchase desk report on "
-            f"{where}.\n\n"
-            f"We'll send it within {days} working days. Part of it is a call to "
-            "the local municipal office about what may and may not be built on "
+            f"Thanks — we're preparing your desk report on {where}.\n\n"
+            f"It will reach you within {days} working days. Part of it is a call "
+            "to the local municipal office about what may and may not be built on "
             "the parcel, which is why it takes a few days rather than minutes.\n\n"
             "If there is anything specific you want us to look at, reply to this "
             "email and we'll fold it in.\n\n"
             "— My Akiya in Japan\nhttps://akiyainjapan.com"
         ),
-        to=[order.email],
+        to=[claim.email],
     )
 
     notification_email(
-        subject=f"PAID desk report owed — {where}",
+        subject=f"Pro desk report owed — {where}",
         body=(
-            f"Order #{order.pk}\n"
-            f"Buyer: {order.name or '(no name)'} <{order.email}>\n"
-            f"Listing: {order.listing_url or '(none given)'}\n"
-            f"Paid: {order.amount} {order.currency}\n"
-            f"Their notes: {order.buyer_notes or '(none)'}\n\n"
-            f"Start with: manage.py desk_report {order.listing_id or '<pk>'}\n"
+            f"Request #{claim.pk}\n"
+            f"Member: {claim.name or '(no name)'} <{claim.email}>\n"
+            f"Listing: {claim.listing_url or '(none given)'}\n"
+            f"Their notes: {claim.buyer_notes or '(none)'}\n\n"
+            f"Start with: manage.py desk_report {claim.listing_id or '<pk>'}\n"
             "Then the municipal enquiry, the Japanese remarks, and the verdict."
         ),
         to=[settings.DESK_REPORT_NOTIFY_EMAIL],

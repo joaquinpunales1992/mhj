@@ -6,7 +6,9 @@ from django.db.models import Q, F
 from django.conf import settings
 from django.shortcuts import render, redirect
 from django.views import View
+from inventory.desk_report import preview as desk_preview
 from inventory.models import GeocodedPlace, Property, PropertyImage
+from membership.desk_report_allowance import allowance_for
 from membership.metering import check_access
 from membership.consultations import _safe_zone, slot_context
 from inventory.images import thumb_url
@@ -403,6 +405,7 @@ def pricing(request):
             "consult_price": settings.CONSULT_PRICE_LABEL,
             "booking_url": settings.CONSULT_BOOKING_URL,
             "already_pro": bool(subscription and subscription.is_active),
+            "desk_report_total": settings.DESK_REPORT_PRO_ALLOWANCE,
         },
     )
 
@@ -786,9 +789,37 @@ def property_detail(request, pk, user_just_registered=0):
             "saves_count": property.saved_by.count(),
             "pro_price": settings.PRO_PRICE_LABEL,
             "free_limit": settings.VIEW_LIMIT_FREE,
-            "desk_report_price": settings.DESK_REPORT_PRICE_LABEL,
+            # The desk report teaser: what the report actually found on *this*
+            # listing, with the reasoning withheld. Query-free — the one rule
+            # that scans the prefecture is left out of the preview.
+            "desk_preview": desk_preview(property),
+            "desk_allowance": allowance_for(request.user),
+            "desk_already_requested": _desk_report_already_requested(
+                request.user, property
+            ),
+            "desk_report_total": settings.DESK_REPORT_PRO_ALLOWANCE,
+            # Named in the panel's copy, so it has to be the real number rather
+            # than the template's "1,500+" fallback.
+            "inventory_size": Property.objects.filter(show_in_front=True).count(),
+            "turnaround_days": settings.DESK_REPORT_TURNAROUND_DAYS,
         },
     )
+
+
+def _desk_report_already_requested(user, property):
+    """True when this member has already claimed a report on this listing.
+
+    Checked here so the panel can say "we're preparing it" instead of offering a
+    second claim on the same house.
+    """
+    if not user.is_authenticated:
+        return False
+    from membership.models import DeskReportRequest
+
+    return DeskReportRequest.objects.filter(
+        user=user, listing=property,
+        status__in=DeskReportRequest.COUNTED_STATUSES,
+    ).exists()
 
 
 def legacy_contact_seller_redirect(request, pk):

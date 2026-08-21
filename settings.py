@@ -268,12 +268,14 @@ CONSULT_CURRENCY = env("CONSULT_CURRENCY", default="USD")
 # Deliverable without site access, which is what separates it from an inspection
 # (see membership.models.InspectionRequest) and lets it be charged for up front.
 #
-# PRICE is the number PayPal charges and must stay a bare decimal; the LABEL is
-# what the site says. Never write "$39" into an env value — django-environ
-# treats a leading "$" as a variable reference and recurses on it.
-DESK_REPORT_PRICE = env("DESK_REPORT_PRICE", default="39.00")
-DESK_REPORT_PRICE_LABEL = env("DESK_REPORT_PRICE_LABEL", default="US$39")
-DESK_REPORT_CURRENCY = env("DESK_REPORT_CURRENCY", default="USD")
+# Not sold separately. It is what Pro is for: somebody asking us to research a
+# specific house is the highest-intent signal on the site, and the referral that
+# may follow is worth far more than a one-off fee would have been.
+#
+# Two limits, for two different reasons — see
+# membership.desk_report_allowance, where the reasoning lives with the numbers.
+DESK_REPORT_PRO_ALLOWANCE = env.int("DESK_REPORT_PRO_ALLOWANCE", default=3)
+DESK_REPORT_COOLDOWN_DAYS = env.int("DESK_REPORT_COOLDOWN_DAYS", default=30)
 # What we promise on the page. Keep it honest: the municipal enquiry is a phone
 # call to a Japanese office that keeps office hours.
 DESK_REPORT_TURNAROUND_DAYS = env.int("DESK_REPORT_TURNAROUND_DAYS", default=3)

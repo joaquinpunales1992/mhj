@@ -40,8 +40,8 @@ urlpatterns = [
         name="consultation_cancelled",
     ),
     path("pricing/", front_views.pricing, name="pricing"),
-    # The paid desk report: the offer, a worked example on a real listing, and
-    # PayPal's two redirects back.
+    # The desk report: the offer, a worked example on a real listing, and the
+    # endpoint a Pro member claims one through.
     path(
         "desk-report/",
         desk_report_views.desk_report_offer,
@@ -53,19 +53,9 @@ urlpatterns = [
         name="desk_report_example",
     ),
     path(
-        "desk-report/order",
-        desk_report_views.order_desk_report,
-        name="order_desk_report",
-    ),
-    path(
-        "desk-report/ordered",
-        desk_report_views.desk_report_paid,
-        name="desk_report_paid",
-    ),
-    path(
-        "desk-report/cancelled",
-        desk_report_views.desk_report_cancelled,
-        name="desk_report_cancelled",
+        "api/request-desk-report",
+        desk_report_views.request_desk_report,
+        name="request_desk_report",
     ),
     path("map/", front_views.map_view, name="map"),
     path(

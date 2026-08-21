@@ -9,7 +9,7 @@ from django.utils import timezone
 from django.utils.html import format_html
 
 from membership.models import (
-    DeskReportOrder,
+    DeskReportRequest,
     InspectionRequest,
     Consultation,
     InterestRequest,
@@ -430,26 +430,27 @@ class ConsultationAdmin(admin.ModelAdmin):
         )
 
 
-@admin.register(DeskReportOrder)
-class DeskReportOrderAdmin(admin.ModelAdmin):
-    """Paid desk reports, and how long each has been owed.
+@admin.register(DeskReportRequest)
+class DeskReportRequestAdmin(admin.ModelAdmin):
+    """Desk reports claimed by Pro members, and how long each has been owed.
 
-    The list is a queue, not a report: every paid row is work outstanding until
-    it is marked delivered, and `owed_for` is there so nothing quietly ages.
+    A queue, not a report: every requested row is work outstanding to somebody
+    paying monthly, and `owed_for` is here so nothing quietly ages. Marking one
+    Declined returns the member's allowance, which is the right outcome when the
+    listing turns out to be unworkable.
     """
 
     list_display = ("created_at", "email", "listing_location", "status",
-                    "owed_for", "amount")
+                    "owed_for", "claims_used")
     list_filter = ("status", "created_at")
-    search_fields = ("email", "name", "listing_url", "listing_location",
-                     "paypal_order_id")
+    search_fields = ("email", "name", "listing_url", "listing_location")
     list_editable = ("status",)
-    readonly_fields = ("created_at", "paid_at", "paypal_order_id",
-                       "paypal_capture_id", "amount", "currency", "user",
-                       "buyer_notes")
+    readonly_fields = ("created_at", "delivered_at", "user", "buyer_notes",
+                       "listing", "listing_url", "listing_location", "email",
+                       "name")
     date_hierarchy = "created_at"
 
-    @admin.display(description="Owed for", ordering="paid_at")
+    @admin.display(description="Owed for", ordering="created_at")
     def owed_for(self, obj):
         days = obj.days_owed
         if days is None:
@@ -459,12 +460,23 @@ class DeskReportOrderAdmin(admin.ModelAdmin):
             '<b style="color:{}">{} day{}</b>', colour, days, "" if days == 1 else "s"
         )
 
+    @admin.display(description="Their allowance")
+    def claims_used(self, obj):
+        """How much of this member's Pro allowance is spent — so you can see at a
+        glance whether someone is on their first report or their last."""
+        if not obj.user_id:
+            return "—"
+        from membership.desk_report_allowance import allowance_for
+
+        allowance = allowance_for(obj.user)
+        return f"{allowance['used']} of {allowance['total']}"
+
     def save_model(self, request, obj, form, change):
         # Stamp the delivery date from the status change, so "sent" and "when"
         # cannot disagree.
-        if obj.status == DeskReportOrder.STATUS_DELIVERED and obj.delivered_at is None:
+        if obj.status == DeskReportRequest.STATUS_DELIVERED and obj.delivered_at is None:
             obj.delivered_at = timezone.now()
-        if obj.status != DeskReportOrder.STATUS_DELIVERED:
+        if obj.status != DeskReportRequest.STATUS_DELIVERED:
             obj.delivered_at = None
         super().save_model(request, obj, form, change)
 
