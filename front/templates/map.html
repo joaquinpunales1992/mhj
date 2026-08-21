@@ -22,6 +22,16 @@
 
   <style>
     :root { --shade:#f1efe9; }  /* map-only; brand tokens come from includes/brand.html */
+
+    /* Leaflet's stylesheet puts Helvetica Neue on .leaflet-container, and every
+       label, popup and note of ours inside the map inherited it. The zoom
+       control's own Lucida Console is left alone: it renders "+" and "−". */
+    .leaflet-container { font-family: var(--font-body); }
+    /* MarkerCluster.Default.css sets the cluster bubbles with a `font:`
+       shorthand, which overrides an inherited family — so the counts on the map
+       ("55", "628") were Helvetica Neue. Same specificity as its rule and this
+       stylesheet is loaded after it, so this wins. */
+    .marker-cluster div, .marker-cluster span { font-family: var(--font-body); }
     * { box-sizing:border-box; margin:0; padding:0; }
     html, body { height:100%; }
     body {

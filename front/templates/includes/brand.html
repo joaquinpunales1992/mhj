@@ -37,4 +37,13 @@
     --font-display: 'Noto Serif JP', Georgia, serif;
     --font-body: 'Work Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
+
+  /* Form controls do not inherit type from their ancestors — the browser gives
+     them its own default, which is Arial. That is why the home page's category
+     filters (Explore All, Beach Town, Snow Town…) rendered in Arial while
+     everything around them was Work Sans. Anything that sets its own face still
+     wins on specificity. */
+  button, input, select, textarea, optgroup {
+    font-family: inherit;
+  }
 </style>
