@@ -604,6 +604,19 @@ def preview(property):
         "question_count": len(STANDARD_QUESTIONS) + sum(
             len(f["questions"]) for f in findings
         ),
+        # Rows the panel shows greyed out beneath the findings, to say that the
+        # list is not the whole report. Every one of these names something the
+        # report genuinely contains and the preview genuinely withholds — the
+        # price comparison is the rule deliberately left out of preview_findings
+        # to keep the property page query-free, and the other two are sections of
+        # every report. Faded placeholders implying findings that might not exist
+        # would be a different thing entirely, and not one worth building.
+        "locked": [
+            {"label": "Price", "title": "How this asking price compares with "
+                                        "comparable listings nearby"},
+            {"label": "Rebuild", "title": "What the municipal office says about "
+                                          "building on this parcel"},
+        ],
     }
 
 

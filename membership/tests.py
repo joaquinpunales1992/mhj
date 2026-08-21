@@ -1355,6 +1355,25 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         self.assertNotIn("(optional)", form)
         self.assertNotIn("<textarea", form)
 
+    def test_withheld_rows_say_the_list_is_not_the_whole_report(self):
+        """Faded rows beneath the findings. Each names something the report
+        genuinely contains — a blurred placeholder implying findings we have not
+        made would be a promise, not a teaser."""
+        body = self.page()
+        self.assertIn("pp-dr-more", body)
+        self.assertIn("How this asking price compares", body)
+        self.assertIn("What the municipal office says", body)
+
+    def test_the_withheld_rows_are_not_counted_as_findings(self):
+        """The heading counts findings; these are sections, so a member must not
+        read "7 things" and then find two of them were locked rows."""
+        from inventory.desk_report import preview
+
+        report = preview(self.listing)
+        titles = [t["title"] for t in report["titles"]]
+        for row in report["locked"]:
+            self.assertNotIn(row["title"], titles)
+
     def test_the_finding_count_is_hedged(self):
         """The preview leaves out the rule that scans the prefecture, and the
         full report adds more — so the count is a floor, not a total."""

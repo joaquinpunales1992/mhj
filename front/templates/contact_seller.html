@@ -1751,6 +1751,16 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-dr-caution .pp-dr-sev { color: #7a5a1c; }
   .pp-dr-cleared { border-left-color: #3b6b58; }
   .pp-dr-cleared .pp-dr-sev { color: #35604f; }
+  /* Withheld rows: same shape, deliberately quieter, and a dashed stripe so the
+     difference reads as "not shown here" rather than as another severity. */
+  .pp-dr-more {
+    border-left-style: dashed;
+    border-left-color: var(--mhj-border);
+    background: transparent;
+    opacity: 0.62;
+  }
+  .pp-dr-more .pp-dr-sev { color: var(--mhj-secondary); }
+  .pp-dr-more .pp-dr-sev svg { width: 0.85em; height: 0.85em; vertical-align: -0.1em; }
 
   .pp-deskreport .pp-dr-locked { margin: 0 0 1.1em; }
   .pp-deskreport .pp-dr-locked em { font-style: normal; font-weight: 600; }
@@ -2965,6 +2975,21 @@ document.addEventListener('DOMContentLoaded', () => {
                   <li class="pp-dr-finding pp-dr-{{ finding.severity }}">
                     <span class="pp-dr-sev">{{ finding.severity_label }}</span>
                     <span class="pp-dr-title">{{ finding.title }}</span>
+                  </li>
+                {% endfor %}
+                {% comment %}
+                  The list is not the whole report, and these rows say so. Each
+                  names something the report genuinely contains and this preview
+                  withholds — the price comparison is the one rule left out of
+                  the preview to keep this page query-free, and the other two are
+                  sections of every report. Greyed rather than blurred: a blur
+                  implies findings we have not made, which is a promise rather
+                  than a teaser.
+                {% endcomment %}
+                {% for row in desk_preview.locked %}
+                  <li class="pp-dr-finding pp-dr-more">
+                    <span class="pp-dr-sev">{% include "includes/icon_lock.html" %} {{ row.label }}</span>
+                    <span class="pp-dr-title">{{ row.title }}</span>
                   </li>
                 {% endfor %}
               </ul>
