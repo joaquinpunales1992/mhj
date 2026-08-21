@@ -611,11 +611,17 @@ def preview(property):
         # to keep the property page query-free, and the other two are sections of
         # every report. Faded placeholders implying findings that might not exist
         # would be a different thing entirely, and not one worth building.
+        # Three, because the list fades down its height and two rows give the
+        # gradient no room — the second would do all the disappearing. Ordered
+        # most legible first, so what survives the fade is the row a buyer cares
+        # about most.
         "locked": [
             {"label": "Price", "title": "How this asking price compares with "
                                         "comparable listings nearby"},
             {"label": "Rebuild", "title": "What the municipal office says about "
                                           "building on this parcel"},
+            {"label": "Remarks", "title": "What the seller's own notes say in the "
+                                          "original Japanese"},
         ],
     }
 

@@ -1363,6 +1363,14 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
         self.assertIn("pp-dr-more", body)
         self.assertIn("How this asking price compares", body)
         self.assertIn("What the municipal office says", body)
+        # A separate list, because the fade is a mask on the container — masking
+        # the findings list would make the real findings look withheld too.
+        # Compare the markup, not the stylesheet — both class names appear in the
+        # <style> block first, so searching the whole document finds the CSS.
+        findings_list = body.index('<ul class="pp-dr-findings">')
+        withheld_list = body.index('<ul class="pp-dr-findings pp-dr-more-list"')
+        self.assertLess(findings_list, withheld_list,
+                        "the real findings come first, then the faded rows")
 
     def test_the_withheld_rows_are_not_counted_as_findings(self):
         """The heading counts findings; these are sections, so a member must not
