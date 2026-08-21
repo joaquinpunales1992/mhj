@@ -1701,7 +1701,11 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-deskreport h3 { margin: 0 0 0.5em; }
   .pp-deskreport .pp-deskreport-copy {
     margin: 0 0 1em;
-    max-width: 62ch;
+    /* 72ch rather than the 62ch its siblings use. Still inside the range a line
+       can be tracked comfortably, and it narrows the gap between this paragraph
+       and the full-width finding rows above it — at a 1090px panel the shorter
+       measure left the block visibly weighted to the left. */
+    max-width: 72ch;
   }
   /* The finding list. Severity is carried by a left stripe and a small label
      rather than by colour alone, so it survives being read in greyscale and by
