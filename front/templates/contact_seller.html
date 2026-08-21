@@ -904,7 +904,8 @@ input:checked + .toggle-slider:before {
     .buying-details[open] > summary .buying-details-arrow {
       transform: rotate(180deg);
     }
-    .buying-details[open] > .step {
+    /* Descendant, not child: the steps sit inside .buying-steps now. */
+    .buying-details[open] .step {
       margin-top: 1.4rem;
     }
     /* The card itself comes from .pp-panel now; only the open-state spacing
@@ -1790,19 +1791,30 @@ document.addEventListener('DOMContentLoaded', () => {
   /* The trigger is a <button> because it opens a dialog, but it should read as
      the link it replaced. main.css gives buttons a fixed height, a background
      and uppercase tracking; all reset here. */
-  .pp-dr-example button.pp-deskreport-link {
-    background: none;
-    border: 0;
-    padding: 0;
-    height: auto;
+  /* !important throughout, like .map-dialog-close: main.css styles every button
+     site-wide with a background, a fixed height and `color: #fff !important`, so
+     a plain declaration here lost and the trigger rendered white on white —
+     invisible until hover. The same rule bit the dialog's close button. */
+  .pp-dr-example button.pp-deskreport-link,
+  .pp-dr-example button.pp-deskreport-link:hover,
+  .pp-dr-example button.pp-deskreport-link:focus {
+    background: none !important;
+    background-image: none !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-width: 0;
+    width: auto;
     cursor: pointer;
     font: inherit;
     font-weight: 600;
     font-size: 0.92em;
-    color: var(--mhj-primary);
+    color: var(--mhj-primary) !important;
     letter-spacing: normal;
     text-transform: none;
   }
+  .pp-dr-example button.pp-deskreport-link:hover { text-decoration: underline; }
   .pp-dr-example button.pp-deskreport-link::before { content: '\25B8  '; }
 
   /* The example dialog reuses .map-dialog's frame, header and close button; only
@@ -2183,6 +2195,26 @@ document.addEventListener('DOMContentLoaded', () => {
     color: var(--mhj-foreground);
     margin: 0 0 0.3em;
   }
+  /* Six steps down one side of a 1010px card left two thirds of it empty, which
+     is the same left-hugging the desk report panel had. Two columns while the
+     card is wide enough, using grid rather than a wrapper element so the
+     steps' own wrapper carries it. */
+  @media (min-width: 1200px) {
+    /* Multi-column, so the numbers run down the first column and continue down
+       the second (1-2-3 / 4-5-6) rather than zig-zagging across rows. */
+    .buying-steps {
+      columns: 2;
+      column-gap: 2.6em;
+    }
+    /* A step must not be split across the column break, and the first item in a
+       column should not carry the top margin that separates it from the step
+       above — there is nothing above it. */
+    .buying-steps .step {
+      break-inside: avoid;
+      -webkit-column-break-inside: avoid;
+    }
+  }
+
   .buying-details .step small {
     display: block;
     font-family: var(--font-body);
@@ -2910,6 +2942,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="buying-details-arrow" aria-hidden="true">▾</span>
               </summary>
 
+              {% comment %}
+                The steps live in their own element so they can be laid out as
+                columns on a wide card. Chrome wraps <details> content in a
+                ::details-content box, so putting grid or columns on the
+                <details> itself lays out [summary, that box] — two items — and
+                leaves the steps stacked inside one of them.
+              {% endcomment %}
+              <div class="buying-steps">
               <div class="step" data-step="1">
                 <h4>Talk to our team about this property</h4>
                 <p class="cta-blurb">Talk it through with our English-speaking team: what this house would really cost you, what the process looks like, and whether your plan is realistic.</p>
@@ -2973,6 +3013,7 @@ document.addEventListener('DOMContentLoaded', () => {
               <div class="step" data-step="6">
                 <h4>Receive the keys</h4>
                 <small>Congratulations! Your new home is ready for you!</small>
+              </div>
               </div>
             </details>
 
