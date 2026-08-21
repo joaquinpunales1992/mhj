@@ -904,10 +904,21 @@ input:checked + .toggle-slider:before {
     .buying-details[open] > summary .buying-details-arrow {
       transform: rotate(180deg);
     }
-    /* Descendant, not child: the steps sit inside .buying-steps now. */
+    /* Spacing below each step, not above it. A margin at the top of a column is
+       discarded by multi-column fragmentation, so with margin-top the first step
+       in column two sat 14px higher than the first step in column one — flush
+       against the summary while its neighbour was not. Bottom margins are not
+       trimmed, so both columns now start level and the space lives between the
+       steps.
+
+       Descendant, not child: the steps sit inside .buying-steps. */
     .buying-details[open] .step {
-      margin-top: 1.4rem;
+      margin-bottom: 1.4rem;
     }
+    /* The gap under the summary comes from the wrapper, once, rather than from
+       whichever step happens to be first. */
+    .buying-details[open] .buying-steps { margin-top: 1.4rem; }
+    .buying-details[open] .step:last-child { margin-bottom: 0; }
     /* The card itself comes from .pp-panel now; only the open-state spacing
        belongs here. */
     .buying-details[open] > summary { margin-bottom: 0.25em; }
