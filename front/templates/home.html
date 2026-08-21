@@ -997,7 +997,11 @@
 			   reset the site template's global button/input styling (uppercase,
 			   letter-spacing, fixed 3em height, box-shadow, white !important
 			   color) so the widget renders as its own self-contained component. */
-			#header h1 strong, .site-tagline { font-family: var(--font-display); }
+			/* The brand mark keeps the display face; the tagline beneath it is a
+			   full sentence of UI copy, and a sentence in the serif next to an
+			   all-sans nav is the one place the header read as two designs. */
+			#header h1 strong { font-family: var(--font-display); }
+			.site-tagline { font-family: var(--font-body); }
 
 			/* The theme absolutely positions #header nav at right:0, so it takes
 			   up no space in the bar. That was fine for the original three
