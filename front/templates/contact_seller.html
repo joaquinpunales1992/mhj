@@ -393,7 +393,7 @@ function riskInformationInterestAuthenticated(userEmail = "", propertyId) {
     }
     .share-card-title {
         margin: 0 0 16px;
-        font-family: var(--font-display);
+        font-family: var(--font-body);
         font-weight: 500;
         color: #477535 !important; /* beat the #pp-layout h4 dark-color rule */
         font-size: 1.25rem;
@@ -1539,8 +1539,8 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-newsletter h3,
   .pp-deskreport h3,
   .pp-inspect h3 {
-    font-family: var(--font-display);
-    font-weight: 500;
+    font-family: var(--font-body);
+    font-weight: 600;
     /* rem, not em: these three panels sit in parents with different font sizes,
        so the same declared em came out as 18.5px in one and 16.1px in the others
        — two sizes of the same heading, stacked one above the other. The root on
@@ -1632,7 +1632,7 @@ document.addEventListener('DOMContentLoaded', () => {
   .pp-photo-gate-inner svg { width: 1.6em; height: 1.6em; margin-bottom: 0.4em; }
   .pp-photo-gate-count {
     margin: 0 0 0.3em;
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-size: 1.5em;
     line-height: 1.2;
     text-transform: none;
@@ -2064,7 +2064,7 @@ document.addEventListener('DOMContentLoaded', () => {
   header h1,
   .related-properties-heading,
   .modal-title,
-  .buying-details summary h3 { font-family: var(--font-display); font-weight: 500; }
+  .buying-details summary h3 { font-family: var(--font-body); font-weight: 600; }
 
   /* Brand wordmark + back link in the sidebar */
   aside h1.font-serif { font-family: var(--font-display); color: var(--mhj-primary); }
@@ -2094,10 +2094,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   /* Dark serif display title, like the premium hero */
   #pp-layout header h1 { color: var(--mhj-foreground); line-height: 1.15; }
+  /* Headings below h1 are the body face at 600. The display face is Noto Serif
+     JP — a Japanese typeface whose Latin letterforms read oddly at heading
+     sizes, and worst of all in uppercase with tracking — so it is kept for the
+     logotype and page h1s, where it carries the brand. This rule carries an id,
+     so it also settles the weight for the panel headings below. */
   #pp-layout h2, #pp-layout h3, #pp-layout h4, #pp-layout h5,
   .related-properties-heading, .modal-title {
-    font-family: var(--font-display);
-    font-weight: 500;
+    font-family: var(--font-body);
+    font-weight: 600;
     color: var(--mhj-foreground);
   }
   /* White card surfaces with the faint green border + soft shadow */
@@ -2181,7 +2186,7 @@ document.addEventListener('DOMContentLoaded', () => {
      took its fonts from its own link rather than includes/brand.html, so the
      --font-* tokens are not defined on this page. */
   .buying-details .step h4 {
-    font-family: var(--font-display);
+    font-family: var(--font-body);
     font-weight: 500;
     /* em, not rem: main.css sets body{font-size:15pt} (20px) while html stays
        at 16px, so on this page a rem value renders SMALLER than the
@@ -3411,7 +3416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     .map-dialog-head h4 {
       margin: 0;
-      font-family: var(--font-display);
+      font-family: var(--font-body);
       font-weight: 500;
       /* em, not rem: main.css sets body{font-size:15pt} on this page. */
       font-size: 1em;
