@@ -2938,7 +2938,13 @@ document.addEventListener('DOMContentLoaded', () => {
             {% endcomment %}
             {% if desk_preview.findings %}
             <div class="pp-panel pp-deskreport" id="deskreport">
-              <p class="pp-deskreport-eyebrow">Before you offer</p>
+              {% comment %}
+                Names the product, and the entitlement with it — the same shape
+                the newsletter panel above uses ("THE NEWSLETTER · INCLUDED WITH
+                PRO"). "Before you offer" described the moment rather than the
+                thing, so nobody could learn what it was called.
+              {% endcomment %}
+              <p class="pp-deskreport-eyebrow">Desk report · included with Pro</p>
               <h3>We found {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }} worth knowing about this house</h3>
 
               <ul class="pp-dr-findings">

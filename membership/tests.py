@@ -1279,6 +1279,12 @@ class DeskReportPreviewOnPropertyPageTests(TestCase):
             f"/japanese-houses/{self.listing.pk}/"
         ).content.decode()
 
+    def test_the_panel_names_the_product_and_the_entitlement(self):
+        """"Before you offer" described the moment, not the thing — nobody could
+        learn what it was called."""
+        body = self.page()
+        self.assertIn("Desk report · included with Pro", body)
+
     def test_the_real_findings_are_shown_as_titles(self):
         body = self.page()
         self.assertIn("Inside an urbanization control area", body)
