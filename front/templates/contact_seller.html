@@ -2063,8 +2063,11 @@ document.addEventListener('DOMContentLoaded', () => {
   .mhj-tip:focus .mhj-tip-text,
   .mhj-tip:focus-within .mhj-tip-text { visibility: visible; opacity: 1; }
 
-  /* Serif display headings, like the premium page */
-  header h1,
+  /* The page title keeps the display face — it is this page's h1, the same role
+     the serif holds on every other page. It used to share a rule with three
+     headings that are not h1s, so when those moved to the body face the title
+     went with them. */
+  header h1 { font-family: var(--font-display); font-weight: 500; }
   .related-properties-heading,
   .modal-title,
   .buying-details summary h3 { font-family: var(--font-body); font-weight: 600; }
