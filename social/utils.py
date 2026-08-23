@@ -30,8 +30,14 @@ from moviepy import (
     vfx,
 )
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
+import numpy as np
 from PIL import Image
-from social.content.listing_cards import trim_white_borders
+from social.content.cards import ACCENT, FG
+from social.content.listing_cards import (
+    MARGIN as CARD_MARGIN,
+    _details_line,
+    _photo_band,
+)
 from membership.utils import notify_social_token_expired
 import logging
 from django.conf import settings
@@ -421,7 +427,7 @@ def generate_caption_for_post(
 LISTING_CARD_DIR = os.path.join(settings.MEDIA_ROOT, "social_cards")
 
 
-def _card_location(property: Property) -> str:
+def _card_location(property: Property, max_chars: int = 70) -> str:
     """A place name fit to be burnt into an image: Latin script, short, specific.
 
     The scraped address is the specific thing, but it arrives with Japanese
@@ -437,9 +443,11 @@ def _card_location(property: Property) -> str:
             re.sub(r"[^\x00-\x7F]+", " ", _clean_location(candidate or "")),
         ).strip(" ,-")
         if len(latin) >= 3:
-            if len(latin) > 70:
-                # Cut on a word so the card never ends mid-place-name.
-                latin = latin[:70].rsplit(" ", 1)[0]
+            if len(latin) > max_chars:
+                # Cut on a word so it never ends mid-place-name. The reel asks
+                # for fewer characters than the card: moviepy raises when text
+                # overflows its box, and that costs every overlay on the video.
+                latin = latin[:max_chars].rsplit(" ", 1)[0]
             return latin.strip(" ,-")
     return ""
 
@@ -1070,6 +1078,9 @@ def create_property_video(
     W, H = REEL_WIDTH, REEL_HEIGHT
     bold_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf")
     light_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf")
+    # The card sets a price in Black, not Bold, and a price is the thing both
+    # formats are built around.
+    black_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Black.ttf")
 
     llm = ai_client()
     images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
@@ -1079,17 +1090,21 @@ def create_property_video(
         return None
 
     def _make_slide(local_path):
-        """Vertical 9:16 slide: photo fit onto a dark canvas (downscale only).
+        """Vertical 9:16 slide, cover-cropped by the same code as the cards.
 
-        We pre-shrink with PIL so a large source image is never fully decoded
-        into a giant array — upscaling to 'cover' is what OOM-killed the VPS.
+        This used to fit the photo onto the canvas, which left a 600x450 listing
+        photo filling a band across the middle of the frame and two thirds of a
+        phone screen black. The type then had to sit in the empty space, and the
+        gradients it is designed to sit on had nothing to fade over.
+
+        The old warning that "upscaling to cover is what OOM-killed the VPS" was
+        about doing it inside moviepy at 1080x1920. _photo_band does it in PIL,
+        at a bounded size, and hands over a JPEG already the size of the frame —
+        so what moviepy holds per slide is 540x960 either way, exactly what it
+        held before. A photo too small to reach the frame is still letterboxed
+        onto the dark canvas below rather than smeared across it.
         """
-        # Trim white borders, then downscale to fit within the canvas in place
-        # (Pillow only shrinks).
-        with Image.open(local_path) as im:
-            im = trim_white_borders(im.convert("RGB"))
-            im.thumbnail((W, H), Image.LANCZOS)
-            im.save(local_path, "JPEG", quality=88)
+        _photo_band(local_path, W, H).save(local_path, "JPEG", quality=88)
 
         img = ImageClip(local_path, duration=duration_per_image).with_position("center")
         if REEL_ENABLE_KEN_BURNS:
@@ -1176,34 +1191,96 @@ def create_property_video(
     dur = clip.duration
 
     # --- Text overlays -----------------------------------------------------
-    # Font sizes are tuned for a 1920px-tall canvas and scaled to the actual
-    # height so the layout looks right at 540, 720 or 1080.
+    # Same design as the listing carousel: left-aligned at the card's margin,
+    # the price in Black, the place under it, the size in brass, and gradients
+    # rather than hard translucent bands. A reel and a carousel of the same
+    # house used to look like two accounts.
+    #
+    # Sizes are given in the card's own pixels. The card is 1080 wide, a 9:16
+    # frame 1080 wide is 1920 tall, and fs() is scaled against 1920 — so fs(126)
+    # here is the card's 126px price whatever the reel is rendered at.
     def fs(base):
         return max(14, int(base * H / 1920))
 
-    def _band(y_frac, h_frac, opacity=0.45):
-        return (
-            ColorClip((W, int(H * h_frac)), color=(0, 0, 0), duration=dur)
-            .with_opacity(opacity)
-            .with_position((0, int(H * y_frac)))
-        )
+    margin = fs(CARD_MARGIN)
+    box_w = W - margin * 2
 
-    def _centered_text(text, y_frac, h_frac, font, font_size):
+    def _hex(rgb):
+        # PIL takes a tuple, but moviepy hands the colour through several layers
+        # to get there and a string survives all of them.
+        return "#%02x%02x%02x" % rgb
+
+    def _scrims():
+        """The card's two gradients, as one transparent overlay.
+
+        One clip rather than two: it is the same RGBA image either way, and the
+        composite has fewer layers to walk on a box with no memory to spare.
+        """
+        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+        # Deeper and longer than the card's, and concave rather than convex: a
+        # card is read in still light, where a gradient that only darkens near
+        # the edge is enough. On video the type sits over whatever the photo
+        # happens to be — sunlit concrete, in the render I checked — and the
+        # brass size line and the hook both disappeared into it. The exponent
+        # below 1 keeps the band dark most of the way across and spends the fade
+        # at the very end, where nothing is written.
+        for height, strength, at_top in (
+            (int(H * 0.40), 240, True), (int(H * 0.46), 238, False)
+        ):
+            ramp = Image.new("L", (1, height))
+            ramp.putdata([
+                int(strength * ((1 - i / max(1, height - 1)) if at_top
+                                else i / max(1, height - 1)) ** 0.6)
+                for i in range(height)
+            ])
+            band = Image.new("RGBA", (W, height), (*REEL_BG_COLOR, 255))
+            band.putalpha(ramp.resize((W, height), Image.BILINEAR))
+            canvas.alpha_composite(band, (0, 0 if at_top else H - height))
+        return ImageClip(np.array(canvas), transparent=True).with_duration(dur)
+
+    def _line(text, y, box_h, font, font_size, color):
+        """One left-aligned block, its own box, pinned to the top of it.
+
+        Every box is generous: moviepy raises when text overflows, and that
+        exception is caught below by a fallback that posts the video with no
+        overlays at all — no price, no place, not even the watermark.
+        """
         return (
             TextClip(
-                font=font,
-                text=text,
-                font_size=font_size,
-                color="white",
-                stroke_color="black",
-                stroke_width=3,
-                method="caption",
-                text_align="center",
-                size=(W - 140, int(H * h_frac)),
+                font=font, text=text, font_size=font_size, color=color,
+                method="caption", text_align="left",
+                horizontal_align="left", vertical_align="top",
+                size=(box_w, box_h),
             )
             .with_duration(dur)
-            .with_position(("center", int(H * y_frac)))
+            .with_position((margin, y))
         )
+
+    def _price_stack(top):
+        """Price, place, size — the hero card's block, in the same order."""
+        # Tiered rather than shrunk to fit: see _line on what an overflow costs.
+        price_size = fs(126) if len(price) <= 10 else (
+            fs(96) if len(price) <= 13 else fs(76)
+        )
+        clips = [_line(price, top, fs(150), black_font, price_size, _hex(FG))]
+        if place:
+            clips.append(
+                _line(place, top + fs(160), fs(120), light_font, fs(46), _hex(FG))
+            )
+        if details:
+            clips.append(
+                _line(details, top + fs(292), fs(56), light_font, fs(32),
+                      _hex(ACCENT))
+            )
+        return clips
+
+    def _hook_stack(top):
+        """The AI phrase, with the wordmark under it — the later slides' bar."""
+        return [
+            _line(video_top_text, top, fs(140), light_font, fs(52), _hex(FG)),
+            _line(REEL_BRAND_TEXT, top + fs(150), fs(60), bold_font, fs(32),
+                  _hex(FG)),
+        ]
 
     # Top: short AI hook, sanitised to ASCII (the model sometimes injects CJK).
     try:
@@ -1219,55 +1296,30 @@ def create_property_video(
     video_top_text = top_clean[:24].strip() or "Link in Bio"
 
     price = str(property.get_price_for_front or "")
-    loc = _clean_location(property.get_location_for_front())
-    # Truncated, not shrunk: moviepy raises when text overflows its caption box,
-    # and that exception costs every overlay including the watermark.
-    place = loc[:REEL_HOOK_PLACE_MAX_CHARS].strip(" ,-")
+    # The same place name and the same size line the card carries, from the same
+    # code — the two formats naming one house differently was the tell that they
+    # were built separately. Truncated on a word, not shrunk.
+    place = _card_location(property, max_chars=REEL_HOOK_PLACE_MAX_CHARS)
+    details = _details_line(
+        _clean_area(property.building_area), _clean_area(property.land_area)
+    )
 
     # What the reel is remembered by, and the thing to compare against the
     # insights later.
     meta["overlay_hook"] = video_top_text
     meta["hook_price_first"] = REEL_HOOK_PRICE_FIRST
 
+    overlays = [clip, _scrims()]
     if REEL_HOOK_PRICE_FIRST:
-        # Frame one, top of the screen: the price, then where it is. The AI
-        # phrase moves to the lower band — it is atmosphere, not a hook, and it
-        # was occupying the only line anyone reads before deciding to scroll.
-        #
-        # The price is set as large as it can be without risking the caption box:
-        # an overflow raises, and that exception takes every overlay with it —
-        # including the watermark — leaving an unbranded reel to be posted.
-        price_size = fs(88) if len(price) <= 11 else fs(64)
-        overlays = [
-            clip,
-            _band(0.04, 0.16),
-            _centered_text(price, 0.05, 0.085, bold_font, price_size),
-            _centered_text(place, 0.135, 0.055, light_font, fs(40)),
-            _band(0.66, 0.13),
-            _centered_text(video_top_text, 0.665, 0.12, light_font, fs(52)),
-        ]
+        # Frame one, top of the screen: the price, then where it is, then how
+        # big. The AI phrase goes to the bottom — it is atmosphere, not a hook,
+        # and it was occupying the only line anyone reads before deciding to
+        # scroll.
+        # 0.74 rather than lower: Instagram's own caption and buttons cover the
+        # bottom of a reel, and the wordmark was sitting under them.
+        overlays += _price_stack(margin) + _hook_stack(int(H * 0.74))
     else:
-        overlays = [
-            clip,
-            _band(0.05, 0.11),
-            _centered_text(video_top_text, 0.05, 0.11, light_font, fs(60)),
-            _band(0.66, 0.17),
-            _centered_text(f"{price}\n{loc}", 0.66, 0.17, bold_font, fs(54)),
-        ]
-
-    overlays += [
-        # Persistent brand watermark.
-        TextClip(
-            font=bold_font,
-            text=REEL_BRAND_TEXT,
-            font_size=fs(36),
-            color="white",
-            stroke_color="black",
-            stroke_width=2,
-        )
-        .with_duration(dur)
-        .with_position(("center", int(H * 0.91))),
-    ]
+        overlays += _hook_stack(margin) + _price_stack(int(H * 0.58))
 
     # Composite overlays onto the base video. On any failure, fall back to the
     # already-written no-label video so the bot still posts something.

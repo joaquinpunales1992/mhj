@@ -743,6 +743,7 @@ class ReelRenderSmokeTests(TestCase):
     """
 
     def test_the_hook_frame_renders(self):
+        from moviepy import VideoFileClip
         from PIL import Image, ImageDraw
 
         from social import utils
@@ -756,6 +757,8 @@ class ReelRenderSmokeTests(TestCase):
         property = Property.objects.create(
             url="https://example.com/render", price=1800, show_in_front=True,
             location="Oita Prefecture, Bungo-ono City, Mitsuke", floor_plan="3DK",
+            # Areas, so the render exercises the brass size line as well.
+            building_area="118.12㎡", land_area="1,074㎡ (public book)",
         )
         PropertyImage.objects.create(property=property, file="properties/a.jpg")
 
@@ -765,7 +768,8 @@ class ReelRenderSmokeTests(TestCase):
         video_path = os.path.join(out_dir, "reel-render.mp4")
         meta = {}
         with patch.object(utils, "_download_image_to_tempfile", return_value=photo), \
-             patch.object(utils, "ai_client") as ai:
+             patch.object(utils, "ai_client") as ai, \
+             self.assertLogs("social.utils", level="INFO") as logs:
             ai.return_value.generate_text.return_value = "Wake Up Here"
             result = utils.create_property_video(
                 property.pk, output_path=video_path, audio_path=audio,
@@ -776,3 +780,15 @@ class ReelRenderSmokeTests(TestCase):
         self.assertEqual(meta["overlay_hook"], "Wake Up Here")
         self.assertTrue(meta["hook_price_first"])
         self.assertTrue(os.path.getsize(video_path) > 0)
+
+        # The one assertion this test exists for. An overflowing caption box
+        # raises, the composite is abandoned, and the no-label video is posted
+        # instead — same return value, same non-zero file, no overlays on it.
+        # Without this the test passes while the reel goes out unbranded.
+        fell_back = [line for line in logs.output if "no-label" in line]
+        self.assertEqual(fell_back, [], "the overlays did not composite")
+
+        # And keep a frame to look at, which is what the docstring promises.
+        frame_path = os.path.join(out_dir, "reel-frame.png")
+        VideoFileClip(video_path).save_frame(frame_path, t=1)
+        self.assertTrue(os.path.getsize(frame_path) > 0)

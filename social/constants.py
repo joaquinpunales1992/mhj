@@ -130,8 +130,11 @@ REEL_BRAND_TEXT = "akiyainjapan.com"  # persistent watermark
 REEL_HOOK_PRICE_FIRST = True
 # Longer place names are truncated rather than shrunk: moviepy raises if text
 # does not fit its caption box, and losing the whole overlay to a long address
-# would cost the watermark too.
-REEL_HOOK_PLACE_MAX_CHARS = 30
+# would cost the watermark too. Cut on a word boundary, and enough of them to
+# name a town rather than just a prefecture — the card says "Oaza Inano, Usuki
+# City, Oita Prefecture" and the reel of the same house should not say less than
+# it has room for.
+REEL_HOOK_PLACE_MAX_CHARS = 44
 
 # Reels also appear in the main feed and the profile grid. There is no reason to
 # publish into the Reels tab alone — it is the same video with less shelf space.
