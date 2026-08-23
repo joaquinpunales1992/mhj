@@ -394,6 +394,14 @@ STATICFILES_FINDERS = [
 MEDIA_ROOT = os.path.join(BASE_DIR, "myhouseinjapan/media")
 MEDIA_URL = "/media/"
 
+# Where a rendered social card has to be fetchable from. Instagram will not
+# accept an upload — it takes an image_url and fetches it itself — so a card we
+# drew locally needs a public address before it can be posted. Served out of
+# STATIC_ROOT by whitenoise; see social/content/hosting.py.
+SOCIAL_PUBLIC_BASE_URL = env(
+    "SOCIAL_PUBLIC_BASE_URL", default="https://www.akiyainjapan.com"
+)
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.1/ref/settings/#default-auto-field
 
@@ -411,3 +419,8 @@ HUGGING_FACE_AI_ENDPOINT_URL = ""
 HUGGING_FACE_AI_TOKEN = ""
 
 CEREBRAS_API_KEY = env("CEREBRAS_API_KEY", default="")
+
+# Gemini is tried first and Cerebras is the fallback; see ai/providers.py. Not
+# the same value as GOOGLE_API_KEY, which is the Custom Search key — a Gemini
+# key comes from AI Studio. Left unset, the bot behaves exactly as it did.
+GEMINI_API_KEY = env("GEMINI_API_KEY", default="")

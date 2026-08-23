@@ -8,7 +8,7 @@ import tempfile
 import urllib.parse
 from social.constants import *
 from ai.hugging import HuggingFaceAI
-from ai.cerebras import CerebrasAI
+from ai.providers import ai_client
 from social.models import SocialPost, SocialComment
 from inventory.models import Property, PropertyImage
 from inventory.utils import all_images_gone, is_permanently_gone
@@ -356,7 +356,7 @@ def generate_caption_for_post(
     selected_angle = ""
     if use_ai_caption:
         try:
-            cerebras_ai_client = CerebrasAI()
+            llm = ai_client()
 
             # Vary the angle so a feed of posts doesn't read identically.
             caption_angles = [
@@ -377,7 +377,7 @@ def generate_caption_for_post(
             selected_angle = random.choice(caption_angles)
             selected_cta = random.choice(cta_options)
 
-            ai_caption = cerebras_ai_client.generate_text(
+            ai_caption = llm.generate_text(
                 prompt=(
                     "You write Instagram/Facebook captions for a brand that sells "
                     "affordable houses (akiya) in Japan to an international audience.\n\n"
@@ -1071,7 +1071,7 @@ def create_property_video(
     bold_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Bold.ttf")
     light_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Light.ttf")
 
-    cerebras_ai_client = CerebrasAI()
+    llm = ai_client()
     images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
     property = Property.objects.get(pk=property_id)
     if not images:
@@ -1207,13 +1207,13 @@ def create_property_video(
 
     # Top: short AI hook, sanitised to ASCII (the model sometimes injects CJK).
     try:
-        raw_top = cerebras_ai_client.generate_text(
+        raw_top = llm.generate_text(
             prompt="Generate a short, punchy 2-4 word overlay phrase in ENGLISH ONLY for a"
             " Japan property reel (e.g. 'Your Quiet Escape'). No quotes, no emojis,"
             " no non-English characters, title case."
         )
     except Exception as exc:
-        logger.warning(f"Cerebras failed for video overlay text, using default: {exc}")
+        logger.warning(f"No model gave us overlay text, using the default: {exc}")
         raw_top = None
     top_clean = re.sub(r"[^A-Za-z0-9 &!'-]", "", raw_top or "").strip() if raw_top else ""
     video_top_text = top_clean[:24].strip() or "Link in Bio"

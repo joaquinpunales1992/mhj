@@ -82,7 +82,7 @@ class CaptionTests(TestCase):
         self.assertIn("#oita", caption, "location hashtag should be derived")
 
     def test_the_angle_comes_back_so_it_can_be_stored(self):
-        with patch("social.utils.CerebrasAI") as ai:
+        with patch("social.utils.ai_client") as ai:
             ai.return_value.generate_text.return_value = "A hook\n\nBody copy."
             ai_caption, caption, angle = self.caption(use_ai_caption=True)
         self.assertTrue(angle, "the creative direction used must be reported")
@@ -90,7 +90,7 @@ class CaptionTests(TestCase):
         self.assertTrue(caption.startswith("US$18,000 · Oita Prefecture"))
 
     def test_a_dead_ai_still_produces_a_price_led_caption(self):
-        with patch("social.utils.CerebrasAI") as ai:
+        with patch("social.utils.ai_client") as ai:
             ai.return_value.generate_text.side_effect = RuntimeError("no service")
             _, caption, angle = self.caption(use_ai_caption=True)
         self.assertTrue(caption.startswith("US$18,000 · Oita Prefecture"))
@@ -437,7 +437,7 @@ class ReelPostingTests(TestCase):
              patch.object(utils, "get_fresh_token", return_value="token"), \
              patch.object(utils.shutil, "move"), \
              patch.object(utils.time, "sleep"), \
-             patch.object(utils, "CerebrasAI") as ai, \
+             patch.object(utils, "ai_client") as ai, \
              patch.object(utils.requests, "post", side_effect=fake_post):
             ai.return_value.generate_text.return_value = "Wake Up Here"
             utils.post_instagram_reel()
@@ -489,7 +489,7 @@ class CommentReplyTests(TestCase):
                                                               "property tax?"}]), \
              patch.object(social_bot, "_reply_comment",
                           return_value={"id": "1802"}) as reply, \
-             patch.object(social_bot, "CerebrasAI") as ai:
+             patch.object(social_bot, "ai_client") as ai:
             ai.return_value.generate_text.return_value = "It depends on the town — ask us!"
             social_bot.reply_comments_instagram()
 
@@ -765,7 +765,7 @@ class ReelRenderSmokeTests(TestCase):
         video_path = os.path.join(out_dir, "reel-render.mp4")
         meta = {}
         with patch.object(utils, "_download_image_to_tempfile", return_value=photo), \
-             patch.object(utils, "CerebrasAI") as ai:
+             patch.object(utils, "ai_client") as ai:
             ai.return_value.generate_text.return_value = "Wake Up Here"
             result = utils.create_property_video(
                 property.pk, output_path=video_path, audio_path=audio,

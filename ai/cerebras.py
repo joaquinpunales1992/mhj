@@ -44,6 +44,20 @@ class CerebrasAI:
         return resolved or list(self.PREFERRED_MODELS)
 
     def generate_text(self, prompt: str) -> str:
+        """One string back. The original entry point, unchanged in behaviour."""
+        obj = self.generate_json(
+            prompt, self._get_scehma(), schema_name="caption_schema"
+        )
+        return obj["caption"]
+
+    def generate_json(self, prompt: str, schema: dict, schema_name: str = "payload"):
+        """Structured output against any schema, with the same model fallback.
+
+        Captions only ever needed one string, but content that is not a listing
+        needs several fields at once — an answer plus the short version of it
+        for a card, say — and asking the model twice invites the two halves to
+        disagree with each other.
+        """
         last_exception = None
 
         for model in self._resolve_models():
@@ -54,19 +68,19 @@ class CerebrasAI:
                     response_format={
                         "type": "json_schema",
                         "json_schema": {
-                            "name": "caption_schema",
+                            "name": schema_name,
                             "strict": True,
-                            "schema": self._get_scehma(),
+                            "schema": schema,
                         },
                     },
                 )
                 obj = json.loads(resp.choices[0].message.content)
-                logger.info(f"Caption generated with model {model}: {obj['caption']}")
-                return obj["caption"]
+                logger.info(f"Generated with model {model}: {obj}")
+                return obj
             except Exception as e:
-                logger.error(f"Error generating caption with model {model}: {e}")
+                logger.error(f"Error generating with model {model}: {e}")
                 last_exception = e
-        raise RuntimeError(f"All models failed to generate caption: {last_exception}")
+        raise RuntimeError(f"All models failed to generate: {last_exception}")
 
     def _get_scehma(self):
         return {

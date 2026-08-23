@@ -1,7 +1,7 @@
 from social.constants import *
 import logging
 from ai.hugging import HuggingFaceAI
-from ai.cerebras import CerebrasAI
+from ai.providers import ai_client
 from social.models import SocialPost, SocialComment
 from inventory.models import Property
 from social.utils import (
@@ -138,13 +138,13 @@ def _reply_comments_instagram_reels():
             ):
                 continue
 
-            cerebras_ai_client = CerebrasAI()
+            llm = ai_client()
             # The comment itself now goes into the prompt. It never did before,
             # so every reply was the same generic "check our bio" regardless of
             # what was asked — which reads as a bot and ends the conversation.
             # A reply that answers the question gets answered back, and that
             # exchange is worth more to the reel's reach than the reply is.
-            ai_comment = cerebras_ai_client.generate_text(
+            ai_comment = llm.generate_text(
                 prompt=(
                     "You reply to comments as the owner of an account that lists "
                     "cheap houses (akiya) in Japan for international buyers.\n\n"
