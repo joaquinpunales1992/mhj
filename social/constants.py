@@ -84,6 +84,32 @@ JAPAN_PREFECTURES = [
 # Kept as an alias for backwards compatibility with any external references.
 HASHTAGS_LIST = CORE_HASHTAGS + ROTATING_HASHTAGS
 
+# --- Listing carousel cards (tunable) --------------------------------------
+# A listing post used to be the scraped photos, unaltered. The price and the
+# place — the only two facts that sell an akiya — lived in a caption Instagram
+# truncates at ~125 characters, and a photo saved or reshared out of the
+# carousel carried nothing at all: no price, no place, no brand.
+#
+# So the photos are drawn onto branded 4:5 cards first (social/content/
+# listing_cards.py). Set this to False to go back to posting the raw photos —
+# the same fallback the code takes on its own if rendering or hosting fails.
+LISTING_CARDS_ENABLED = True
+
+# Instagram allows 10 carousel items; 4 photos plus the closing card is what
+# people actually swipe through, and every extra slide is another render and
+# another upload on a slow box.
+LISTING_CARDS_MAX_PHOTOS = 4
+
+# End on a card that repeats the price and points at the listing, rather than on
+# a photo. This is the slide people are looking at when they decide to click.
+LISTING_CARDS_ADD_SUMMARY = True
+
+# How long a rendered card is kept on disk. Five JPEGs per post, twice a day, in
+# two directories is most of a gigabyte a year on a box that hasn't got one to
+# spare; Instagram has fetched them within seconds of posting. 0 keeps them
+# forever.
+LISTING_CARDS_KEEP_DAYS = 30
+
 # --- Reel video style (tunable) -------------------------------------------
 # Reels are vertical 9:16. The server has very little RAM (it OOM-killed at
 # 1080x1920), so we default to 720x1280 and FIT photos onto the canvas
@@ -110,3 +136,114 @@ REEL_HOOK_PLACE_MAX_CHARS = 30
 # Reels also appear in the main feed and the profile grid. There is no reason to
 # publish into the Reels tab alone — it is the same video with less shelf space.
 REEL_SHARE_TO_FEED = True
+
+
+# --- Community manager -----------------------------------------------------
+# The bot used to have exactly one thing to say: here is a house. These settings
+# govern the layer that decides what else is worth saying today, and in which
+# medium. Nothing here is a schedule — cron decides how often the planner runs,
+# the planner decides what it does when it runs.
+
+# Base weight per format, before performance is taken into account. Listings
+# still lead: they are the reason the account exists. The rest exist so the feed
+# is worth following between listings.
+CONTENT_WEIGHTS = {
+    "listing": 4.0,
+    "news": 2.0,
+    "data": 2.0,
+    "faq": 2.0,
+}
+
+# How long before the same subject may be posted again. News is keyed by URL and
+# never repeats. Listings are governed by the existing property queue.
+CONTENT_COOLDOWN_DAYS = {
+    "faq": 60,
+    "data": 14,
+}
+
+# Autonomy. False means the planner posts on its own, which is the point of it.
+# Flip to True and everything lands in Content drafts for approval instead —
+# worth doing for a week if you want to watch what it would have said.
+SOCIAL_REQUIRE_APPROVAL = False
+
+# --- News ------------------------------------------------------------------
+# Google News RSS, queried rather than a fixed publication list, so the net is
+# as wide as the subject deserves. Each query is a separate feed fetch.
+# Queries specific enough that anything they return is on-topic. Google matches
+# the article body as well as the headline, so these are taken on trust: a story
+# genuinely about akiya does not always say so in its headline.
+NEWS_QUERIES_SPECIFIC = [
+    'akiya japan',
+    '"vacant homes" OR "abandoned homes" japan house',
+    'japan countryside depopulation houses',
+    '"kominka" OR "machiya" japan house',
+]
+
+# Broader queries, worth casting for but not worth trusting — whatever they
+# return still has to pass the keyword tiers below.
+NEWS_QUERIES_BROAD = [
+    'japan property market foreign buyers',
+    '"rural japan" moving OR renovation OR village',
+    'japan house prices countryside',
+]
+
+# Alias for anything importing the old flat list.
+NEWS_QUERIES = NEWS_QUERIES_SPECIFIC + NEWS_QUERIES_BROAD
+
+NEWS_FEED_URL = "https://news.google.com/rss/search"
+
+# Anything older than this is not news, and posting it as though it were is the
+# fastest way to look automated.
+NEWS_MAX_AGE_DAYS = 10
+
+# Outlets we will not repost from: content farms and aggregators that rewrite
+# other people's reporting. Matched as a substring of the source name.
+NEWS_SOURCE_BLOCKLIST = [
+    "msn.com",
+    "news break",
+    "newsbreak",
+    "biztoc",
+    "yahoo entertainment",
+]
+
+# A headline shorter than this is usually a truncated feed artefact rather than
+# a story.
+NEWS_MIN_HEADLINE_CHARS = 30
+
+# Publisher feeds, checked in addition to the Google News queries. These carry
+# the real article URL, which Google News no longer does (its links are opaque
+# tokens that only resolve in a browser). That matters on Facebook, where a link
+# is clickable; on Instagram it is dead text either way, which is why
+# attribution there is by outlet name.
+#
+# These are general Japan feeds, so items are keyword-filtered against
+# NEWS_KEYWORDS below rather than taken wholesale.
+NEWS_RSS_FEEDS = [
+    ("The Japan Times", "https://www.japantimes.co.jp/feed/"),
+    ("SoraNews24", "https://soranews24.com/feed/"),
+    ("Nippon.com", "https://www.nippon.com/en/feed/"),
+    ("Unseen Japan", "https://unseen-japan.com/feed/"),
+]
+
+# What makes a general Japan story relevant to an akiya audience, in two tiers.
+# A single boolean keyword list was too loose: "real estate" alone pulled in a
+# story about a ninja theme park closing over a property dispute, which is not
+# what this account is about. A strong term is enough on its own; weak ones have
+# to corroborate each other.
+NEWS_KEYWORDS_STRONG = [
+    "akiya", "vacant house", "vacant home", "vacant homes",
+    "abandoned house", "abandoned home", "abandoned homes",
+    "empty house", "empty home", "empty homes",
+    "kominka", "machiya", "minka", "depopulation",
+    "rural japan", "countryside", "abandoned village",
+]
+
+NEWS_KEYWORDS_WEAK = [
+    "rural", "village", "renovation", "renovate", "real estate",
+    "property market", "housing market", "house price", "land price",
+    "moving to japan", "move to japan", "second home", "inheritance",
+    "population decline", "shrinking", "relocate", "homeowner",
+]
+
+# Kept as an alias: anything still importing the flat list gets both tiers.
+NEWS_KEYWORDS = NEWS_KEYWORDS_STRONG + NEWS_KEYWORDS_WEAK

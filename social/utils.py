@@ -30,7 +30,8 @@ from moviepy import (
     vfx,
 )
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
-from PIL import Image, ImageChops
+from PIL import Image
+from social.content.listing_cards import trim_white_borders
 from membership.utils import notify_social_token_expired
 import logging
 from django.conf import settings
@@ -417,10 +418,114 @@ def generate_caption_for_post(
         return ai_caption, f"{lead}\n\n{_details_block()}", ""
 
 
+LISTING_CARD_DIR = os.path.join(settings.MEDIA_ROOT, "social_cards")
+
+
+def _card_location(property: Property) -> str:
+    """A place name fit to be burnt into an image: Latin script, short, specific.
+
+    The scraped address is the specific thing, but it arrives with Japanese
+    characters in it and Montserrat has no CJK glyphs — those render as empty
+    boxes, which looks worse than saying less. So each candidate is stripped to
+    Latin script and the first one with anything left wins: the address, then
+    the inferred prefecture, then nothing at all. A card with no place on it is
+    a poorer card; a card with three empty boxes on it looks broken.
+    """
+    for candidate in (property.display_location, property.get_location_for_front()):
+        latin = re.sub(
+            r"\s+", " ",
+            re.sub(r"[^\x00-\x7F]+", " ", _clean_location(candidate or "")),
+        ).strip(" ,-")
+        if len(latin) >= 3:
+            if len(latin) > 70:
+                # Cut on a word so the card never ends mid-place-name.
+                latin = latin[:70].rsplit(" ", 1)[0]
+            return latin.strip(" ,-")
+    return ""
+
+
+def _listing_card_urls(property: Property):
+    """Public URLs for the branded carousel, or None to fall back to raw photos.
+
+    None rather than an empty list on failure, so the caller can tell "post the
+    photos plain" from "there is nothing to post". Nothing in here is allowed to
+    raise: this runs from cron, and an unbranded post is a far better outcome
+    than a post that never went out.
+    """
+    from social.content.hosting import CARD_SUBDIR, public_url_for_card
+    from social.content.listing_cards import prune_old_cards, render_listing_cards
+
+    temp_paths = []
+    try:
+        for image in property.get_ordered_images()[:LISTING_CARDS_MAX_PHOTOS]:
+            raw_url = prepare_image_url_for_facebook(image.file.url)
+            try:
+                temp_paths.append(_download_image_to_tempfile(raw_url))
+            except Exception as exc:
+                # A 404 here is usually a delisted listing; the reel pipeline
+                # owns that judgement, so just draw with what did load.
+                logger.warning(f"Skipping photo {raw_url} for card render: {exc}")
+
+        if not temp_paths:
+            logger.warning("No photo could be downloaded; not rendering cards.")
+            return None
+
+        card_paths = render_listing_cards(
+            temp_paths,
+            price=property.get_price_for_front,
+            location=_card_location(property),
+            building_area=_clean_area(property.building_area),
+            land_area=_clean_area(property.land_area),
+            link=f"www.akiyainjapan.com{property.get_public_url}",
+            out_dir=LISTING_CARD_DIR,
+            slug=f"listing-{property.pk}-{time.strftime('%Y%m%d%H%M%S')}",
+            add_summary=LISTING_CARDS_ADD_SUMMARY,
+        )
+        if not card_paths:
+            return None
+
+        urls = [url for url in (public_url_for_card(p) for p in card_paths) if url]
+        if not urls:
+            logger.error("Cards rendered but none could be made publicly fetchable.")
+            return None
+
+        # Housekeeping after the fact, never before: a prune that throws must
+        # not cost us the post it just rendered.
+        for directory in (
+            LISTING_CARD_DIR, os.path.join(settings.STATIC_ROOT, CARD_SUBDIR)
+        ):
+            try:
+                prune_old_cards(directory, "listing-", LISTING_CARDS_KEEP_DAYS)
+            except Exception as exc:
+                logger.warning(f"Card prune skipped for {directory}: {exc}")
+        return urls
+    except Exception as exc:
+        logger.error(f"Listing card render failed, posting raw photos: {exc}")
+        return None
+    finally:
+        for path in temp_paths:
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+
+def _listing_media_urls(property: Property):
+    """What a listing post should actually upload, branded if we can manage it."""
+    if LISTING_CARDS_ENABLED:
+        urls = _listing_card_urls(property)
+        if urls:
+            return urls
+    return [
+        prepare_image_url_for_facebook(image.file.url)
+        for image in property.get_ordered_images()[:5]
+    ]
+
+
 def post_to_instagram(
     property: Property, last_caption_generated: str, use_ai_caption: bool
 ):
-    property_image_urls = [image.file.url for image in property.images.all()][:5]
+    property_image_urls = _listing_media_urls(property)
 
     ai_caption, caption, caption_angle = generate_caption_for_post(
         property_location=property.location,
@@ -434,14 +539,10 @@ def post_to_instagram(
 
     media_ids = []
 
-    # Upload each image as a carousel item
-    for raw_url in property_image_urls:
-        try:
-            image_url = prepare_image_url_for_facebook(raw_url)
-        except Exception as e:
-            logger.error(f"Error preparing image URL: {e}")
-            continue
-
+    # Upload each image as a carousel item. The URLs arrive ready to fetch —
+    # _listing_media_urls has already prepared them, and running the raw-photo
+    # fixups over one of our own card URLs would mangle it.
+    for image_url in property_image_urls:
         upload_url = f"https://graph.facebook.com/v19.0/{INSTAGRAM_USER_ID}/media"
         payload = {
             "image_url": image_url,
@@ -506,7 +607,7 @@ def post_to_instagram(
 def post_to_facebook(
     property: Property, last_caption_generated: str, use_ai_caption: bool
 ):
-    property_image_urls = [image.file.url for image in property.images.all()][:5]
+    property_image_urls = _listing_media_urls(property)
 
     ai_caption, caption, caption_angle = generate_caption_for_post(
         property_location=property.location,
@@ -518,15 +619,10 @@ def post_to_facebook(
         use_ai_caption=use_ai_caption,
     )
 
-    # Upload each image (unpublished)
+    # Upload each image (unpublished). Already-prepared URLs — see the note in
+    # post_to_instagram.
     media_fbids = []
-    for raw_url in property_image_urls:
-        try:
-            image_url = prepare_image_url_for_facebook(raw_url)
-        except Exception as e:
-            logger.error(f"Error preparing image URL: {e}")
-            continue
-
+    for image_url in property_image_urls:
         upload_url = f"https://graph.facebook.com/v19.0/{PAGE_ID}/photos"
         payload = {
             "url": image_url,
@@ -982,22 +1078,6 @@ def create_property_video(
         logger.error("No images found for the property.")
         return None
 
-    def _trim_white_borders(im):
-        """Crop near-white borders some SUUMO photos carry (and the white
-        padding from fixed-box resizes) so reels don't show white frames."""
-        rgb = im.convert("RGB")
-        bg = Image.new("RGB", rgb.size, (255, 255, 255))
-        diff = ImageChops.difference(rgb, bg)
-        # Amplify + offset so anything brighter than ~235 counts as "white".
-        diff = ImageChops.add(diff, diff, 2.0, -20)
-        bbox = diff.getbbox()
-        # Only crop if there's a real border (ignore tiny/no-op or full-white).
-        if bbox and bbox != (0, 0, rgb.width, rgb.height):
-            cropped = im.crop(bbox)
-            if cropped.width >= 50 and cropped.height >= 50:
-                return cropped
-        return im
-
     def _make_slide(local_path):
         """Vertical 9:16 slide: photo fit onto a dark canvas (downscale only).
 
@@ -1007,7 +1087,7 @@ def create_property_video(
         # Trim white borders, then downscale to fit within the canvas in place
         # (Pillow only shrinks).
         with Image.open(local_path) as im:
-            im = _trim_white_borders(im.convert("RGB"))
+            im = trim_white_borders(im.convert("RGB"))
             im.thumbnail((W, H), Image.LANCZOS)
             im.save(local_path, "JPEG", quality=88)
 

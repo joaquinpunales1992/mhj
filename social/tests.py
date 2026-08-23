@@ -9,6 +9,9 @@ regression there costs reach without breaking anything.
 
 import json
 import os
+import shutil
+import tempfile
+import time
 import unittest
 from datetime import timedelta
 from io import StringIO
@@ -498,6 +501,230 @@ class CommentReplyTests(TestCase):
         self.assertTrue(comment.replied)
         self.assertEqual(comment.comment, "It depends on the town — ask us!",
                          "the reply text belongs here, not the API's response object")
+
+
+class ListingCardTests(TestCase):
+    """The cards a listing carousel is made of.
+
+    What is worth asserting is the count and the fallbacks: the page dots are
+    drawn onto each card from a total worked out up front, so a photo that turns
+    out not to be an image has to be dropped before the first card is saved, not
+    after. The layout itself is checked by eye — see the preview command.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def photo(self, name, size=(600, 450)):
+        """A stand-in for a scraped listing photo, at the size homes.jp serves."""
+        from PIL import Image, ImageDraw
+
+        path = os.path.join(self.dir, name)
+        canvas = Image.new("RGB", size, (238, 240, 235))
+        ImageDraw.Draw(canvas).rectangle(
+            [size[0] // 6, size[1] // 3, size[0] * 5 // 6, size[1]],
+            fill=(140, 120, 96),
+        )
+        canvas.save(path, "JPEG")
+        return path
+
+    def render(self, photos, **kwargs):
+        from social.content.listing_cards import render_listing_cards
+
+        defaults = dict(
+            price="US$25,000",
+            location="Bungo-ono City, Oita Prefecture",
+            building_area="78.5 m²",
+            land_area="198.73 m² (60.11 tsubo)",
+            link="www.akiyainjapan.com/japanese-houses/1/",
+            out_dir=os.path.join(self.dir, "cards"),
+            slug="listing-1",
+        )
+        defaults.update(kwargs)
+        return render_listing_cards(photos, **defaults)
+
+    def test_every_photo_gets_a_card_and_the_carousel_closes_on_the_summary(self):
+        from PIL import Image
+
+        paths = self.render([self.photo("a.jpg"), self.photo("b.jpg")])
+
+        self.assertEqual(len(paths), 3, "two photos plus the closing card")
+        for path in paths:
+            self.assertEqual(Image.open(path).size, (1080, 1350),
+                             "4:5 is the tallest Instagram shows uncropped")
+
+    def test_a_portrait_photo_is_rendered_too(self):
+        """Cover-cropping a portrait photo fills the card; it must not crash."""
+        paths = self.render([self.photo("tall.jpg", size=(450, 600))])
+        self.assertEqual(len(paths), 2)
+
+    def test_a_file_that_is_not_an_image_is_dropped_before_anything_is_drawn(self):
+        """Otherwise the page dots promise a slide that was never rendered."""
+        broken = os.path.join(self.dir, "broken.jpg")
+        with open(broken, "w") as f:
+            f.write("<html>404 Not Found</html>")
+
+        paths = self.render([self.photo("a.jpg"), broken])
+        self.assertEqual(len(paths), 2, "one photo plus the closing card")
+
+    def test_nothing_is_rendered_when_no_photo_survives(self):
+        """A delisted listing must produce no cards rather than a lone CTA."""
+        self.assertEqual(self.render([]), [])
+
+    def test_the_summary_card_can_be_turned_off(self):
+        paths = self.render([self.photo("a.jpg")], add_summary=False)
+        self.assertEqual(len(paths), 1)
+
+    def test_the_areas_are_shortened_for_the_card(self):
+        """A card has no room for two units and false decimals."""
+        from social.content.listing_cards import _details_line
+
+        line = _details_line("198.73 m² (60.11 tsubo)", "78.42 m²")
+        self.assertIn("Building 199 m²", line)
+        self.assertIn("Land 78 m²", line)
+        self.assertNotIn("tsubo", line)
+
+    def test_a_thousands_separator_survives(self):
+        """'1,074 m²' read as digits-and-dots stops at the comma: 'Land 1 m²'."""
+        from social.content.listing_cards import _details_line
+
+        self.assertEqual(_details_line("", "1,074 m²"), "Land 1,074 m²")
+
+    def test_a_missing_area_leaves_no_dangling_separator(self):
+        from social.content.listing_cards import _details_line
+
+        self.assertEqual(_details_line("", "78.42 m²"), "Land 78 m²")
+        self.assertEqual(_details_line("", ""), "")
+
+
+    def test_only_our_own_old_cards_are_pruned(self):
+        """The text-card pipeline shares the directory, and drafts link to it."""
+        from social.content.listing_cards import prune_old_cards
+
+        old_day = time.time() - 60 * 86400
+        kept_new = os.path.join(self.dir, "listing-1-20260101-1.jpg")
+        pruned = os.path.join(self.dir, "listing-1-20250101-1.jpg")
+        other = os.path.join(self.dir, "faq-tax-single-20250101.jpg")
+        for path in (kept_new, pruned, other):
+            open(path, "w").close()
+        for path in (pruned, other):
+            os.utime(path, (old_day, old_day))
+
+        self.assertEqual(prune_old_cards(self.dir, "listing-", 30), 1)
+        self.assertTrue(os.path.exists(kept_new))
+        self.assertTrue(os.path.exists(other), "not ours to delete")
+        self.assertFalse(os.path.exists(pruned))
+
+    def test_pruning_can_be_turned_off(self):
+        from social.content.listing_cards import prune_old_cards
+
+        old_day = time.time() - 900 * 86400
+        path = os.path.join(self.dir, "listing-1-1.jpg")
+        open(path, "w").close()
+        os.utime(path, (old_day, old_day))
+
+        self.assertEqual(prune_old_cards(self.dir, "listing-", 0), 0)
+        self.assertTrue(os.path.exists(path))
+
+
+class CardLocationTests(TestCase):
+    """What place name goes on the image.
+
+    Montserrat has no CJK glyphs, so a Japanese address renders as a row of
+    empty boxes — which looks broken in a way that saying nothing does not.
+    """
+
+    def location(self, raw):
+        from social.utils import _card_location
+
+        return _card_location(
+            Property(url="https://example.com/1", price=1800, location=raw)
+        )
+
+    def test_a_latin_address_is_used_as_it_is(self):
+        self.assertEqual(
+            self.location("Bungo-ono City, Oita Prefecture"),
+            "Bungo-ono City, Oita Prefecture",
+        )
+
+    def test_the_scraper_junk_is_stripped(self):
+        self.assertEqual(
+            self.location("Oita Prefecture [ ■ Surrounding environment ]"),
+            "Oita Prefecture",
+        )
+
+    def test_a_mixed_address_keeps_the_part_that_will_render(self):
+        self.assertEqual(self.location("大分県 Bungo-ono City"), "Bungo-ono City")
+
+    def test_an_address_with_nothing_renderable_yields_nothing(self):
+        """Better a card with no place on it than one with three empty boxes."""
+        self.assertEqual(self.location("大分県豊後大野市"), "")
+
+
+class ListingMediaTests(TestCase):
+    """What a listing post actually uploads.
+
+    The branded cards are the point of the format, but they depend on a render
+    and on our own domain serving the result. Both run from cron with nobody
+    watching, so the fallback to the raw photos matters as much as the cards:
+    an unbranded post beats no post.
+    """
+
+    def setUp(self):
+        self.property = Property.objects.create(
+            url="https://example.com/house-1", price=1800, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City",
+            building_area="78.5m 2", land_area="198.73m 2",
+        )
+        # Photos are stored as the source listing's own URL, which is what
+        # prepare_image_url_for_facebook exists to dig back out of MEDIA_URL.
+        PropertyImage.objects.create(
+            property=self.property, file="https://img.example.com/a.jpg"
+        )
+
+    def post(self, card_urls):
+        """Post to Instagram with the card pipeline stubbed to `card_urls`."""
+        from social import utils
+
+        self.uploaded = []
+
+        def fake_post(url, data=None, **kwargs):
+            if url.endswith("/media") and data.get("is_carousel_item"):
+                self.uploaded.append(data["image_url"])
+                return response(200, {"id": f"child-{len(self.uploaded)}"})
+            if url.endswith("/media"):
+                return response(200, {"id": "carousel-1"})
+            return response(200, {"id": "17999999999999999"})
+
+        with patch.object(utils, "_listing_card_urls", return_value=card_urls), \
+             patch.object(utils, "get_fresh_token", return_value="token"), \
+             patch.object(utils.requests, "post", side_effect=fake_post):
+            utils.post_to_instagram(
+                property=self.property, last_caption_generated="",
+                use_ai_caption=False,
+            )
+
+    def test_the_branded_cards_are_what_gets_uploaded(self):
+        self.post(["https://www.akiyainjapan.com/static/social_cards/a-1.jpg"])
+        self.assertEqual(
+            self.uploaded,
+            ["https://www.akiyainjapan.com/static/social_cards/a-1.jpg"],
+        )
+
+    def test_a_card_url_is_uploaded_untouched(self):
+        """The raw-photo URL fixups would mangle one of our own URLs."""
+        self.post(["https://www.akiyainjapan.com/static/social_cards/a-1.jpg"])
+        for url in self.uploaded:
+            self.assertNotIn("https:///", url)
+
+    def test_a_failed_render_falls_back_to_the_raw_photos(self):
+        self.post(None)
+        self.assertEqual(self.uploaded, ["https://img.example.com/a.jpg"])
+        self.assertEqual(SocialPost.objects.count(), 1,
+                         "an unbranded post still has to go out")
 
 
 @unittest.skipUnless(
