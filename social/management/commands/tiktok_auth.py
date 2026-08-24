@@ -91,11 +91,47 @@ class Command(BaseCommand):
             f"Posting as @{creator.get('creator_username', '?')} "
             f"({creator.get('creator_nickname', '?')})"
         ))
+        from social.constants import TIKTOK_PRIVACY_LEVEL
+
         options = creator.get("privacy_level_options") or []
         self.stdout.write(f"Privacy levels this account allows: {options}")
-        if options == ["SELF_ONLY"]:
+        self.stdout.write(
+            "Account reports: "
+            f"comments {'off' if creator.get('comment_disabled') else 'on'}, "
+            f"duet {'off' if creator.get('duet_disabled') else 'on'}, "
+            f"stitch {'off' if creator.get('stitch_disabled') else 'on'}"
+        )
+        self.stdout.write(f"Configured privacy level: {TIKTOK_PRIVACY_LEVEL}")
+
+        # An unaudited app can only post to a private account, and this is how
+        # to tell one from the other without leaving the terminal: a private
+        # account cannot be duetted or stitched, and is not offered
+        # PUBLIC_TO_EVERYONE. Both readings are shown because either can be
+        # stale by a few minutes after the switch is flipped in the app.
+        looks_public = (
+            "PUBLIC_TO_EVERYONE" in options
+            or not creator.get("duet_disabled")
+            or not creator.get("stitch_disabled")
+        )
+        if looks_public:
             self.stdout.write(self.style.WARNING(
-                "SELF_ONLY is the only option, which means the app has not "
-                "passed TikTok's audit yet: everything it posts will be "
-                "private. Posting still works — nobody else can see it."
+                "This account still looks PUBLIC to TikTok. An unaudited app "
+                "can only post to a private account, so posting will be refused "
+                "with unaudited_client_can_only_post_to_private_accounts until "
+                "the account itself is switched to private in the TikTok app "
+                "(Settings and privacy > Privacy > Private account). TikTok can "
+                "take a few minutes to report the change here."
+            ))
+        else:
+            self.stdout.write(self.style.SUCCESS(
+                "This account looks private, which is what an unaudited app "
+                "needs. Posts will be visible only to the account owner until "
+                "the app passes review."
+            ))
+
+        if TIKTOK_PRIVACY_LEVEL != "SELF_ONLY":
+            self.stdout.write(self.style.WARNING(
+                f"TIKTOK_PRIVACY_LEVEL is {TIKTOK_PRIVACY_LEVEL}. Until the app "
+                "is audited, anything other than SELF_ONLY is refused. Unset it "
+                "in .env, or set it to SELF_ONLY, until approval comes through."
             ))
