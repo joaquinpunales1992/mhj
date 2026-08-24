@@ -121,7 +121,17 @@ TIKTOK_DISABLE_STITCH = False
 # user.info.basic. So the posting page calls /user/info/ and shows the account
 # it is about to post as: a scope that is requested and never called is a
 # reason on its own for an app review to be refused.
-TIKTOK_SCOPES = ["user.info.basic", "video.publish"]
+#
+# Overridable from .env, because the authorize screen refuses the whole request
+# with one word — "scope" — when any single scope is not enabled on the app
+# being authorised against, and sandbox and production are configured
+# separately. Narrowing it to one scope is how you find out which:
+#   TIKTOK_SCOPES=video.publish
+TIKTOK_SCOPES = [
+    scope.strip()
+    for scope in os.getenv("TIKTOK_SCOPES", "user.info.basic,video.publish").split(",")
+    if scope.strip()
+]
 
 # Seconds. Generous because one of these requests is a whole video going up a
 # domestic connection.
