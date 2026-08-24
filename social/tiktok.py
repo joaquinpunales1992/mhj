@@ -220,6 +220,36 @@ def _call(path, token, payload):
     return body.get("data") or {}
 
 
+def fetch_user_info(token, fields=("open_id", "display_name", "avatar_url_100")):
+    """The connected account's own profile, via Login Kit's user.info.basic.
+
+    Login Kit is a prerequisite of the Content Posting API — it is the OAuth
+    flow the access token comes from — and the portal grants user.info.basic
+    with it. This is what makes that scope honest: the posting page names and
+    pictures the account it is about to post as, from the account's own profile,
+    rather than requesting a scope it never calls.
+
+    creator_info also returns a username, but it returns it as part of asking
+    permission to post. This is the profile.
+    """
+    response = requests.get(
+        f"{API_ROOT}/user/info/",
+        headers={"Authorization": f"Bearer {token}"},
+        params={"fields": ",".join(fields)},
+        timeout=TIKTOK_TIMEOUT,
+    )
+    body = response.json() if response.content else {}
+    error = body.get("error") or {}
+    code = error.get("code", "")
+    if response.status_code != 200 or code not in ("", "ok"):
+        raise TikTokError(
+            f"/user/info/ failed: {code or response.status_code} "
+            f"{error.get('message') or response.text}",
+            code=code,
+        )
+    return (body.get("data") or {}).get("user") or {}
+
+
 def query_creator_info(token):
     """Who we are about to post as, and what that account allows.
 

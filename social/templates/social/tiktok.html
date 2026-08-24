@@ -15,12 +15,24 @@
   <h2>Connected account</h2>
   {% if connected %}
     <div class="tt-card">
-      {% if creator.creator_avatar_url %}
+      {% comment %}
+        Explicit branches rather than `profile.x|default:creator.y`: profile is
+        empty whenever the /user/info/ call did not come back, and a missing key
+        in a filter chain raises rather than falling through.
+      {% endcomment %}
+      {% if profile.avatar_url_100 %}
+        <img class="tt-avatar" src="{{ profile.avatar_url_100 }}" alt="">
+      {% elif creator.creator_avatar_url %}
         <img class="tt-avatar" src="{{ creator.creator_avatar_url }}" alt="">
       {% endif %}
       <div>
         <strong>@{{ creator.creator_username }}</strong>
-        <p>{{ creator.creator_nickname }}</p>
+        {% if profile.display_name %}
+          <p>{{ profile.display_name }}</p>
+        {% else %}
+          <p>{{ creator.creator_nickname }}</p>
+        {% endif %}
+        {% if profile.open_id %}<p class="tt-hint">open_id {{ profile.open_id }}</p>{% endif %}
       </div>
     </div>
     <p><a href="{% url 'tiktok_connect' %}">Reconnect a different account</a></p>

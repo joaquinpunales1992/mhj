@@ -307,6 +307,8 @@ class TikTokPageTests(TestCase):
         "creator_nickname": "My Akiya in Japan",
         "privacy_level_options": ["PUBLIC_TO_EVERYONE", "SELF_ONLY"],
     }
+    PROFILE = {"open_id": "open-1", "display_name": "My Akiya in Japan",
+               "avatar_url_100": "https://example.com/a.jpg"}
 
     def setUp(self):
         from django.contrib.auth.models import User
@@ -340,11 +342,28 @@ class TikTokPageTests(TestCase):
     def test_the_page_shows_the_account_and_the_levels_it_allows(self):
         self.client.force_login(self.staff)
         with patch.object(tiktok, "get_fresh_token", return_value="t"), \
+             patch.object(tiktok, "fetch_user_info", return_value=self.PROFILE), \
              patch.object(tiktok, "query_creator_info", return_value=self.CREATOR):
             response = self.client.get("/tiktok/")
         self.assertContains(response, "akiyainjapan")
         self.assertContains(response, "PUBLIC_TO_EVERYONE")
         self.assertContains(response, "SELF_ONLY")
+
+    def test_the_page_renders_when_the_profile_lookup_fails(self):
+        """The profile is decoration. Not being able to post is the failure.
+
+        This broke the page once: an empty profile dict in a filter chain raises
+        rather than falling through to the creator_info values behind it.
+        """
+        with patch.object(tiktok, "get_fresh_token", return_value="t"), \
+             patch.object(tiktok, "fetch_user_info",
+                          side_effect=tiktok.TikTokError("no scope")), \
+             patch.object(tiktok, "query_creator_info", return_value=self.CREATOR):
+            self.client.force_login(self.staff)
+            response = self.client.get("/tiktok/")
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "akiyainjapan")
+        self.assertContains(response, "My Akiya in Japan")
 
     def test_an_unconnected_account_is_offered_the_connect_link(self):
         self.client.force_login(self.staff)
@@ -365,7 +384,10 @@ class TikTokPageTests(TestCase):
             response = self.client.get("/tiktok/connect/")
         self.assertEqual(response.status_code, 302)
         self.assertIn("www.tiktok.com", response["Location"])
-        self.assertIn("scope=video.publish", response["Location"])
+        # Both scopes: Login Kit is a prerequisite of the posting product and
+        # brings user.info.basic, which the page uses rather than merely holds.
+        self.assertIn("user.info.basic", response["Location"])
+        self.assertIn("video.publish", response["Location"])
         self.assertIn(self.client.session["tiktok_oauth_state"],
                       response["Location"])
 

@@ -116,11 +116,12 @@ TIKTOK_DISABLE_COMMENT = False
 TIKTOK_DISABLE_DUET = False
 TIKTOK_DISABLE_STITCH = False
 
-# video.publish only. It covers both the post and the creator_info query the
-# post requires, and creator_info already returns the username we log — so
-# user.info.basic would be a scope we ask for and never call, which is a
+# Login Kit is a prerequisite of the Content Posting API in the developer
+# portal — it is the OAuth flow the access token comes from — and it grants
+# user.info.basic. So the posting page calls /user/info/ and shows the account
+# it is about to post as: a scope that is requested and never called is a
 # reason on its own for an app review to be refused.
-TIKTOK_SCOPES = ["video.publish"]
+TIKTOK_SCOPES = ["user.info.basic", "video.publish"]
 
 # Seconds. Generous because one of these requests is a whole video going up a
 # domestic connection.

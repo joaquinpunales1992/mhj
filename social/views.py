@@ -67,9 +67,19 @@ def dashboard(request):
     remembered list would be offering a choice TikTok may refuse.
     """
     creator = None
+    profile = {}
     error = ""
     try:
-        creator = tiktok.query_creator_info(tiktok.get_fresh_token())
+        token = tiktok.get_fresh_token()
+        # Two calls, two scopes, and the page shows both: user.info.basic names
+        # and pictures the account, video.publish's creator_info says what that
+        # account will let us publish.
+        creator = tiktok.query_creator_info(token)
+        try:
+            profile = tiktok.fetch_user_info(token)
+        except Exception as exc:
+            # The profile is decoration; being unable to post is the failure.
+            logger.warning("TikTok profile lookup failed: %s", exc)
     except tiktok.TikTokError as exc:
         error = str(exc)
     except Exception as exc:  # a network failure is not a broken page
@@ -79,6 +89,7 @@ def dashboard(request):
     privacy_options = (creator or {}).get("privacy_level_options") or []
     return render(request, "social/tiktok.html", {
         "creator": creator,
+        "profile": profile,
         "error": error,
         "connected": bool(creator),
         "property": _next_property(),
