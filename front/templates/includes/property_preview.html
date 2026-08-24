@@ -219,8 +219,14 @@
         {% endcomment %}
         <div class="pv-panel-card">
           <p class="pv-panel-label">Desk report · included with Pro</p>
+          {% comment %}
+            "At least", as the listing page says it. The count is what these
+            rules found in the listing's own fields; the report also asks the
+            municipality, so the real number can only go up. Stating it flat
+            would be claiming a completeness the preview does not have.
+          {% endcomment %}
           <p class="pv-panel-note">
-            {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }}
+            At least {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }}
             worth knowing about this house:
           </p>
           <ul class="pv-findings">

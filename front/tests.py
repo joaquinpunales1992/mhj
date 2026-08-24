@@ -324,6 +324,10 @@ class PreviewPanelTests(TestCase):
         """The same withholding the listing page does — the titles sell it."""
         response = self.preview()
         self.assertContains(response, "Desk report")
+        # "At least": these rules read the listing's own fields, and the report
+        # also asks the municipality, so the count can only go up. A flat number
+        # would claim a completeness the preview does not have.
+        self.assertContains(response, "At least")
         self.assertContains(response, "worth knowing about this house")
 
     def test_the_desk_report_button_says_it_comes_with_pro(self):
