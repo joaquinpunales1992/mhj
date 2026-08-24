@@ -121,6 +121,44 @@
 
   </div>
 
+  {% comment %}
+      One primary and two secondary, all the same shape. They were underlined
+      green text beside a filled button, which read as small print rather than as
+      the two services the popup is here to offer.
+    {% endcomment %}
+  <div class="pv-actions">
+      <a class="pv-btn pv-btn-primary" href="{% url 'property_detail' property.pk %}">View the full listing</a>
+      <div class="pv-services">
+        <a class="pv-btn" href="{% url 'consultation' %}?property={{ property.pk }}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3M16 2v3M3.5 8.5h17M4.5 5h15a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+          Book a consultation
+        </a>
+        {% comment %}
+          Two lines: what it is, and what it costs. It reads as another paid
+          extra beside the consultation otherwise, and it is not — it comes with
+          the subscription.
+        {% endcomment %}
+        {% if user.is_authenticated %}
+          <button type="button" class="pv-btn pv-btn-stacked pv-desk" data-property="{{ property.pk }}"
+                  data-url="{{ property.url }}">
+            <span class="pv-btn-line">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+              Request a desk report
+            </span>
+            <span class="pv-btn-sub">Included with Pro</span>
+          </button>
+        {% else %}
+          <a class="pv-btn pv-btn-stacked" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">
+            <span class="pv-btn-line">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+              Request a desk report
+            </span>
+            <span class="pv-btn-sub">Included with Pro</span>
+          </a>
+        {% endif %}
+      </div>
+  </div>
+
   <div class="pv-analysis">
     {% comment %}
       The three derived panels, in the order a buyer asks them: is it a fair
@@ -197,44 +235,6 @@
       {% endif %}
     {% endif %}
 
-  </div>
-
-  {% comment %}
-      One primary and two secondary, all the same shape. They were underlined
-      green text beside a filled button, which read as small print rather than as
-      the two services the popup is here to offer.
-    {% endcomment %}
-  <div class="pv-actions">
-      <a class="pv-btn pv-btn-primary" href="{% url 'property_detail' property.pk %}">View the full listing</a>
-      <div class="pv-services">
-        <a class="pv-btn" href="{% url 'consultation' %}?property={{ property.pk }}">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3M16 2v3M3.5 8.5h17M4.5 5h15a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
-          Book a consultation
-        </a>
-        {% comment %}
-          Two lines: what it is, and what it costs. It reads as another paid
-          extra beside the consultation otherwise, and it is not — it comes with
-          the subscription.
-        {% endcomment %}
-        {% if user.is_authenticated %}
-          <button type="button" class="pv-btn pv-btn-stacked pv-desk" data-property="{{ property.pk }}"
-                  data-url="{{ property.url }}">
-            <span class="pv-btn-line">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
-              Request a desk report
-            </span>
-            <span class="pv-btn-sub">Included with Pro</span>
-          </button>
-        {% else %}
-          <a class="pv-btn pv-btn-stacked" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">
-            <span class="pv-btn-line">
-              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
-              Request a desk report
-            </span>
-            <span class="pv-btn-sub">Included with Pro</span>
-          </a>
-        {% endif %}
-      </div>
   </div>
 
   <p class="pv-msg" hidden></p>
@@ -362,14 +362,27 @@
     the actions stayed stacked on a wide screen.
   {% endcomment %}
   @media (min-width:760px) {
+    {% comment %}
+      Two rows beside the photo, then the analysis across the bottom.
+
+        photo   |  price, place, size
+        photo   |  the three buttons
+        ------- analysis -------------
+
+      The photo spans both rows, which is what fills the gap: with the facts
+      down to a single line the right-hand column was mostly white space, and
+      the buttons were below the fold under it.
+    {% endcomment %}
     #pv-overlay .pv-grid { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
-                           gap:1.2rem 1.6rem; align-items:start; }
-    #pv-overlay .pv-analysis, #pv-overlay .pv-actions { grid-column:1 / -1; }
-    #pv-overlay .pv-analysis { display:grid; gap:.9rem; align-items:start;
+                           gap:1.1rem 1.6rem; align-items:start; }
+    #pv-overlay .pv-media { grid-column:1; grid-row:1 / 3; }
+    #pv-overlay .pv-info { grid-column:2; grid-row:1; }
+    #pv-overlay .pv-actions { grid-column:2; grid-row:2; flex-direction:column; }
+    #pv-overlay .pv-analysis { grid-column:1 / -1; grid-row:3;
+                               display:grid; gap:.9rem; align-items:start;
                                grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); }
     #pv-overlay .pv-analysis .pv-panel-card { margin-top:0; }
-    #pv-overlay .pv-actions { flex-direction:row; align-items:stretch; }
-    #pv-overlay .pv-actions > .pv-btn-primary { flex:1 1 13rem; }
-    #pv-overlay .pv-services { flex:2 1 20rem; }
+    #pv-overlay .pv-services { flex-direction:column; }
+    #pv-overlay .pv-services > * { flex:0 0 auto; }
   }
 </style>
