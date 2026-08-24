@@ -569,3 +569,44 @@ class PostOnTikTokCommandTests(TestCase):
     def test_the_post_is_recorded(self):
         self.run_command()
         self.assertEqual(SocialPost.objects.filter(social_media="tiktok").count(), 1)
+
+
+class WebImportPathTests(SimpleTestCase):
+    """The web process must not import the video stack.
+
+    social/utils imports moviepy and numpy at module level, and this site runs
+    under Passenger, which preloads and forks. numpy in a forked worker raises
+    "CPU dispatcher tracer already initlized" — first at boot, as a 503 across
+    the whole site, then at request time on the one page that reached for it.
+
+    This has to run in a fresh interpreter, because by the time the suite gets
+    here numpy is long since imported by the tests that exercise the encoder. It
+    is the one subprocess in this file and it is the only way to assert the
+    thing that actually broke.
+    """
+
+    def imports_cleanly(self, module):
+        project = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        script = (
+            "import sys, django; django.setup(); "
+            f"__import__({module!r}); "
+            "print(','.join(m for m in ('moviepy', 'numpy') if m in sys.modules))"
+        )
+        result = subprocess.run(
+            [sys.executable, "-c", script],
+            cwd=project, capture_output=True, text=True, timeout=120,
+            env={**os.environ, "DJANGO_SETTINGS_MODULE": "settings",
+                 "PYTHONPATH": project},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.strip()
+
+    def test_the_url_conf_does_not_load_the_video_stack(self):
+        self.assertEqual(self.imports_cleanly("urls"), "")
+
+    def test_the_tiktok_views_do_not_load_the_video_stack(self):
+        self.assertEqual(self.imports_cleanly("social.views"), "")
+
+    def test_the_queue_does_not_load_the_video_stack(self):
+        """It is a query and a sort. It moved out of social/utils for this."""
+        self.assertEqual(self.imports_cleanly("social.queue"), "")
