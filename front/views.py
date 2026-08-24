@@ -480,6 +480,9 @@ def property_preview(request, pk):
         # rules read this property's own fields and make no queries.
         "desk_preview": desk_preview(property),
         "pro_price": getattr(settings, "PRO_PRICE_LABEL", ""),
+        # What a free account is worth, which is not the same as what the
+        # anonymous allowance was: access.limit is the tier they are on.
+        "free_limit": settings.VIEW_LIMIT_FREE,
         "images": images,
         "photos_withheld": withheld,
         "is_saved": (

@@ -31,10 +31,38 @@
                  data-index="{{ forloop.counter0 }}"
                  alt="{{ property.get_title_for_front }}" loading="lazy" decoding="async">
           {% endfor %}
-          {% if images|length > 1 %}
+          {% comment %}
+            The withheld photos become a slide rather than disappearing — the
+            same thing the listing page's carousel does. A gallery that silently
+            shrinks from 11 photos to 3 reads as a listing with three photos;
+            a locked tile with a count reads as what it is.
+          {% endcomment %}
+          {% if access.locked and photos_withheld %}
+            <div class="pv-shot pv-shot-gate">
+              {% include "includes/icon_lock.html" %}
+              <p class="pv-gate-count">{{ photos_withheld }} more photo{{ photos_withheld|pluralize }}</p>
+              <p class="pv-gate-copy">
+                {% if access.next_step == 'signup' %}
+                  You've opened {{ access.limit }} home{{ access.limit|pluralize }}.
+                  Create a free account to see every photo on this one — and on
+                  {{ free_limit }} homes in total.
+                {% else %}
+                  You've used the {{ access.limit }} home{{ access.limit|pluralize }}
+                  your free account includes. Pro removes the limit.
+                {% endif %}
+              </p>
+              {% if access.next_step == 'signup' %}
+                <a class="pv-gate-cta" href="{% url 'account_signup' %}?next={% url 'property_detail' property.pk %}">Create a free account</a>
+                <span class="pv-gate-note">Free, no card.</span>
+              {% else %}
+                <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">{% include "includes/icon_lock.html" %} See Pro</a>
+              {% endif %}
+            </div>
+          {% endif %}
+          {% if images|length > 1 or access.locked and photos_withheld %}
             <button type="button" class="pv-arrow pv-prev" aria-label="Previous photo">‹</button>
             <button type="button" class="pv-arrow pv-next" aria-label="Next photo">›</button>
-            <p class="pv-counter"><span class="pv-at">1</span> / {{ images|length }}</p>
+            <p class="pv-counter"><span class="pv-at">1</span> / {% if access.locked and photos_withheld %}{{ images|length|add:"1" }}{% else %}{{ images|length }}{% endif %}</p>
           {% endif %}
 
           {% comment %}
@@ -64,7 +92,7 @@
             </button>
           </div>
         </div>
-        {% if photos_withheld %}
+        {% if photos_withheld and not access.locked %}
           <p class="pv-withheld">
             {{ photos_withheld }} more photo{{ photos_withheld|pluralize }} on the full listing.
           </p>
@@ -83,9 +111,18 @@
         visitor clicked already showed them — and what they came for does not.
       {% endcomment %}
       <div class="pv-wall">
-        <p class="pv-wall-title">You have opened all {{ access.limit }} of your listings.</p>
+        <p class="pv-wall-title">
+          You have opened all {{ access.limit }} of your listing{{ access.limit|pluralize }}.
+        </p>
         {% if access.next_step == 'signup' %}
-          <p>Create a free account to open {{ access.limit }} more, and save the ones you like.</p>
+          {% comment %}
+            free_limit, not access.limit: access.limit is the allowance of the
+            tier they are on now. "Create a free account to open 5 more" promised
+            the anonymous allowance again, when a free account is worth
+            {{ free_limit }} in total.
+          {% endcomment %}
+          <p>Create a free account to open {{ free_limit }} homes in total, and
+             save the ones you like.</p>
           <a class="pv-cta" href="{% url 'account_signup' %}">Create a free account</a>
         {% else %}
           <p>Pro removes the limit and adds the full detail on every listing.</p>
@@ -301,6 +338,17 @@
   #pv-overlay .pv-heart.on { color:#c0392b !important; }
   #pv-overlay .pv-heart.on svg { fill:#c0392b; }
   #pv-overlay .pv-withheld { color:#666; font-size:.9rem; margin:.6rem 0 0; }
+  {% comment %}
+    The side padding clears the gallery arrows, which sit at the frame's edges
+    and were running straight through this tile's copy.
+  {% endcomment %}
+  #pv-overlay .pv-shot-gate { flex-direction:column; align-items:center;
+            justify-content:center; text-align:center; gap:.3rem;
+            background:#f4f1ea; color:#2b2b2b; padding:1.4rem 3rem; }
+  #pv-overlay .pv-shot-gate.is-current { display:flex; }
+  #pv-overlay .pv-shot-gate .mhj-lock { width:1.6em; height:1.6em; color:#6f7570; }
+  #pv-overlay .pv-gate-count { margin:.2rem 0 0; font-weight:700; font-size:1.05rem; }
+  #pv-overlay .pv-gate-copy { margin:0; font-size:.86rem; color:#4a4a4a; max-width:24rem; }
   #pv-overlay .pv-size { display:flex; flex-wrap:wrap; gap:.4rem 1.6rem; margin:0; }
   #pv-overlay .pv-size-item { display:inline-flex; align-items:baseline; gap:.45rem; }
   #pv-overlay .pv-size-label { color:#6f7570; font-size:.82rem; text-transform:uppercase;

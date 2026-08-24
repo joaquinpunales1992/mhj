@@ -194,12 +194,32 @@ class PropertyPreviewTests(TestCase):
             response = self.preview(self.listing("https://example.com/2"))
         self.assertContains(response, "US$14,000")
 
-    def test_the_gallery_is_capped_once_the_allowance_is_spent(self):
+    def test_the_withheld_photos_become_a_locked_slide_not_an_absence(self):
+        """A gallery that shrinks from 11 photos to 3 reads as a short listing.
+
+        The listing page's carousel puts a locked tile where the rest would be;
+        so does this. Three photos plus the tile is four slides.
+        """
         with override_settings(VIEW_LIMIT_ANONYMOUS=1, VIEW_PHOTO_LIMIT_LOCKED=3):
             self.preview(self.listing("https://example.com/1"))
             response = self.preview(self.listing("https://example.com/2"))
-        self.assertContains(response, 'class="pv-shot', count=3)
+        self.assertContains(response, 'class="pv-shot', count=4)
+        self.assertContains(response, 'class="pv-shot pv-shot-gate"')
         self.assertContains(response, "more photo")
+        self.assertContains(response, "Create a free account")
+
+    def test_an_unlocked_visitor_gets_no_photo_gate(self):
+        """The preview caps at 8 photos for weight, which is not a paywall."""
+        response = self.preview(self.listing("https://example.com/3", photos=12))
+        self.assertNotContains(response, 'class="pv-shot pv-shot-gate"')
+        self.assertContains(response, "more photo")
+
+    def test_the_signup_offer_names_what_a_free_account_is_worth(self):
+        """Not the anonymous allowance again: "open 5 more" promised the same 5."""
+        with override_settings(VIEW_LIMIT_ANONYMOUS=1, VIEW_LIMIT_FREE=25):
+            self.preview(self.listing("https://example.com/4"))
+            response = self.preview(self.listing("https://example.com/5"))
+        self.assertContains(response, "25 homes in total")
 
     def test_a_visitor_is_sent_to_sign_in_for_a_desk_report(self):
         """Same label either way; a visitor is routed through login first.
