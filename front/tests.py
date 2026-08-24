@@ -5,7 +5,24 @@ with a 404 at a URL that a payment provider, an app reviewer or a regulator is
 the one to discover. A template rename would do it silently.
 """
 
+from django.core.cache import cache
 from django.test import TestCase, override_settings
+
+
+class HomePageTestCase(TestCase):
+    """A TestCase for anything that fetches the home page.
+
+    The home view is cache_page, and the test runner's LocMemCache lives for the
+    whole run — so one test fetching "/" with an empty database serves that
+    cached page to every test after it. That is how three passing tests turned
+    one red by being added alphabetically ahead of it.
+    """
+
+    def _pre_setup(self):
+        # Not setUp: a subclass that defines its own setUp without calling
+        # super() silently loses it, which is exactly what happened here.
+        super()._pre_setup()
+        cache.clear()
 
 
 class SiteVerificationTests(TestCase):
@@ -108,7 +125,7 @@ class LegalPageTests(TestCase):
             self.assertContains(response, "Governing law and contact")
 
 
-class PropertyPreviewTests(TestCase):
+class PropertyPreviewTests(HomePageTestCase):
     """The home page popup's contents.
 
     The reason this is a view and not a template include is metering: a popup
@@ -245,7 +262,7 @@ class PropertyPreviewTests(TestCase):
         self.assertContains(self.client.get("/"), "data-preview=")
 
 
-class ConsultationCtaTests(TestCase):
+class ConsultationCtaTests(HomePageTestCase):
     """One thing per button.
 
     The floating pill opened the interest modal AND followed its own href, so
@@ -271,7 +288,7 @@ class ConsultationCtaTests(TestCase):
         self.assertTrue(reverse("submit_interest_request"))
 
 
-class SharedPopupTests(TestCase):
+class SharedPopupTests(HomePageTestCase):
     """One popup, both pages.
 
     The map used to open a 240px Leaflet card with one photo and a link. It
