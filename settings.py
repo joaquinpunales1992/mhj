@@ -424,3 +424,19 @@ CEREBRAS_API_KEY = env("CEREBRAS_API_KEY", default="")
 # the same value as GOOGLE_API_KEY, which is the Custom Search key — a Gemini
 # key comes from AI Studio. Left unset, the bot behaves exactly as it did.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
+
+# TikTok, from an app registered at developers.tiktok.com. The tokens the app
+# earns live in TIKTOK_TOKEN_FILE, not here: the refresh token rotates on every
+# use, so it is state rather than configuration and .env is the wrong place for
+# something the code has to rewrite. Absolute path, because cron and Passenger
+# do not share a working directory.
+TIKTOK_CLIENT_KEY = env("TIKTOK_CLIENT_KEY", default="")
+TIKTOK_CLIENT_SECRET = env("TIKTOK_CLIENT_SECRET", default="")
+TIKTOK_TOKEN_FILE = env(
+    "TIKTOK_TOKEN_FILE", default=str(BASE_DIR / "tiktok_token.json")
+)
+# Where TikTok sends the browser back after the one-time authorisation. Must
+# match the redirect URI registered on the app, exactly.
+TIKTOK_REDIRECT_URI = env(
+    "TIKTOK_REDIRECT_URI", default="https://www.akiyainjapan.com/tiktok/callback/"
+)

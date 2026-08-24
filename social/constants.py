@@ -97,6 +97,40 @@ JAPAN_PREFECTURES = [
 # Kept as an alias for backwards compatibility with any external references.
 HASHTAGS_LIST = CORE_HASHTAGS + ROTATING_HASHTAGS
 
+# --- TikTok ----------------------------------------------------------------
+# The reel the Instagram pipeline builds is already what TikTok wants: 9:16,
+# MP4, the price and the place burnt in. What is different is the account side.
+#
+# THE AUDIT. TikTok: "All content posted by unaudited clients will be restricted
+# to private viewing mode." Until the app passes review, a post from here is
+# visible to nobody but the account owner, and asking for a public privacy level
+# is refused rather than downgraded. So this starts at SELF_ONLY — the runs
+# work, they are simply private — and becomes PUBLIC_TO_EVERYONE the day the
+# audit clears. Nothing else needs to change.
+TIKTOK_PRIVACY_LEVEL = "SELF_ONLY"
+
+# Comments are where this account earns its reach — see the reply bot — so they
+# stay on. Duet and stitch are other people's remixes of our footage, which is
+# free distribution and costs us nothing.
+TIKTOK_DISABLE_COMMENT = False
+TIKTOK_DISABLE_DUET = False
+TIKTOK_DISABLE_STITCH = False
+
+# video.publish covers both the post and the creator_info query it requires.
+# user.info.basic is what makes the account identifiable in a log.
+TIKTOK_SCOPES = ["user.info.basic", "video.publish"]
+
+# Seconds. Generous because one of these requests is a whole video going up a
+# domestic connection.
+TIKTOK_TIMEOUT = 180
+
+# TikTok processes a video after the upload finishes, so the post is not live
+# when the API returns. Poll a few times to log what became of it, then stop —
+# a cron job holding a connection open to watch an encode is not doing anything
+# useful with the wait.
+TIKTOK_STATUS_POLLS = 3
+TIKTOK_STATUS_POLL_SECONDS = 20
+
 # --- Listing carousel cards (tunable) --------------------------------------
 # A listing post used to be the scraped photos, unaltered. The price and the
 # place — the only two facts that sell an akiya — lived in a caption Instagram

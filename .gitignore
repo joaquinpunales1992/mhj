@@ -10,3 +10,7 @@ media
 # Secrets / runtime tokens (never commit these)
 .env
 social_access_token.json
+
+# Holds TikTok's rotating refresh token — state, not configuration.
+tiktok_token.json
+tiktok_token.json.tmp

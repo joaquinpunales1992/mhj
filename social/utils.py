@@ -907,6 +907,144 @@ def post_instagram_reel():
         notify_social_token_expired(message=f"Error posting Instagram Reel: {e}")
 
 
+def post_tiktok_reel():
+    """Post the next queued property to TikTok, as a reel.
+
+    The same shape as post_instagram_reel and deliberately so: same queue, same
+    encoder, same caption. What is different is only the last step — TikTok
+    takes the file itself rather than fetching a URL, so nothing has to be
+    served off the site for this to work.
+
+    Returns True if something was posted. Every failure logs and returns rather
+    than raising: this runs from cron beside the other posters, and one network
+    refusing a video is not a reason for the run to end.
+    """
+    from social import tiktok
+
+    try:
+        tiktok_reels = SocialPost.objects.filter(social_media="tiktok")
+        last = tiktok_reels.order_by("-datetime").first()
+
+        candidates = select_properties_to_post(tiktok_reels, PRICE_LIMIT_INSTAGRAM)
+        if not candidates:
+            logger.warning("No suitable property found to post on TikTok.")
+            return False
+
+        audio_path = _get_random_mp3_full_path(
+            exclude=last.sound_track if last else None
+        )
+
+        property_to_post = None
+        video_meta = {}
+        encode_attempts = delisted_skips = 0
+        for candidate in candidates:
+            if encode_attempts >= MAX_REEL_ATTEMPTS or delisted_skips >= MAX_DELISTED_SKIPS:
+                break
+            video_meta.clear()
+            result = create_property_video(
+                candidate.pk,
+                output_path="property_video_tiktok.mp4",
+                audio_path=audio_path,
+                duration_per_image=3,
+                meta=video_meta,
+            )
+            if result:
+                property_to_post = candidate
+                break
+            if result is NO_LIVE_IMAGES:
+                delisted_skips += 1
+                logger.warning(
+                    f"Skipping delisted property {candidate.url}; trying next "
+                    "(does not count as a video attempt)."
+                )
+                continue
+            encode_attempts += 1
+            logger.warning(
+                f"Skipping property {candidate.url}: video creation failed, trying next."
+            )
+
+        if not property_to_post:
+            logger.error(
+                "Could not create a video for any candidate property; nothing "
+                "posted to TikTok."
+            )
+            return False
+
+        ai_caption, caption, caption_angle = generate_caption_for_post(
+            property_to_post.location,
+            property_to_post.get_public_url,
+            property_to_post.get_price_for_front,
+            property_to_post.building_area,
+            property_to_post.land_area,
+            last_caption_generated=last.ai_caption if last else None,
+            use_ai_caption=USE_AI_CAPTION,
+        )
+
+        try:
+            publish_id = tiktok.publish_video("property_video_tiktok.mp4", caption)
+        except tiktok.TikTokError as exc:
+            # The code is the useful half. An unaudited app, a banned account and
+            # a daily cap all arrive here and none of them is fixed by retrying.
+            logger.error(f"TikTok refused the post ({exc.code or 'no code'}): {exc}")
+            return False
+
+        SocialPost.objects.create(
+            ai_caption=ai_caption,
+            caption=caption,
+            caption_angle=caption_angle,
+            # The publish id, not a post id: TikTok is still processing the
+            # video when this returns, and this is what its status is looked up
+            # with. Stored for the same reason the Instagram media id is —
+            # without it the post cannot be attributed afterwards.
+            media_id=str(publish_id),
+            overlay_hook=video_meta.get("overlay_hook", ""),
+            property_url=property_to_post.url,
+            social_media="tiktok",
+            content_type="reel",
+            sound_track=os.path.basename(audio_path) if audio_path else "",
+        )
+
+        _log_tiktok_status(tiktok, publish_id)
+        return True
+    except Exception as exc:
+        logger.error(f"Unexpected failure posting to TikTok: {exc}")
+        return False
+    finally:
+        # The upload has already read the file; leaving a video per run on a box
+        # this size is how a disk fills up.
+        try:
+            os.remove("property_video_tiktok.mp4")
+        except OSError:
+            pass
+
+
+def _log_tiktok_status(tiktok, publish_id):
+    """Say what became of the upload, then stop asking.
+
+    TikTok finishes processing after the API returns, so "uploaded" is not
+    "published" and a failure at that stage is otherwise completely silent. A
+    few polls turn that into a log line; holding the cron job open any longer
+    would not change what happened.
+    """
+    for attempt in range(TIKTOK_STATUS_POLLS):
+        time.sleep(TIKTOK_STATUS_POLL_SECONDS)
+        try:
+            status = tiktok.fetch_status(publish_id)
+        except Exception as exc:
+            logger.warning(f"Could not read TikTok publish status: {exc}")
+            return
+        state = status.get("status", "")
+        logger.info(f"TikTok publish {publish_id}: {state}")
+        if state in ("PUBLISH_COMPLETE", "FAILED"):
+            if state == "FAILED":
+                logger.error(f"TikTok failed to publish {publish_id}: {status}")
+            return
+    logger.info(
+        f"TikTok publish {publish_id} still processing after "
+        f"{TIKTOK_STATUS_POLLS} checks; not waiting further."
+    )
+
+
 def post_facebook_reel():
     try:
         # Get previously posted properties
