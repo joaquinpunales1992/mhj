@@ -31,6 +31,19 @@ BATCH_SIZE_FACEBOOK = 2
 PRICE_LIMIT_INSTAGRAM = 5000
 BATCH_SIZE_INSTAGRAM = 2
 
+# A featured listing gets one turn at the head of the social queue — but only if
+# it is also cheap.
+#
+# `featured` alone used to be the first thing the queue sorted on, so a single
+# featured 1400万 (US$98,000) listing outranked 1,558 never-posted properties on
+# every run, including the 200万 ones directly behind it, and it did so after it
+# had already been posted. It could never stop being next.
+#
+# Above this, a featured listing is promoted on the home page — which is where
+# the flag is set and what it was built for — and takes its turn here like
+# anything else. The account's promise is cheap houses.
+FEATURED_BOOST_PRICE_LIMIT = 500  # 万, about US$35,000
+
 USE_AI_CAPTION = True
 
 

@@ -22,6 +22,7 @@ from django.test import TestCase
 from django.utils import timezone
 
 from inventory.models import Property, PropertyImage
+from social.constants import PRICE_LIMIT_INSTAGRAM
 from social.models import SocialComment, SocialPost
 
 
@@ -501,6 +502,103 @@ class CommentReplyTests(TestCase):
         self.assertTrue(comment.replied)
         self.assertEqual(comment.comment, "It depends on the town — ask us!",
                          "the reply text belongs here, not the API's response object")
+
+
+class QueueOrderTests(TestCase):
+    """Which house goes out next.
+
+    Untested until now, and it was wrong: `featured` was the first sort key, so
+    one featured 1400man listing was the head of the queue on every run — after
+    it had already been posted — ahead of 1,558 never-posted properties, the
+    cheapest of which were 200man.
+    """
+
+    def property(self, price, featured=False, url=None, posted=None):
+        property = Property.objects.create(
+            url=url or f"https://example.com/{price}-{featured}",
+            price=price, show_in_front=True, featured=featured,
+            location="Oita Prefecture",
+        )
+        PropertyImage.objects.create(property=property, file="properties/a.jpg")
+        if posted is not None:
+            post = SocialPost.objects.create(
+                social_media="instagram", property_url=property.url, caption="",
+            )
+            # datetime is auto_now_add, so it ignores anything passed to
+            # create() and has to be written afterwards. Passing it and not
+            # checking is how this helper silently gave every post the same
+            # timestamp and made the rotation look like it worked.
+            SocialPost.objects.filter(pk=post.pk).update(datetime=posted)
+        return property
+
+    def queue(self, limit=None):
+        from social.utils import select_properties_to_post
+
+        return select_properties_to_post(
+            SocialPost.objects.filter(social_media="instagram"),
+            price_limit=PRICE_LIMIT_INSTAGRAM, limit=limit,
+        )
+
+    def test_the_cheapest_never_posted_house_goes_first(self):
+        expensive = self.property(1400)
+        cheap = self.property(200)
+        middling = self.property(700)
+        self.assertEqual(
+            [p.pk for p in self.queue()],
+            [cheap.pk, middling.pk, expensive.pk],
+        )
+
+    def test_a_featured_but_expensive_house_does_not_jump_the_queue(self):
+        """The regression. It cost every run one of its two slots."""
+        featured = self.property(1400, featured=True)
+        cheap = self.property(200)
+        self.assertEqual([p.pk for p in self.queue()], [cheap.pk, featured.pk])
+
+    def test_a_featured_cheap_house_leads(self):
+        featured = self.property(400, featured=True)
+        cheaper = self.property(200)
+        self.assertEqual([p.pk for p in self.queue()], [featured.pk, cheaper.pk])
+
+    def test_the_boost_is_worth_one_turn_and_not_a_tenancy(self):
+        """Posted once, a featured listing rejoins the rotation like the rest."""
+        featured = self.property(
+            400, featured=True, posted=timezone.now() - timedelta(days=1)
+        )
+        never_posted = self.property(1400)
+        self.assertEqual(
+            [p.pk for p in self.queue()], [never_posted.pk, featured.pk],
+            "anything never posted comes before a repost, featured or not",
+        )
+
+    def test_nothing_is_reposted_while_something_has_never_been_posted(self):
+        posted = self.property(200, posted=timezone.now() - timedelta(days=30))
+        fresh = self.property(4000)
+        self.assertEqual([p.pk for p in self.queue()], [fresh.pk, posted.pk])
+
+    def test_reposts_go_oldest_first_rather_than_cheapest_first(self):
+        """Otherwise the cheapest house is reposted every run, forever."""
+        recent = self.property(200, posted=timezone.now() - timedelta(days=2))
+        stale = self.property(3000, posted=timezone.now() - timedelta(days=90))
+        self.assertEqual([p.pk for p in self.queue()], [stale.pk, recent.pk])
+
+    def test_a_house_over_the_price_limit_is_not_eligible_at_all(self):
+        self.property(PRICE_LIMIT_INSTAGRAM + 1)
+        cheap = self.property(200)
+        self.assertEqual([p.pk for p in self.queue()], [cheap.pk])
+
+    def test_a_house_with_no_photo_is_not_eligible(self):
+        """There is nothing to build a card or a reel out of."""
+        Property.objects.create(
+            url="https://example.com/photoless", price=100, show_in_front=True,
+            location="Oita Prefecture",
+        )
+        cheap = self.property(200)
+        self.assertEqual([p.pk for p in self.queue()], [cheap.pk])
+
+    def test_the_limit_is_respected(self):
+        for price in (200, 300, 400):
+            self.property(price)
+        self.assertEqual(len(self.queue(limit=2)), 2)
 
 
 class ListingCardTests(TestCase):
