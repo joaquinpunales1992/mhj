@@ -61,6 +61,16 @@ class GeminiAI:
     # and a caption should not stop going out over a rename.
     PREFERRED_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"]
 
+    # …but not just anything. Cerebras lists a handful of chat models, so
+    # "whatever else is there" is a safe fallback. Google lists dozens, most of
+    # them specialised, and they all advertise generateContent — a caption was
+    # attempted against gemini-2.5-pro-tts, a text-to-speech model, which
+    # answered with a quota error naming itself. Fallbacks are text models only.
+    NOT_TEXT = (
+        "tts", "image", "imagen", "veo", "embedding", "aqa", "audio", "live",
+        "vision", "guard",
+    )
+
     # Captions are a hundred characters. The ceiling is high anyway because the
     # 2.5 models spend output tokens thinking before they answer, and a budget
     # tight enough to fit only the answer returns an empty one.
@@ -108,7 +118,12 @@ class GeminiAI:
             return self._models
 
         preferred = [m for m in self.PREFERRED_MODELS if m in available]
-        others = [m for m in available if m not in self.PREFERRED_MODELS]
+        others = [
+            model for model in available
+            if model not in self.PREFERRED_MODELS
+            and model.startswith("gemini-")
+            and not any(word in model for word in self.NOT_TEXT)
+        ]
         resolved = preferred + others
 
         missing = [m for m in self.PREFERRED_MODELS if m not in available]

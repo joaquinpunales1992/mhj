@@ -151,12 +151,32 @@ class GeminiClientTests(SimpleTestCase):
 
     def test_the_preferred_model_goes_first(self):
         with patch.object(gemini.requests, "get",
-                          return_value=model_list("some-other-model", "gemini-2.5-flash")):
+                          return_value=model_list("gemini-9-turbo", "gemini-2.5-flash")):
             self.assertEqual(
                 GeminiAI()._resolve_models(),
-                ["gemini-2.5-flash", "some-other-model"],
-                "and the rest stay on as further fallbacks",
+                ["gemini-2.5-flash", "gemini-9-turbo"],
+                "and a model we have never heard of stays on as a fallback",
             )
+
+    def test_a_speech_or_image_model_is_never_used_for_a_caption(self):
+        """A caption was attempted against gemini-2.5-pro-tts.
+
+        Every model Google lists advertises generateContent, including the
+        text-to-speech and image ones, so "whatever else the account has" is not
+        a safe fallback the way it is on Cerebras's much shorter list.
+        """
+        listing = model_list(
+            "gemini-2.5-pro-tts", "gemini-2.5-flash-image", "imagen-4.0",
+            "text-embedding-004", "gemini-2.5-flash", "gemini-3-pro",
+        )
+        with patch.object(gemini.requests, "get", return_value=listing):
+            resolved = GeminiAI()._resolve_models()
+
+        self.assertEqual(resolved[0], "gemini-2.5-flash", "preferred still first")
+        self.assertIn("gemini-3-pro", resolved, "an unknown text model is usable")
+        for rejected in ("gemini-2.5-pro-tts", "gemini-2.5-flash-image",
+                         "imagen-4.0", "text-embedding-004"):
+            self.assertNotIn(rejected, resolved)
 
     def test_a_listing_failure_does_not_stop_generation(self):
         """Whether we can list models is not whether we can use one."""
