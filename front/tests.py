@@ -213,3 +213,54 @@ class PropertyPreviewTests(TestCase):
     def test_the_card_links_carry_the_hook_the_popup_binds_to(self):
         """The home page opens this; without data-preview nothing would."""
         self.assertContains(self.client.get("/"), "data-preview=")
+
+
+class SharedPopupTests(TestCase):
+    """One popup, both pages.
+
+    The map used to open a 240px Leaflet card with one photo and a link. It
+    opens the same popup the home page does now, from the same include — two
+    implementations of the same thing is how they drift.
+    """
+
+    def setUp(self):
+        from inventory.models import Property, PropertyImage
+
+        self.property = Property.objects.create(
+            url="https://example.com/a", price=200, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City", floor_plan="3DK",
+        )
+        PropertyImage.objects.create(
+            property=self.property, file="https://img.example.com/1.jpg"
+        )
+
+    def test_the_home_page_carries_the_popup(self):
+        self.assertContains(self.client.get("/"), 'id="pv-overlay"')
+
+    def test_the_map_carries_the_same_popup(self):
+        self.assertContains(self.client.get("/map/"), 'id="pv-overlay"')
+
+    def test_the_map_cards_open_it(self):
+        """Without data-preview the card is just a link, and navigates away."""
+        self.assertContains(self.client.get("/map/"), "data-preview=")
+
+    def test_the_map_marker_link_opens_it_too(self):
+        """Picking a property off the map is picking a marker, not a card."""
+        body = self.client.get("/map/").content.decode()
+        self.assertIn("pop-link", body)
+        self.assertIn("data-preview=\"' + encodeURIComponent(p.i)", body)
+
+    def test_the_map_loads_the_unit_script(self):
+        """The popup's price and areas answer the same switches as everywhere."""
+        self.assertContains(self.client.get("/map/"), "units.js")
+
+    def test_the_popup_offers_save_and_share_on_the_photo(self):
+        """The pair the full listing page overlays on its gallery."""
+        body = self.client.get(f"/japanese-houses/{self.property.pk}/preview/").content.decode()
+        self.assertIn("pv-media-actions", body)
+        self.assertIn("pv-share", body)
+
+    def test_the_popup_sizes_its_own_icons(self):
+        """The pin ships without dimensions and rendered 392px on the map."""
+        body = self.client.get(f"/japanese-houses/{self.property.pk}/preview/").content.decode()
+        self.assertIn(".pv-place svg", body)

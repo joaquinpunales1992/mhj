@@ -1,114 +1,146 @@
 {% load static inventory_tags %}
 {% comment %}
-  The home page popup's contents, fetched when a card is opened.
+  The popup's contents, fetched when a listing is opened from the home page grid
+  or from the map.
 
-  A fragment, not a page: it is injected into the modal in home.html. It carries
-  its own <style> because it is loaded into a page whose stylesheet knows nothing
-  about it, and the styles are scoped under .pv- for the same reason.
+  Two columns on a wide screen: the photo carries the gallery and the two things
+  you do to a listing without reading it — save and share, overlaid the way the
+  full listing page overlays them — and the column beside it carries what you
+  read. One column below 760px, where there is no room for two.
+
+  It carries its own <style> because it is injected into pages whose stylesheets
+  know nothing about it, scoped to #pv-overlay because those stylesheets have
+  opinions about buttons that would otherwise win.
 {% endcomment %}
-<div class="pv-head">
-  <div>
+<div class="pv-grid">
+  <div class="pv-media">
+    {% if images %}
+      <div class="pv-gallery" data-count="{{ images|length }}">
+        <div class="pv-frame">
+          {% for image in images %}
+            <img class="pv-shot{% if forloop.first %} is-current{% endif %}"
+                 src="{{ image.file|thumb:900 }}" data-index="{{ forloop.counter0 }}"
+                 alt="{{ property.get_title_for_front }}" loading="lazy" decoding="async">
+          {% endfor %}
+          {% if images|length > 1 %}
+            <button type="button" class="pv-arrow pv-prev" aria-label="Previous photo">‹</button>
+            <button type="button" class="pv-arrow pv-next" aria-label="Next photo">›</button>
+            <p class="pv-counter"><span class="pv-at">1</span> / {{ images|length }}</p>
+          {% endif %}
+
+          {% comment %}
+            The same pair the listing page overlays on its gallery, and the same
+            favourite: one SavedProperty row, shown here, there, and on the map's
+            cards.
+          {% endcomment %}
+          <div class="pv-media-actions">
+            {% if user.is_authenticated %}
+              <button type="button" class="pv-media-btn pv-heart{% if is_saved %} on{% endif %}"
+                      data-property="{{ property.pk }}"
+                      aria-pressed="{% if is_saved %}true{% else %}false{% endif %}"
+                      aria-label="Save this property" title="Save this property">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.7-9.6-9A5.4 5.4 0 0 1 12 6.2 5.4 5.4 0 0 1 21.6 12c-2.1 4.3-9.6 9-9.6 9z"/></svg>
+              </button>
+            {% endif %}
+            <button type="button" class="pv-media-btn pv-share"
+                    data-share-url="{{ request.scheme }}://{{ request.get_host }}{% url 'property_detail' property.pk %}"
+                    data-share-title="{{ property.get_title_for_front }} — {{ property.get_location_for_front }}, Japan"
+                    aria-label="Share this property" title="Share this property">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            </button>
+          </div>
+        </div>
+        {% if photos_withheld %}
+          <p class="pv-withheld">
+            {{ photos_withheld }} more photo{{ photos_withheld|pluralize }} on the full listing.
+          </p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="pv-info">
     <p class="pv-price"><span data-yen="{{ property.price_yen }}">{{ property.get_price_for_front }}</span></p>
     <p class="pv-place">{% include "includes/icons/pin.html" %} {{ property.display_location }}</p>
-  </div>
-  {% if user.is_authenticated %}
-    <button type="button" class="pv-heart{% if is_saved %} is-saved{% endif %}"
-            data-property="{{ property.pk }}"
-            aria-pressed="{% if is_saved %}true{% else %}false{% endif %}"
-            aria-label="Save this property" title="Save this property">
-      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.7-9.6-9A5.4 5.4 0 0 1 12 6.2 5.4 5.4 0 0 1 21.6 12c-2.1 4.3-9.6 9-9.6 9z"/></svg>
-    </button>
-  {% endif %}
-</div>
 
-{% if images %}
-  <div class="pv-gallery" data-count="{{ images|length }}">
-    <div class="pv-frame">
-      {% for image in images %}
-        <img class="pv-shot{% if forloop.first %} is-current{% endif %}"
-             src="{{ image.file|thumb:900 }}" data-index="{{ forloop.counter0 }}"
-             alt="{{ property.get_title_for_front }}" loading="lazy" decoding="async">
-      {% endfor %}
-      {% if images|length > 1 %}
-        <button type="button" class="pv-arrow pv-prev" aria-label="Previous photo">‹</button>
-        <button type="button" class="pv-arrow pv-next" aria-label="Next photo">›</button>
-        <p class="pv-counter"><span class="pv-at">1</span> / {{ images|length }}</p>
+    {% if access.locked %}
+      {% comment %}
+        The allowance is spent. The price and the place stay — the card the
+        visitor clicked already showed them — and what they came for does not.
+      {% endcomment %}
+      <div class="pv-wall">
+        <p class="pv-wall-title">You have opened all {{ access.limit }} of your listings.</p>
+        {% if access.next_step == 'signup' %}
+          <p>Create a free account to open {{ access.limit }} more, and save the ones you like.</p>
+          <a class="pv-cta" href="{% url 'account_signup' %}">Create a free account</a>
+        {% else %}
+          <p>Pro removes the limit and adds the full detail on every listing.</p>
+          <a class="pv-cta" href="{% url 'pricing' %}">See Pro</a>
+        {% endif %}
+      </div>
+    {% else %}
+      <dl class="pv-facts">
+        {% comment %}
+          data-m2 / data-orig is what units.js reads, and what the full listing
+          page uses — so the popup answers the unit switch rather than sitting in
+          m² while the rest of the page shows tsubo.
+        {% endcomment %}
+        {% if property.building_area %}
+          <dt>Building</dt>
+          <dd>{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</dd>
+        {% endif %}
+        {% if property.land_area %}
+          <dt>Land</dt>
+          <dd>{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %}</dd>
+        {% endif %}
+        {% if property.floor_plan %}<dt>Layout</dt><dd>{{ property.floor_plan }}</dd>{% endif %}
+        {% if property.construction_date %}<dt>Built</dt><dd>{{ property.construction_date }}</dd>{% endif %}
+        {% if property.traffic %}<dt>Getting there</dt><dd>{{ property.traffic }}</dd>{% endif %}
+      </dl>
+    {% endif %}
+
+    <div class="pv-actions">
+      <a class="pv-cta" href="{% url 'property_detail' property.pk %}">View the full listing</a>
+      <a class="pv-link" href="{% url 'consultation' %}?property={{ property.pk }}">Book a consultation</a>
+      {% if user.is_authenticated %}
+        <button type="button" class="pv-link pv-desk" data-property="{{ property.pk }}"
+                data-url="{{ property.url }}">Request a desk report</button>
+      {% else %}
+        <a class="pv-link" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">Sign in to request a desk report</a>
       {% endif %}
     </div>
-    {% if photos_withheld %}
-      <p class="pv-withheld">
-        {{ photos_withheld }} more photo{{ photos_withheld|pluralize }} on the full listing.
-      </p>
-    {% endif %}
+    <p class="pv-msg" hidden></p>
   </div>
-{% endif %}
-
-{% if access.locked %}
-  {% comment %}
-    The allowance is spent. The price and the place stay — they are what the card
-    already showed — and everything the visitor came for is behind the wall.
-  {% endcomment %}
-  <div class="pv-wall">
-    <p class="pv-wall-title">You have opened all {{ access.limit }} of your listings.</p>
-    {% if access.next_step == 'signup' %}
-      <p>Create a free account to open {{ access.limit }} more, and save the ones you like.</p>
-      <a class="pv-cta" href="{% url 'account_signup' %}">Create a free account</a>
-    {% else %}
-      <p>Pro removes the limit and adds the full detail on every listing.</p>
-      <a class="pv-cta" href="{% url 'pricing' %}">See Pro</a>
-    {% endif %}
-  </div>
-{% else %}
-  <dl class="pv-facts">
-    {% comment %}
-      data-m2 / data-orig is what units.js reads, and what the full listing page
-      uses — so the popup answers the currency and unit switches the same way
-      rather than sitting in m² while the rest of the page shows tsubo.
-    {% endcomment %}
-    {% if property.building_area %}
-      <dt>Building</dt>
-      <dd>{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</dd>
-    {% endif %}
-    {% if property.land_area %}
-      <dt>Land</dt>
-      <dd>{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %}</dd>
-    {% endif %}
-    {% if property.floor_plan %}<dt>Layout</dt><dd>{{ property.floor_plan }}</dd>{% endif %}
-    {% if property.construction_date %}<dt>Built</dt><dd>{{ property.construction_date }}</dd>{% endif %}
-    {% if property.traffic %}<dt>Getting there</dt><dd>{{ property.traffic }}</dd>{% endif %}
-  </dl>
-{% endif %}
-
-<div class="pv-actions">
-  <a class="pv-cta" href="{% url 'property_detail' property.pk %}">View the full listing</a>
-  <a class="pv-link" href="{% url 'consultation' %}?property={{ property.pk }}">Book a consultation</a>
-  {% if user.is_authenticated %}
-    <button type="button" class="pv-link pv-desk" data-property="{{ property.pk }}"
-            data-url="{{ property.url }}">Request a desk report</button>
-  {% else %}
-    <a class="pv-link" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">Sign in to request a desk report</a>
-  {% endif %}
 </div>
-<p class="pv-msg" hidden></p>
 
 <style>
   {% comment %}
-    The theme's main.css sets height, line-height, padding and min-width on every
-    button on the site, so a button in here inherits a 98x183 box unless it says
-    otherwise. Hence the reset: it is not belt and braces, it is the difference
-    between a close cross and an empty rectangle.
+    Every rule is scoped to the id. The themes on both pages style buttons
+    globally — main.css sets `color: #ffffff !important`, a 3.05em height and an
+    inset shadow on every one — so a class selector loses, and the colour rules
+    below carry !important because that is the only thing that beats it. The
+    listing page's own overlaid icons carry the same note for the same reason.
   {% endcomment %}
   #pv-overlay button { height:auto; line-height:normal; min-width:0; box-shadow:none;
                        text-transform:none; letter-spacing:normal; padding:0;
                        white-space:normal; font-size:inherit; font-weight:inherit; }
-  #pv-overlay .pv-head { display:flex; justify-content:space-between; align-items:flex-start; gap:1rem; }
-  #pv-overlay .pv-price { font-size:1.7rem; font-weight:700; margin:0; line-height:1.2; }
-  #pv-overlay .pv-place { color:#666; margin:.25rem 0 0; font-size:.95rem; }
-  #pv-overlay .pv-heart { background:none; border:0; padding:.25rem; cursor:pointer; line-height:0; }
-  #pv-overlay .pv-heart svg { width:26px; height:26px; fill:none; stroke:#c0392b; stroke-width:2; }
-  #pv-overlay .pv-heart.is-saved svg { fill:#c0392b; }
-  #pv-overlay .pv-gallery { margin:1rem 0; }
-  #pv-overlay .pv-frame { position:relative; background:#111; border-radius:10px; overflow:hidden; aspect-ratio:4/3; }
+  #pv-overlay .pv-grid { display:grid; grid-template-columns:1fr; gap:1.4rem; }
+  @media (min-width:760px) {
+    #pv-overlay .pv-grid { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:1.6rem; }
+  }
+  #pv-overlay .pv-price { font-size:1.8rem; font-weight:700; margin:0; line-height:1.15; }
+  #pv-overlay .pv-place { color:#666; margin:.3rem 0 1rem; font-size:.95rem; }
+  {% comment %}
+    The pin ships without dimensions and took its size from whatever styled it
+    on the page. The home page had a rule; the map did not, and it rendered as a
+    400px grey teardrop in the middle of the popup. The popup sizes its own
+    icons now, on both pages.
+  {% endcomment %}
+  #pv-overlay .pv-place svg { width:1em; height:1em; vertical-align:-.1em;
+                              flex:0 0 auto; }
+  #pv-overlay .pv-gallery { margin:0; }
+  #pv-overlay .pv-frame { position:relative; background:#111; border-radius:10px;
+                          overflow:hidden; aspect-ratio:4/3; }
   #pv-overlay .pv-shot { display:none; width:100%; height:100%; object-fit:cover; }
   #pv-overlay .pv-shot.is-current { display:block; }
   #pv-overlay .pv-arrow { position:absolute; top:50%; transform:translateY(-50%); border:0;
@@ -118,21 +150,32 @@
   #pv-overlay .pv-next { right:0; border-radius:6px 0 0 6px; }
   #pv-overlay .pv-counter { position:absolute; right:.6rem; bottom:.5rem; margin:0; color:#fff;
                 background:rgba(0,0,0,.5); border-radius:20px; padding:.1rem .6rem; font-size:.8rem; }
-  #pv-overlay .pv-withheld { color:#666; font-size:.9rem; margin:.5rem 0 0; }
-  #pv-overlay .pv-facts { display:grid; grid-template-columns:auto 1fr; gap:.35rem 1rem; margin:1rem 0 0; }
+  #pv-overlay .pv-media-actions { position:absolute; top:12px; right:12px; z-index:3;
+                display:flex; gap:8px; }
+  #pv-overlay .pv-media-btn { display:inline-flex; align-items:center; justify-content:center;
+                width:38px; height:38px !important; padding:0 !important; border:0;
+                border-radius:999px; cursor:pointer; background:rgba(255,255,255,.92);
+                color:#6f7570 !important; box-shadow:0 1px 6px rgba(0,0,0,.28); }
+  #pv-overlay .pv-media-btn svg { width:18px; height:18px; fill:none; stroke:currentColor;
+                stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  #pv-overlay .pv-media-btn:hover { color:#1f2224 !important; }
+  #pv-overlay .pv-heart.on { color:#c0392b !important; }
+  #pv-overlay .pv-heart.on svg { fill:#c0392b; }
+  #pv-overlay .pv-withheld { color:#666; font-size:.9rem; margin:.6rem 0 0; }
+  #pv-overlay .pv-facts { display:grid; grid-template-columns:auto 1fr; gap:.4rem 1rem; margin:0; }
   #pv-overlay .pv-facts dt { color:#666; font-size:.9rem; }
   #pv-overlay .pv-facts dd { margin:0; }
-  #pv-overlay .pv-wall { background:#f4f2ec; border-radius:10px; padding:1rem 1.2rem; margin:1rem 0 0; }
+  #pv-overlay .pv-wall { background:#f4f2ec; border-radius:10px; padding:1rem 1.2rem; }
   #pv-overlay .pv-wall-title { font-weight:700; margin:0 0 .35rem; }
   #pv-overlay .pv-wall p { margin:0 0 .6rem; }
-  #pv-overlay .pv-actions { display:flex; flex-wrap:wrap; gap:.6rem; align-items:center; margin-top:1.2rem; }
+  #pv-overlay .pv-actions { display:flex; flex-wrap:wrap; gap:.6rem 1rem; align-items:center;
+                margin-top:1.4rem; }
   #pv-overlay .pv-cta { display:inline-block; background:#477535; color:#fff !important;
             border-radius:8px; padding:.6rem 1.1rem !important; text-decoration:none;
             font-weight:600; }
-  #pv-overlay .pv-cta:hover { background:#38602a; color:#fff; }
-  #pv-overlay .pv-link { background:none; border:0; color:#477535 !important;
-             font:inherit; font-weight:600; cursor:pointer; text-decoration:underline;
-             padding:.6rem 0 !important; }
-  #pv-overlay .pv-msg { margin:.8rem 0 0; padding:.6rem .9rem; border-radius:8px; background:#f4f2ec; }
+  #pv-overlay .pv-cta:hover { background:#38602a; }
+  #pv-overlay .pv-link { background:none; border:0; color:#477535 !important; font:inherit;
+             font-weight:600; cursor:pointer; text-decoration:underline; padding:0 !important; }
+  #pv-overlay .pv-msg { margin:.9rem 0 0; padding:.6rem .9rem; border-radius:8px; background:#f4f2ec; }
   #pv-overlay .pv-msg.is-error { background:#f7e6e4; }
 </style>

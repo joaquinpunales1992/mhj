@@ -287,7 +287,7 @@
         <div class="cards" id="cards">
           {% for p in initial_properties %}
             {% with img=p.get_ordered_images.first %}
-            <a class="card" href="{{ p.get_public_url }}" data-id="{{ p.pk }}">
+            <a class="card" href="{{ p.get_public_url }}" data-id="{{ p.pk }}" data-preview="{{ p.pk }}">
               {% if img %}
                 <img class="card-img" src="{{ img.file|thumb }}" data-full="{{ img.file }}"
                      onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}"
@@ -389,7 +389,11 @@
             '<div class="pop-title">' + esc(p.t) + '</div>' +
             '<div class="pop-meta">' + esc(p.l) + (p.f ? ' · ' + esc(p.f) : '') + '</div>' +
             '<div class="pop-price">' + esc(p.p) + '</div>' +
-            '<a class="pop-link" href="/japanese-houses/' + encodeURIComponent(p.i) + '/">View property</a>' +
+            // data-preview opens the shared property popup over the map;
+            // the href stays so it still works without JavaScript, and so the
+            // link is a real link to middle-click.
+            '<a class="pop-link" href="/japanese-houses/' + encodeURIComponent(p.i) + '/"' +
+              ' data-preview="' + encodeURIComponent(p.i) + '">View property</a>' +
           '</div>',
           { minWidth: 240, maxWidth: 260 }
         );
@@ -434,7 +438,8 @@
           : '<div class="card-img ph">No photo</div>';
         var meta = [c.f, c.b].filter(Boolean).map(esc).join(' · ');
         var on = SAVED_IDS.indexOf(c.i) !== -1 ? ' on' : '';
-        return '<a class="card" href="' + esc(c.u) + '" data-id="' + c.i + '">' + img +
+        return '<a class="card" href="' + esc(c.u) + '" data-id="' + c.i +
+          '" data-preview="' + c.i + '">' + img +
           '<button type="button" class="fav' + on + '" data-id="' + c.i +
             '" aria-label="Save this property">' + heartSvg() + '</button>' +
           '<div class="card-body">' +
@@ -698,5 +703,12 @@
       });
   })();
   </script>
+  {% include "includes/property_popup.html" %}
+  {% comment %}
+    units.js so the popup's price and areas answer the same currency and unit
+    switches as the rest of the site. The map did not need it before, because
+    nothing on it carried a data-yen.
+  {% endcomment %}
+  <script src="{% static 'assets/js/units.js' %}"></script>
 </body>
 </html>
