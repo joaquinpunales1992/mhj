@@ -31,7 +31,13 @@ from django.views.decorators.http import require_POST
 from social import tiktok
 from social.constants import PRICE_LIMIT_INSTAGRAM, TIKTOK_PRIVACY_LEVEL
 from social.models import SocialPost
-from social.utils import select_properties_to_post
+
+# social.utils is NOT imported here. It imports moviepy and numpy at module
+# level, and urls.py imports this module, so a module-level import would load
+# the entire video stack into every web worker at boot — on a box that has been
+# OOM-killed encoding video before. It took the site down with a 503. The two
+# functions this module needs are imported inside the views that use them, so
+# the cost is paid only by a member of staff opening the TikTok page.
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +56,8 @@ def _redirect_uri(request):
 
 def _next_property():
     """Whatever the TikTok queue would post next — cheapest first."""
+    from social.utils import select_properties_to_post  # heavy import; see above
+
     candidates = select_properties_to_post(
         SocialPost.objects.filter(social_media="tiktok"),
         PRICE_LIMIT_INSTAGRAM,
