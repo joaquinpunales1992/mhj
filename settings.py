@@ -455,6 +455,10 @@ TIKTOK_TOKEN_FILE = env(
 )
 # Where TikTok sends the browser back after the one-time authorisation. Must
 # match the redirect URI registered on the app, exactly.
+# No www: the site serves both hostnames without redirecting between them, and
+# everything else TikTok has been given — the verified domain, the terms and the
+# privacy URLs — is the apex. TikTok compares this string exactly against the
+# app's registered redirect, so the two have to be spelled the same way.
 TIKTOK_REDIRECT_URI = env(
-    "TIKTOK_REDIRECT_URI", default="https://www.akiyainjapan.com/tiktok/callback/"
+    "TIKTOK_REDIRECT_URI", default="https://akiyainjapan.com/tiktok/callback/"
 )
