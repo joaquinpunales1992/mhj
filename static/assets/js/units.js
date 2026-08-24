@@ -124,4 +124,9 @@
   } else {
     wire();
   }
+
+  // Exposed so markup that arrives after load can be converted too. The home
+  // page popup fetches its contents, and without this its price would sit in
+  // USD while the rest of the page showed yen.
+  window.mhjUnits = { apply: apply };
 })();

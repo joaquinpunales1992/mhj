@@ -106,3 +106,110 @@ class LegalPageTests(TestCase):
             response = self.client.get("/terms/")
             self.assertContains(response, "Governed by the law of Japan.")
             self.assertContains(response, "Governing law and contact")
+
+
+class PropertyPreviewTests(TestCase):
+    """The home page popup's contents.
+
+    The reason this is a view and not a template include is metering: a popup
+    that showed the detail without recording the view would let anyone read
+    every listing from the home page and never meet the wall. Most of what is
+    below is that, checked from the outside.
+    """
+
+    def setUp(self):
+        self.property = self.listing("https://example.com/a")
+
+    def listing(self, url, photos=6):
+        from inventory.models import Property, PropertyImage
+
+        listing = Property.objects.create(
+            url=url, price=200, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City",
+            building_area="78.5㎡", land_area="198.73㎡", floor_plan="3DK",
+        )
+        for index in range(photos):
+            PropertyImage.objects.create(
+                property=listing, file=f"https://img.example.com/{index}.jpg"
+            )
+        return listing
+
+    def preview(self, listing=None):
+        return self.client.get(f"/japanese-houses/{(listing or self.property).pk}/preview/")
+
+    def test_it_renders_the_price_the_place_and_the_facts(self):
+        response = self.preview()
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "US$14,000")
+        self.assertContains(response, "Bungo-ono City")
+        self.assertContains(response, "3DK")
+
+    def test_it_shows_several_photos(self):
+        """The whole point of the redesign: one photo was all poptrox could do."""
+        self.assertContains(self.preview(), 'class="pv-shot', count=6)
+
+    def test_a_missing_listing_is_a_404_not_the_whole_home_page(self):
+        """handler404 on this site redirects home, and the popup follows it.
+
+        Raising Http404 here would inject the entire home page into the modal.
+        """
+        response = self.client.get("/japanese-houses/999999/preview/")
+        self.assertEqual(response.status_code, 404)
+        self.assertNotContains(response, "data-preview=", status_code=404)
+
+    def test_opening_the_popup_spends_a_view(self):
+        """It is a detail page in a box, and it has to cost the same."""
+        with override_settings(VIEW_LIMIT_ANONYMOUS=2):
+            self.preview(self.listing("https://example.com/1"))
+            self.preview(self.listing("https://example.com/2"))
+            response = self.preview(self.listing("https://example.com/3"))
+
+        self.assertContains(response, "You have opened all")
+        self.assertNotContains(response, "<dt>Layout</dt>")
+
+    def test_the_wall_offers_the_next_step_rather_than_just_refusing(self):
+        with override_settings(VIEW_LIMIT_ANONYMOUS=1):
+            self.preview(self.listing("https://example.com/1"))
+            response = self.preview(self.listing("https://example.com/2"))
+        self.assertContains(response, "Create a free account")
+
+    def test_reopening_the_same_listing_does_not_spend_another_view(self):
+        """Otherwise closing and reopening a popup would burn the allowance."""
+        with override_settings(VIEW_LIMIT_ANONYMOUS=2):
+            self.preview()
+            self.preview()
+            response = self.preview()
+        self.assertNotContains(response, "You have opened all")
+        self.assertContains(response, "<dt>Layout</dt>")
+
+    def test_the_price_and_the_place_survive_the_wall(self):
+        """They were on the card already; hiding them would read as a bug."""
+        with override_settings(VIEW_LIMIT_ANONYMOUS=1):
+            self.preview(self.listing("https://example.com/1"))
+            response = self.preview(self.listing("https://example.com/2"))
+        self.assertContains(response, "US$14,000")
+
+    def test_the_gallery_is_capped_once_the_allowance_is_spent(self):
+        with override_settings(VIEW_LIMIT_ANONYMOUS=1, VIEW_PHOTO_LIMIT_LOCKED=3):
+            self.preview(self.listing("https://example.com/1"))
+            response = self.preview(self.listing("https://example.com/2"))
+        self.assertContains(response, 'class="pv-shot', count=3)
+        self.assertContains(response, "more photo")
+
+    def test_a_visitor_is_asked_to_sign_in_for_a_desk_report(self):
+        """Rather than being offered a button that will refuse them."""
+        response = self.preview()
+        self.assertContains(response, "Sign in to request a desk report")
+        self.assertNotContains(response, 'class="pv-desk"')
+
+    def test_a_member_gets_the_desk_report_button(self):
+        from django.contrib.auth.models import User
+
+        self.client.force_login(
+            User.objects.create_user("m", "m@example.com", "pw")
+        )
+        self.assertContains(self.preview(), "pv-desk")
+
+    def test_the_card_links_carry_the_hook_the_popup_binds_to(self):
+        """The home page opens this; without data-preview nothing would."""
+        self.assertContains(self.client.get("/"), "data-preview=")

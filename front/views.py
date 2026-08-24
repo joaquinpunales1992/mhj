@@ -383,6 +383,12 @@ def faqs(request):
     return render(request, "faqs.html")
 
 
+# How many photos the popup shows when nothing is being withheld. Not the whole
+# gallery: this is a preview, and every extra photo is bytes on the page that
+# stopped the visitor scrolling.
+PREVIEW_PHOTO_LIMIT = 8
+
+
 # Both legal pages carry the same date, because they were written together and a
 # reader comparing them should not have to wonder which is current.
 LEGAL_LAST_UPDATED = "24 August 2026"
@@ -422,6 +428,46 @@ def site_verification(request, name):
     if not expected or not content or name != expected:
         raise Http404("No such verification file")
     return HttpResponse(content, content_type="text/plain")
+
+
+def property_preview(request, pk):
+    """The listing, as the home page popup shows it. An HTML fragment.
+
+    Rendered on demand rather than baked into every card: a page of twelve cards
+    would otherwise carry twelve galleries and twelve sets of fields, and the
+    home page is already the heaviest thing on this site.
+
+    It goes through check_access like the full listing page, which is the whole
+    reason this is a view and not a template include. A popup showing the detail
+    without recording the view would let anyone read every listing from the home
+    page and never meet the wall — which is what Pro is sold on.
+    """
+    property = Property.objects.filter(pk=pk).first()
+    if property is None:
+        # Not raise Http404: this site's handler404 redirects to the home page,
+        # and the popup follows redirects — so a deleted listing would inject the
+        # whole home page into the modal. A 404 with a fragment in it is what the
+        # caller can actually act on.
+        return HttpResponse(
+            '<p class="pv-loading">That listing is no longer available.</p>',
+            status=404,
+        )
+
+    access = check_access(request, property.pk)
+    photo_cap = access.get("photo_limit")
+    images = list(property.get_ordered_images()[: photo_cap or PREVIEW_PHOTO_LIMIT])
+    withheld = max(0, property.images.count() - len(images))
+
+    return render(request, "includes/property_preview.html", {
+        "property": property,
+        "access": access,
+        "images": images,
+        "photos_withheld": withheld,
+        "is_saved": (
+            request.user.is_authenticated
+            and property.saved_by.filter(user=request.user).exists()
+        ),
+    })
 
 
 def terms(request):

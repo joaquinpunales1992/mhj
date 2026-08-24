@@ -27,6 +27,13 @@ urlpatterns = [
     # app registration will not accept a URL that is not one of these — and by
     # the fact that the site has accounts, lead forms, analytics and recurring
     # payments, and had neither page.
+    # The home page popup's contents. A fragment, fetched when a card is opened,
+    # so a page of cards does not carry a gallery and a fact list per card.
+    path(
+        "japanese-houses/<int:pk>/preview/",
+        front_views.property_preview,
+        name="property_preview",
+    ),
     path("terms/", front_views.terms, name="terms"),
     path("privacy/", front_views.privacy, name="privacy"),
     # Staff-only TikTok controls. The callback path must match the redirect URI

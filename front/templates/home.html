@@ -681,7 +681,7 @@
 													to the original so a proxy outage degrades to today's
 													behaviour (heavy but correct) rather than a broken card.
 												{% endcomment %}
-												<a href="{{ first_image.file }}" class="image"><img src="{{ first_image.file|thumb:700 }}" data-full="{{ first_image.file }}" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}" alt="{{ first_image.alt }}" loading="lazy" decoding="async"/></a>
+												<a href="{{ first_image.file }}" class="image" data-preview="{{ property.pk }}"><img src="{{ first_image.file|thumb:700 }}" data-full="{{ first_image.file }}" onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}" alt="{{ first_image.alt }}" loading="lazy" decoding="async"/></a>
 											{% endif %}
 											<p id="property-location" hidden>{% include "includes/icons/pin.html" %}{{ property.get_location_for_front }}</p>
 											<p id="property-price" hidden>{{ property.get_price_for_front }}</p>
@@ -983,6 +983,191 @@
 					document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeMenu(); });
 				})();
 			</script>
+		<!-- Property preview popup -->
+		{% comment %}
+		  Replaces what poptrox did for a property card. Poptrox is an image
+		  lightbox: it showed one photo and a caption, which is all it can show.
+		  This fetches the listing's own fragment — gallery, facts, services —
+		  from /japanese-houses/<pk>/preview/ when a card is opened, so a page of
+		  twelve cards does not carry twelve of everything.
+		{% endcomment %}
+		<div id="pv-overlay" class="pv-overlay" role="dialog" aria-modal="true" aria-label="Property details" hidden>
+			<div class="pv-panel" role="document">
+				<button type="button" class="pv-close" aria-label="Close">&times;</button>
+				<div class="pv-body" aria-live="polite"></div>
+			</div>
+		</div>
+		<style>
+			/* Everything here is scoped to the id, not the class. The theme styles
+			   every button on the site — height, min-width, and white text — and a
+			   class selector loses to it: the close cross came out as an empty
+			   98x183 box, then as a white glyph on a white panel. */
+			#pv-overlay { position:fixed; inset:0; z-index:30000; display:none;
+			              background:rgba(0,0,0,.6); padding:2rem 1rem; overflow-y:auto; }
+			#pv-overlay.open { display:block; }
+			#pv-overlay .pv-panel { position:relative; background:#fff; color:#1f2224;
+			            max-width:640px; margin:0 auto; border-radius:12px;
+			            padding:1.6rem 1.6rem 1.8rem; }
+			/* main.css:387 sets `color: #ffffff !important` on every button on the
+			   site, along with a 3.05em height, uppercase text and an inset box
+			   shadow. !important is the only thing that beats !important, so the
+			   colour rules below carry it deliberately — specificity alone loses
+			   however it is written. */
+			#pv-overlay button { height:auto; line-height:normal; min-width:0; box-shadow:none;
+			                     text-transform:none; letter-spacing:normal; padding:0;
+			                     white-space:normal; font-size:inherit; font-weight:inherit; }
+			#pv-overlay .pv-close { position:absolute; top:.35rem; right:.6rem; background:none;
+			            border:0; font-size:2rem; line-height:1; cursor:pointer;
+			            color:#666 !important; padding:.1rem .4rem; width:auto; }
+			#pv-overlay .pv-close:hover { color:#1f2224 !important; }
+			#pv-overlay .pv-body { min-height:6rem; }
+			#pv-overlay .pv-loading { color:#666; }
+			@media (max-width:640px) { #pv-overlay .pv-panel { padding:1.2rem; } }
+		</style>
+		<script>
+			(function () {
+				var overlay = document.getElementById('pv-overlay');
+				if (!overlay) return;
+				var body = overlay.querySelector('.pv-body');
+				var lastFocus = null;
+
+				function csrf() {
+					return (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
+				}
+
+				function say(text, isError) {
+					var msg = body.querySelector('.pv-msg');
+					if (!msg) return;
+					msg.textContent = text;
+					msg.hidden = false;
+					msg.classList.toggle('is-error', !!isError);
+				}
+
+				function open(pk) {
+					lastFocus = document.activeElement;
+					body.innerHTML = '<p class="pv-loading">Loading…</p>';
+					overlay.hidden = false;
+					overlay.classList.add('open');
+					document.body.style.overflow = 'hidden';
+					fetch('/japanese-houses/' + pk + '/preview/', { credentials: 'same-origin' })
+						.then(function (r) {
+							if (!r.ok) throw new Error('unavailable');
+							return r.text();
+						})
+						.then(function (html) {
+							body.innerHTML = html;
+							// The fragment arrives after units.js has already run.
+							if (window.mhjUnits) window.mhjUnits.apply();
+							var close = overlay.querySelector('.pv-close');
+							if (close) close.focus();
+						})
+						.catch(function () {
+							body.innerHTML = '<p class="pv-loading">That listing could not be ' +
+								'loaded. It may have been taken down.</p>';
+						});
+				}
+
+				function close() {
+					overlay.classList.remove('open');
+					overlay.hidden = true;
+					body.innerHTML = '';
+					document.body.style.overflow = '';
+					if (lastFocus && lastFocus.focus) lastFocus.focus();
+				}
+
+				// Capture phase, like the share button above: poptrox binds these
+				// same links and stops the bubble-phase click, so the only way to
+				// get there first is on the way down.
+				document.addEventListener('click', function (e) {
+					var link = e.target.closest ? e.target.closest('a.image[data-preview]') : null;
+					if (!link) return;
+					e.preventDefault();
+					e.stopPropagation();
+					open(link.getAttribute('data-preview'));
+				}, true);
+
+				overlay.addEventListener('click', function (e) { if (e.target === overlay) close(); });
+				document.addEventListener('keydown', function (e) {
+					if (e.key === 'Escape' && overlay.classList.contains('open')) close();
+				});
+
+				// Everything inside the panel is delegated, because the panel's
+				// contents arrive after this script has run and are replaced each
+				// time a different listing is opened.
+				overlay.addEventListener('click', function (e) {
+					var t = e.target;
+					if (t.closest('.pv-close')) { close(); return; }
+
+					var arrow = t.closest('.pv-arrow');
+					if (arrow) {
+						var shots = body.querySelectorAll('.pv-shot');
+						if (!shots.length) return;
+						var at = 0;
+						for (var i = 0; i < shots.length; i++) {
+							if (shots[i].classList.contains('is-current')) { at = i; break; }
+						}
+						shots[at].classList.remove('is-current');
+						at = (at + (arrow.classList.contains('pv-next') ? 1 : -1) + shots.length) % shots.length;
+						shots[at].classList.add('is-current');
+						var counter = body.querySelector('.pv-at');
+						if (counter) counter.textContent = at + 1;
+						return;
+					}
+
+					var heart = t.closest('.pv-heart');
+					if (heart) {
+						var saved = heart.classList.contains('is-saved');
+						// Flipped before the request answers: hearting is reversible
+						// and instant feedback matters more than being right for the
+						// 200ms it takes to find out.
+						heart.classList.toggle('is-saved', !saved);
+						heart.setAttribute('aria-pressed', String(!saved));
+						fetch('/api/toggle-saved-property', {
+							method: 'POST',
+							headers: {
+								'X-CSRFToken': csrf(),
+								'Content-Type': 'application/x-www-form-urlencoded'
+							},
+							credentials: 'same-origin',
+							body: 'property_id=' + encodeURIComponent(heart.getAttribute('data-property'))
+						}).then(function (r) {
+							if (!r.ok) throw new Error('failed');
+						}).catch(function () {
+							heart.classList.toggle('is-saved', saved);
+							heart.setAttribute('aria-pressed', String(saved));
+							say('That could not be saved. Please try again.', true);
+						});
+						return;
+					}
+
+					var desk = t.closest('.pv-desk');
+					if (desk) {
+						desk.disabled = true;
+						var label = desk.textContent;
+						desk.textContent = 'Requesting…';
+						var form = new FormData();
+						form.append('listing', desk.getAttribute('data-property'));
+						form.append('listing_url', desk.getAttribute('data-url') || '');
+						fetch('{% url "request_desk_report" %}', {
+							method: 'POST',
+							headers: { 'X-CSRFToken': csrf() },
+							credentials: 'same-origin',
+							body: form
+						}).then(function (r) {
+							return r.json().then(function (d) { return { ok: r.ok, data: d }; });
+						}).then(function (result) {
+							if (!result.ok) throw new Error(result.data.error || 'Something went wrong.');
+							desk.textContent = 'Requested';
+							say('Desk report requested. We will email it to you.');
+						}).catch(function (err) {
+							desk.disabled = false;
+							desk.textContent = label;
+							say(err.message, true);
+						});
+					}
+				});
+			})();
+		</script>
 			<script src="{% static 'assets/js/units.js' %}"></script>
 			<script src="{% static 'assets/js/jquery.min.js' %}"></script>
 			<script src="{% static 'assets/js/jquery.poptrox.min.js' %}"></script>
