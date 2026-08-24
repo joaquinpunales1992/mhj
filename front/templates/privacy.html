@@ -1,118 +1,77 @@
 {% extends "content_base.html" %}
 {% block title %}Privacy Policy | My Akiya in Japan{% endblock %}
-{% block description %}What My Akiya in Japan collects, why, who else sees it, and how to have it deleted.{% endblock %}
+{% block description %}How My Akiya in Japan handles personal information: what we collect, why, who it is shared with, and how to contact us about it.{% endblock %}
 {% block canonical %}https://akiyainjapan.com/privacy/{% endblock %}
 {% block content %}
   <h1>Privacy policy</h1>
-  <p class="lead">What we collect, why we have it, who else sees it, and how to get rid of it.</p>
+  <p class="lead">How we handle personal information.</p>
   <p><em>Last updated {{ last_updated }}.</em></p>
 
   <h2>Who we are</h2>
-  <p>My Akiya in Japan (akiyainjapan.com) lists houses for sale in Japan and sells
-     a small number of research and advice services around them.
+  <p>My Akiya in Japan (akiyainjapan.com) lists houses for sale in Japan and
+     offers related services.
      {% if legal_entity %}It is operated by {{ legal_entity }}.{% endif %}
-     You can reach a human at
-     <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>, which is
-     also where privacy requests go.</p>
+     For anything to do with this policy, including any request about your own
+     information, contact
+     <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.</p>
 
-  <h2>What we collect</h2>
-
-  <h3>If you make an account</h3>
-  <p>Your email address, and either a password (which we store only as a hash —
-     we cannot read it) or the fact that you signed in with Google. If you use
-     Google sign-in, Google tells us your email address and name; it does not
-     give us access to anything else in your Google account.</p>
-
-  <h3>If you send us something</h3>
-  <p>The site has several forms, and each stores what you type into it:</p>
+  <h2>Information we collect</h2>
   <ul>
-    <li><strong>Enquiring about a house</strong> — your name, email, message, the
-        listing you were looking at, and, when you fill them in, the regions you
-        are interested in, your budget, your timeline, and whether you have been
-        to Japan.</li>
-    <li><strong>Booking a consultation</strong> — your name, email, time zone,
-        any notes you add, and the slot you booked.</li>
-    <li><strong>Requesting an inspection or a desk report</strong> — your name,
-        email, the listing, and your notes about it.</li>
-    <li><strong>Asking for access to a premium listing</strong> — your email and
-        the listing.</li>
-  </ul>
-  <p>We also keep our own notes against these requests, so that whoever picks one
-     up knows what has already been said.</p>
-
-  <h3>What the site records as you use it</h3>
-  <ul>
-    <li><strong>Properties you save</strong> and <strong>searches you save</strong>
-        (the city and price range, and whether you asked to be notified).</li>
-    <li><strong>Which listings you have opened.</strong> Signed-in visitors get a
-        set number of listing views before Pro is needed, and the count has to
-        follow your account rather than your browser, so we store one row per
-        property you have opened.</li>
+    <li><strong>Account information</strong> — your email address, and either a
+        password (stored only in hashed form) or the fact that you signed in
+        with a third-party provider.</li>
+    <li><strong>Information you send us</strong> — what you enter into our
+        enquiry, booking and request forms, such as your name, email address and
+        the details of what you are asking about.</li>
+    <li><strong>Information about your use of the site</strong> — such as the
+        listings and searches you save and the pages you visit, so that the site
+        can offer those features and we can understand how it is used.</li>
+    <li><strong>Payment information</strong> — payments are processed by our
+        payment provider. Card and bank details are handled by them and do not
+        pass through this site. We keep the transaction references and dates
+        needed to know what has been paid for.</li>
+    <li><strong>Technical information</strong> — standard information your
+        browser sends, such as IP address, device and browser type.</li>
   </ul>
 
-  <h3>If you pay us</h3>
-  <p>Payments are handled by PayPal. <strong>We never see your card or bank
-     details</strong> — they do not pass through this site. What we store is what
-     PayPal tells us afterwards: the subscription, order and capture identifiers,
-     the amount, the currency, and the dates. We use those to know whether your
-     access is current.</p>
+  <h2>Cookies and analytics</h2>
+  <p>We use cookies that are necessary for the site to work, such as keeping you
+     signed in and protecting forms from misuse. We also use analytics,
+     currently Google Analytics, to understand how many people visit and which
+     pages they read. Analytics can be blocked in your browser without affecting
+     the rest of the site.</p>
 
-  <h3>Cookies and analytics</h3>
-  <p>The site sets a session cookie and a CSRF cookie when you sign in or submit a
-     form. Those are what keep you logged in and stop a third-party site
-     submitting forms as you; the site cannot work without them.</p>
-  <p>We also use Google Analytics (property <code>G-QBY9Y9CMPS</code>) to see how
-     many people arrive, from where, and which pages they read. It sets its own
-     cookies and tells Google your IP address and the pages you visited. It is
-     loaded after the rest of the page so it does not slow the listings down.</p>
-  <p>If you would rather not be measured, browser-level blocking of Google
-     Analytics is effective here and breaks nothing on the site.</p>
+  <h2>How we use it</h2>
+  <p>To provide and maintain the site and your account, to respond to what you
+     have asked us, to provide services you have paid for, to send messages you
+     have asked to receive, and to understand and improve how the site is used.
+     We do not sell your personal information.</p>
 
-  <h2>Why we have it</h2>
-  <p>To run your account and keep you signed in; to answer what you asked us; to
-     provide and gate the things you have paid for; to send the newsletter to
-     subscribers; and to understand how much traffic the site gets and what
-     people read. We do not build advertising profiles, and we do not sell or
-     rent your data to anyone.</p>
+  <h2>Who it is shared with</h2>
+  <p>We share information with the service providers we rely on to run the site
+     — currently our hosting provider, our email provider, our payment provider
+     (PayPal) and our analytics provider (Google) — and only as far as they need
+     it to provide that service. We may also disclose information where we are
+     required to by law. Where you have asked us to make an introduction about a
+     specific property, we pass on what is needed to do that.</p>
 
-  <h2>Who else sees it</h2>
-  <ul>
-    <li><strong>PayPal</strong> — payments and subscriptions.</li>
-    <li><strong>Google</strong> — Analytics, and sign-in if you use it.</li>
-    <li><strong>Our email provider</strong> — the mail we send you passes through
-        it.</li>
-    <li><strong>Our hosting provider</strong> — the server the site runs on.</li>
-  </ul>
-  <p>Nobody else. Enquiries about a specific house may be forwarded to the agent
-     or seller handling that listing, but only when you have asked us to make an
-     introduction, and we will tell you when we do.</p>
+  <h2>How long we keep it</h2>
+  <p>We keep personal information for as long as it is needed for the purposes
+     above, and for as long as we are required to keep it by law.</p>
 
-  <h2>Where it is kept, and for how long</h2>
-  <p>Data is stored on our hosting provider's servers. We keep account data for as
-     long as the account exists. Enquiries and requests are kept while we are
-     dealing with them and for a reasonable period afterwards, because a buyer
-     who comes back a year later expects us to remember the conversation.
-     Payment records are kept as long as tax and accounting rules require.</p>
-
-  <h2>What you can ask for</h2>
-  <p>Email <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a> and
-     you can ask us to:</p>
-  <ul>
-    <li>tell you what we hold about you;</li>
-    <li>correct anything that is wrong;</li>
-    <li>delete your account and the data attached to it;</li>
-    <li>send you a copy of what you gave us;</li>
-    <li>stop sending you email.</li>
-  </ul>
-  <p>We will not make you explain why. Depending on where you live you may also
-     have a right to complain to a data protection regulator, and nothing here
-     takes that away.</p>
+  <h2>Your choices</h2>
+  <p>You can ask us to provide a copy of the information we hold about you, to
+     correct it, to delete it, or to stop sending you messages. Depending on
+     where you live you may have further rights, including the right to complain
+     to a data protection authority. Contact
+     <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a> and we
+     will deal with your request.</p>
 
   <h2>Children</h2>
-  <p>The site is not intended for anyone under 18, and we do not knowingly collect
-     anything from them.</p>
+  <p>The site is not intended for anyone under 18, and we do not knowingly
+     collect information from them.</p>
 
   <h2>Changes</h2>
-  <p>If this policy changes in a way that matters, the date at the top changes
-     with it.</p>
+  <p>We may update this policy from time to time. The date at the top shows when
+     it was last changed.</p>
 {% endblock %}

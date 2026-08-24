@@ -26,14 +26,15 @@ class LegalPageTests(TestCase):
         self.assertIn("/privacy/", body)
         self.assertIn("/terms/", body)
 
-    def test_the_privacy_page_names_what_it_actually_collects(self):
-        """These are the specifics that make it a policy rather than a template.
+    def test_the_privacy_page_still_names_who_data_is_shared_with(self):
+        """The page is deliberately general, but not about this.
 
-        If one of them stops being true — analytics removed, PayPal replaced —
-        this test failing is the reminder to update the page.
+        Naming the recipients is the part a vague policy gets wrong and the part
+        that is actually required. If a provider is swapped out, this failing is
+        the reminder that the page needs updating too.
         """
         body = self.client.get("/privacy/").content.decode()
-        for claim in ("Google Analytics", "G-QBY9Y9CMPS", "PayPal", "hello@akiyainjapan.com"):
+        for claim in ("Google", "PayPal", "hello@akiyainjapan.com"):
             self.assertIn(claim, body, f"the privacy policy no longer mentions {claim}")
 
     def test_no_operator_is_named_until_one_is_configured(self):
@@ -50,11 +51,11 @@ class LegalPageTests(TestCase):
         with override_settings(LEGAL_GOVERNING_LAW=""):
             body = self.client.get("/terms/").content.decode()
             self.assertIn("11. Contact", body)
-            self.assertNotIn("Law and contact", body)
+            self.assertNotIn("Governing law", body)
             self.assertIn("hello@akiyainjapan.com", body)
 
     def test_the_jurisdiction_and_its_heading_show_once_chosen(self):
         with override_settings(LEGAL_GOVERNING_LAW="Governed by the law of Japan."):
             response = self.client.get("/terms/")
             self.assertContains(response, "Governed by the law of Japan.")
-            self.assertContains(response, "Law and contact")
+            self.assertContains(response, "Governing law and contact")
