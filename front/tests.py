@@ -8,6 +8,53 @@ the one to discover. A template rename would do it silently.
 from django.test import TestCase, override_settings
 
 
+class SiteVerificationTests(TestCase):
+    """The file a domain-verification check fetches from the root.
+
+    Worth testing because both failure modes are quiet: an unset filename that
+    serves nothing, and a route loose enough to serve whatever is asked for.
+    """
+
+    FILE = "tiktokAbc123.txt"
+    CONTENT = "tiktok-developers-site-verification=Abc123"
+
+    def test_the_configured_file_is_served_as_plain_text(self):
+        with override_settings(SITE_VERIFICATION_FILENAME=self.FILE,
+                               SITE_VERIFICATION_CONTENT=self.CONTENT):
+            response = self.client.get(f"/{self.FILE}")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content.decode(), self.CONTENT)
+        self.assertEqual(response["Content-Type"], "text/plain")
+
+    def refuses(self, url):
+        """Not served, whatever the site does with an unknown URL.
+
+        Asserting a 404 here would be asserting the wrong thing: this site's
+        handler404 redirects unknown URLs to the home page, so a miss is a 302
+        and always was. What matters is that the content does not come back.
+        """
+        response = self.client.get(url)
+        self.assertNotEqual(response.status_code, 200, url)
+        if response.status_code == 200:
+            self.assertNotIn(self.CONTENT, response.content.decode())
+
+    def test_any_other_filename_is_not_served(self):
+        """Not a general-purpose way to serve text off the domain root."""
+        with override_settings(SITE_VERIFICATION_FILENAME=self.FILE,
+                               SITE_VERIFICATION_CONTENT=self.CONTENT):
+            self.refuses("/something-else.txt")
+
+    def test_nothing_is_served_when_it_is_not_configured(self):
+        with override_settings(SITE_VERIFICATION_FILENAME="",
+                               SITE_VERIFICATION_CONTENT=""):
+            self.refuses(f"/{self.FILE}")
+
+    def test_the_route_does_not_shadow_a_real_page(self):
+        """It sits at the root, so it must not swallow the rest of the site."""
+        for url in ("/terms/", "/privacy/", "/faqs/"):
+            self.assertEqual(self.client.get(url).status_code, 200, url)
+
+
 class LegalPageTests(TestCase):
 
     def test_the_terms_page_renders(self):

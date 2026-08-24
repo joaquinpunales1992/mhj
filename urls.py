@@ -5,7 +5,7 @@ from membership import views as membership_views
 from membership import consultations as consultation_views
 from membership import desk_reports as desk_report_views
 from membership.paypal import webhook as paypal_webhook
-from django.urls import path, include
+from django.urls import path, include, re_path
 from front import sitemap
 from django.conf import settings
 from django.conf.urls.static import static
@@ -28,6 +28,15 @@ urlpatterns = [
     # payments, and had neither page.
     path("terms/", front_views.terms, name="terms"),
     path("privacy/", front_views.privacy, name="privacy"),
+    # Domain-ownership verification files, which have to answer at the root of
+    # the site rather than under /static/. Narrow on purpose: only names that
+    # look like a verification file reach the view, and the view only serves the
+    # one it has been configured with.
+    re_path(
+        r"^(?P<name>[A-Za-z0-9_.-]{4,120}\.(?:txt|html))$",
+        front_views.site_verification,
+        name="site_verification",
+    ),
     path("consultation/", front_views.consultation, name="consultation"),
     # Booking a paid call: hold + PayPal order, then PayPal's two redirects back.
     path(

@@ -21,7 +21,7 @@ from inventory.utils import (
     scatter_offset,
 )
 from django.core.mail import EmailMessage
-from django.http import JsonResponse
+from django.http import Http404, HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.cache import cache_page
 from django.template.loader import render_to_string
@@ -402,6 +402,26 @@ def _legal_context():
         "legal_entity": getattr(settings, "LEGAL_ENTITY", ""),
         "governing_law": getattr(settings, "LEGAL_GOVERNING_LAW", ""),
     }
+
+
+def site_verification(request, name):
+    """Serve a verification file from the domain root.
+
+    TikTok — and Google, and Meta, and anyone else who wants to know the domain
+    is yours — offers to verify either by DNS or by fetching a file it names
+    from the root of the site. DNS needs no code and is the better option; this
+    exists for when DNS is not available.
+
+    It cannot be a static file: whitenoise serves STATIC_ROOT under /static/,
+    and the whole point is that the file answers at the root. So it is one view
+    reading one setting, and it 404s for any name other than the configured one
+    rather than becoming a way to serve arbitrary text off the domain.
+    """
+    expected = getattr(settings, "SITE_VERIFICATION_FILENAME", "")
+    content = getattr(settings, "SITE_VERIFICATION_CONTENT", "")
+    if not expected or not content or name != expected:
+        raise Http404("No such verification file")
+    return HttpResponse(content, content_type="text/plain")
 
 
 def terms(request):

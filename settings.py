@@ -425,6 +425,15 @@ CEREBRAS_API_KEY = env("CEREBRAS_API_KEY", default="")
 # key comes from AI Studio. Left unset, the bot behaves exactly as it did.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
 
+# Domain-ownership verification, for TikTok and anyone else who asks for it.
+# Only needed when verifying by file rather than by DNS — DNS needs no deploy
+# and covers every URL on the domain at once, so prefer it. Set both:
+#   SITE_VERIFICATION_FILENAME=tiktokXXXXXXXX.txt
+#   SITE_VERIFICATION_CONTENT=tiktok-developers-site-verification=XXXXXXXX
+# and the file answers at https://www.akiyainjapan.com/<filename>.
+SITE_VERIFICATION_FILENAME = env("SITE_VERIFICATION_FILENAME", default="")
+SITE_VERIFICATION_CONTENT = env("SITE_VERIFICATION_CONTENT", default="")
+
 # The two facts the terms and privacy pages cannot get from the code. Left
 # empty, those pages simply omit the sentence that would need them — better than
 # a policy naming the wrong company or claiming a jurisdiction nobody chose.
