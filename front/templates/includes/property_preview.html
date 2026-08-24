@@ -93,30 +93,30 @@
         {% endif %}
       </div>
     {% else %}
-      <dl class="pv-facts">
-        {% comment %}
-          data-m2 / data-orig is what units.js reads, and what the full listing
-          page uses — so the popup answers the unit switch rather than sitting in
-          m² while the rest of the page shows tsubo.
-        {% endcomment %}
+      {% comment %}
+        One line, not a table. Building and land are the pair a buyer reads
+        together — "how big is the house, how big is the plot" is one question —
+        and on four rows they read as four unrelated facts.
+
+        Layout and Built are gone with the table. The layout code (5DK) means
+        nothing to most of this audience without explanation, and the build date
+        arrives as raw Japanese — 1971年4月（築55年）— which is not something to
+        put in a popup. Both are on the full listing.
+      {% endcomment %}
+      <p class="pv-size">
         {% if property.building_area %}
-          <dt>Building</dt>
-          <dd>{% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}</dd>
+          <span class="pv-size-item">
+            <span class="pv-size-label">Building</span>
+            {% if property.building_area_m2 %}<span class="js-area" data-m2="{{ property.building_area_m2|floatformat:2 }}" data-orig="{{ property.building_area }}">{{ property.building_area }}</span>{% else %}{{ property.building_area }}{% endif %}
+          </span>
         {% endif %}
         {% if property.land_area %}
-          <dt>Land</dt>
-          <dd>{% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %}</dd>
+          <span class="pv-size-item">
+            <span class="pv-size-label">Land</span>
+            {% if property.land_area_m2 %}<span class="js-area" data-m2="{{ property.land_area_m2|floatformat:2 }}" data-orig="{{ property.land_area }}">{{ property.land_area }}</span>{% else %}{{ property.land_area }}{% endif %}
+          </span>
         {% endif %}
-        {% if property.floor_plan %}<dt>Layout</dt><dd>{{ property.floor_plan }}</dd>{% endif %}
-        {% if property.construction_date %}<dt>Built</dt><dd>{{ property.construction_date }}</dd>{% endif %}
-        {% comment %}
-          No `traffic` row. It is the scraper's raw station line — "JR Nippo Main
-          Line Kamiusuki Station 37 minutes on foot JR Nippo Main Line Usuki
-          Station 4.7km" — two stations run together with no punctuation, and it
-          took three lines of a four-line panel. It is on the full listing, where
-          there is room for it.
-        {% endcomment %}
-      </dl>
+      </p>
     {% endif %}
 
   </div>
@@ -295,9 +295,10 @@
   #pv-overlay .pv-heart.on { color:#c0392b !important; }
   #pv-overlay .pv-heart.on svg { fill:#c0392b; }
   #pv-overlay .pv-withheld { color:#666; font-size:.9rem; margin:.6rem 0 0; }
-  #pv-overlay .pv-facts { display:grid; grid-template-columns:auto 1fr; gap:.4rem 1rem; margin:0; }
-  #pv-overlay .pv-facts dt { color:#666; font-size:.9rem; }
-  #pv-overlay .pv-facts dd { margin:0; }
+  #pv-overlay .pv-size { display:flex; flex-wrap:wrap; gap:.4rem 1.6rem; margin:0; }
+  #pv-overlay .pv-size-item { display:inline-flex; align-items:baseline; gap:.45rem; }
+  #pv-overlay .pv-size-label { color:#6f7570; font-size:.82rem; text-transform:uppercase;
+            letter-spacing:.04em; }
   #pv-overlay .pv-wall { background:#f4f2ec; border-radius:10px; padding:1rem 1.2rem; }
   #pv-overlay .pv-wall-title { font-weight:700; margin:0 0 .35rem; }
   #pv-overlay .pv-wall p { margin:0 0 .6rem; }

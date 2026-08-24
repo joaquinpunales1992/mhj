@@ -142,7 +142,12 @@ class PropertyPreviewTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "US$14,000")
         self.assertContains(response, "Bungo-ono City")
-        self.assertContains(response, "3DK")
+        # Building and land, on one line. Layout and build date are on the full
+        # listing: a layout code means little without explanation, and the date
+        # arrives as raw Japanese.
+        self.assertContains(response, "Building")
+        self.assertContains(response, "Land")
+        self.assertNotContains(response, "3DK")
 
     def test_it_shows_several_photos(self):
         """The whole point of the redesign: one photo was all poptrox could do."""
@@ -165,7 +170,7 @@ class PropertyPreviewTests(TestCase):
             response = self.preview(self.listing("https://example.com/3"))
 
         self.assertContains(response, "You have opened all")
-        self.assertNotContains(response, "<dt>Layout</dt>")
+        self.assertNotContains(response, 'class="pv-size-item"')
 
     def test_the_wall_offers_the_next_step_rather_than_just_refusing(self):
         with override_settings(VIEW_LIMIT_ANONYMOUS=1):
@@ -180,7 +185,7 @@ class PropertyPreviewTests(TestCase):
             self.preview()
             response = self.preview()
         self.assertNotContains(response, "You have opened all")
-        self.assertContains(response, "<dt>Layout</dt>")
+        self.assertContains(response, 'class="pv-size-item"')
 
     def test_the_price_and_the_place_survive_the_wall(self):
         """They were on the card already; hiding them would read as a bug."""
