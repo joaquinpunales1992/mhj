@@ -281,65 +281,10 @@ def build_hashtags(location: str = "") -> str:
     return " ".join(chosen)
 
 
-def select_properties_to_post(posts_queryset, price_limit, limit=None):
-    """Properties with images under price_limit, cheapest first.
-
-    Eligibility matches the homepage grid (show_in_front=True, price in
-    (0, price_limit]) plus the social-only requirement of at least one image
-    — we can't build a reel/post without a photo. Featured is NOT required;
-    it's only a tiebreaker.
-
-    Ordering: never-posted properties get a turn before anything is reposted,
-    then a featured listing that is also cheap, then the least-recently-posted
-    (to keep the rotation fair), then cheapest first — which, since everything
-    never posted has the same empty posting history, is what actually decides
-    the queue day to day.
-
-    Featured used to be the first key, on the reasoning that the social feed
-    should mirror the home page grid. On the home page that ordering costs
-    nothing: every listing is on the page, featured ones are simply at the top.
-    A queue is not a page. One featured 1400万 listing sat at the head of it
-    ahead of 1,558 never-posted properties, kept sitting there after it had been
-    posted, and would have been next on every run for the rest of the year.
-    Featured now boosts a listing once, and only under
-    FEATURED_BOOST_PRICE_LIMIT.
-
-    `posts_queryset` is the SocialPost rows for the relevant channel; matching
-    is by property_url == Property.url (same value written when a post is made).
-    """
-    rows = posts_queryset.values("property_url").annotate(last=Max("datetime"))
-    last_posted = {r["property_url"]: r["last"] for r in rows}
-
-    candidates = list(
-        Property.objects.filter(
-            show_in_front=True,
-            images__isnull=False,
-            price__gt=0,
-            price__lte=price_limit,
-        ).distinct()
-    )
-    def _boosted(property):
-        """Featured *and* cheap. Featured alone is a home page decision."""
-        return bool(property.featured) and (
-            (property.price or 0) <= FEATURED_BOOST_PRICE_LIMIT
-        )
-
-    # Sort key, in priority order:
-    #   1. already-posted?    never-posted ahead of posted, so the boost below
-    #                         is worth exactly one turn and cannot repeat
-    #   2. not boosted        a cheap featured listing leads its group
-    #   3. last-posted-time   oldest repost first (only separates the posted
-    #                         group — everything never posted ties at 0 here)
-    #   4. price              cheapest first
-    candidates.sort(
-        key=lambda p: (
-            last_posted.get(p.url) is not None,
-            not _boosted(p),
-            last_posted.get(p.url) or 0,
-            p.price or 0,
-        )
-    )
-    return candidates[:limit] if limit else candidates
+# select_properties_to_post lives in social/queue.py now: it is a query and a
+# sort, and having it here meant anything that wanted to know what was next had
+# to import this module — and with it moviepy and numpy.
+from social.queue import select_properties_to_post  # noqa: E402,F401
 
 
 def generate_caption_for_post(

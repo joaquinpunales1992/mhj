@@ -141,6 +141,11 @@ TIKTOK_TIMEOUT = 180
 # when the API returns. Poll a few times to log what became of it, then stop —
 # a cron job holding a connection open to watch an encode is not doing anything
 # useful with the wait.
+# How long the posting page waits for the command it spawns. The encode plus
+# the upload plus the status polls; generous, because being cut off after the
+# upload has started is worse than waiting.
+TIKTOK_POST_TIMEOUT = 600
+
 TIKTOK_STATUS_POLLS = 3
 TIKTOK_STATUS_POLL_SECONDS = 20
 

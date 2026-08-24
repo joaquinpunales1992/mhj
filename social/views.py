@@ -17,9 +17,12 @@ Staff only. It posts to the site's own TikTok account, so it is a control panel
 rather than a feature for visitors.
 """
 
+import importlib
 import logging
 import os
 import secrets
+import subprocess
+import sys
 
 from django.conf import settings
 from django.contrib import messages
@@ -29,8 +32,13 @@ from django.urls import reverse
 from django.views.decorators.http import require_POST
 
 from social import tiktok
-from social.constants import PRICE_LIMIT_INSTAGRAM, TIKTOK_PRIVACY_LEVEL
+from social.constants import (
+    PRICE_LIMIT_INSTAGRAM,
+    TIKTOK_POST_TIMEOUT,
+    TIKTOK_PRIVACY_LEVEL,
+)
 from social.models import SocialPost
+from social.queue import select_properties_to_post
 
 # social.utils is NOT imported here. It imports moviepy and numpy at module
 # level, and urls.py imports this module, so a module-level import would load
@@ -56,8 +64,6 @@ def _redirect_uri(request):
 
 def _next_property():
     """Whatever the TikTok queue would post next — cheapest first."""
-    from social.utils import select_properties_to_post  # heavy import; see above
-
     candidates = select_properties_to_post(
         SocialPost.objects.filter(social_media="tiktok"),
         PRICE_LIMIT_INSTAGRAM,
@@ -172,34 +178,60 @@ def callback(request):
     return redirect(reverse("tiktok_dashboard"))
 
 
+def _manage_py():
+    """manage.py, which lives beside settings.py in this project."""
+    settings_module = importlib.import_module(
+        os.environ.get("DJANGO_SETTINGS_MODULE", "settings")
+    )
+    return os.path.join(
+        os.path.dirname(os.path.abspath(settings_module.__file__)), "manage.py"
+    )
+
+
 @staff_member_required
 @require_POST
 def post_now(request):
-    """Build the video for the queued property and post it, with these settings.
+    """Post the queued listing, in a process of its own.
 
-    Synchronous, which is a real decision: the encode takes seconds and this is
-    a manual action by one person, so a job queue would be machinery for
-    nothing. It is also why the queued property is re-read here rather than
-    trusted from the form — if the queue moved on while the page was open, the
-    post should be of what is next now.
+    Not because posting is slow — it is seconds — but because building the video
+    imports moviepy and numpy, and this host runs the site under Passenger,
+    which preloads and forks. numpy in a forked worker raises "CPU dispatcher
+    tracer already initlized" and takes the process with it; that is how the
+    site returned 503. A subprocess gets a clean interpreter, its own memory,
+    and cannot damage the worker that spawned it.
+
+    It also means the button and the cron job run exactly the same code path,
+    which is worth more than the milliseconds a direct call would save.
     """
-    from social.utils import post_tiktok_reel
+    argv = [sys.executable, _manage_py(), "post_on_tiktok"]
+    if request.POST.get("privacy_level"):
+        argv += ["--privacy-level", request.POST["privacy_level"]]
+    for name in ("comment", "duet", "stitch"):
+        if request.POST.get(f"disable_{name}"):
+            argv.append(f"--disable-{name}")
 
-    privacy_level = request.POST.get("privacy_level") or None
-    options = {
-        "disable_comment": bool(request.POST.get("disable_comment")),
-        "disable_duet": bool(request.POST.get("disable_duet")),
-        "disable_stitch": bool(request.POST.get("disable_stitch")),
-    }
+    try:
+        result = subprocess.run(
+            argv, capture_output=True, text=True, timeout=TIKTOK_POST_TIMEOUT
+        )
+    except subprocess.TimeoutExpired:
+        messages.error(
+            request, "The post took too long and was stopped. The encode may "
+            "still have finished — check the log before trying again."
+        )
+        return redirect(reverse("tiktok_dashboard"))
 
-    posted = post_tiktok_reel(privacy_level=privacy_level, options=options)
-    if posted:
+    if result.returncode == 0 and "Posted to TikTok" in (result.stdout or ""):
         messages.success(
             request, "Posted to TikTok. TikTok finishes processing the video "
             "after the upload, so it appears on the profile shortly."
         )
     else:
+        # The command already logged the detail; the last line is the summary a
+        # person can act on without opening the log.
+        detail = (result.stderr or result.stdout or "").strip().splitlines()
         messages.error(
-            request, "Nothing was posted — the reason is in the application log."
+            request,
+            f"Nothing was posted. {detail[-1] if detail else 'See the log.'}"
         )
     return redirect(reverse("tiktok_dashboard"))

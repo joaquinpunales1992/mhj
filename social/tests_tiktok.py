@@ -13,9 +13,17 @@ dropped, and an off-by-one in the upload's byte range.
 import json
 import os
 import shutil
+import subprocess
+import sys
 import tempfile
 import time
+from io import StringIO
 from unittest.mock import patch
+
+from django.contrib.messages import get_messages
+from django.core.management import call_command
+
+from social import views as social_views
 
 from django.test import SimpleTestCase, TestCase, override_settings
 
@@ -456,8 +464,72 @@ class TikTokPageTests(TestCase):
         exchange.assert_called_once()
         self.assertEqual(exchange.call_args.args[0], "abc")
 
-    def post_now(self, data):
-        """Post through the page, with the encoder and the API mocked."""
+    def post_now(self, data, returncode=0, stdout="Posted to TikTok.", stderr=""):
+        """Post through the page, with the spawned command mocked.
+
+        The page runs `manage.py post_on_tiktok` in a process of its own, so
+        what is worth asserting here is the command line it builds. Whether that
+        command posts correctly is PostOnTikTokCommandTests, below, and no test
+        may actually spawn it — an earlier version of these did, and the suite
+        went from two seconds to ninety.
+        """
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=returncode, stdout=stdout, stderr=stderr
+        )
+        self.client.force_login(self.staff)
+        with patch.object(social_views.subprocess, "run",
+                          return_value=completed) as run:
+            response = self.client.post("/tiktok/post/", data)
+        self.response = response
+        return run
+
+    def argv(self, run):
+        return run.call_args.args[0]
+
+    def test_the_chosen_privacy_level_reaches_the_command(self):
+        run = self.post_now({"privacy_level": "PUBLIC_TO_EVERYONE"})
+        argv = self.argv(run)
+        self.assertIn("post_on_tiktok", argv)
+        self.assertIn("--privacy-level", argv)
+        self.assertEqual(argv[argv.index("--privacy-level") + 1],
+                         "PUBLIC_TO_EVERYONE")
+
+    def test_the_chosen_switches_reach_the_command(self):
+        run = self.post_now({"privacy_level": "SELF_ONLY", "disable_comment": "on"})
+        argv = self.argv(run)
+        self.assertIn("--disable-comment", argv)
+        self.assertNotIn("--disable-duet", argv)
+        self.assertNotIn("--disable-stitch", argv)
+
+    def test_it_runs_in_a_separate_interpreter(self):
+        """numpy in a forked Passenger worker is what took the site down."""
+        argv = self.argv(self.post_now({"privacy_level": "SELF_ONLY"}))
+        self.assertEqual(argv[0], sys.executable)
+        self.assertTrue(argv[1].endswith("manage.py"), argv[1])
+
+    def test_a_failing_command_says_so_rather_than_claiming_success(self):
+        self.post_now(
+            {"privacy_level": "SELF_ONLY"}, returncode=1, stdout="",
+            stderr="Error on TikTok post: spam_risk_too_many_posts",
+        )
+        text = " ".join(str(m) for m in get_messages(self.response.wsgi_request))
+        self.assertIn("Nothing was posted", text)
+        self.assertIn("spam_risk_too_many_posts", text)
+
+
+class PostOnTikTokCommandTests(TestCase):
+    """The command the page spawns, and cron runs unattended."""
+
+    def setUp(self):
+        self.property = Property.objects.create(
+            url="https://example.com/house-1", price=200, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City",
+        )
+        PropertyImage.objects.create(
+            property=self.property, file="https://img.example.com/a.jpg"
+        )
+
+    def run_command(self, *args):
         from social import utils
 
         def fake_video(property_id, output_path, audio_path,
@@ -466,7 +538,6 @@ class TikTokPageTests(TestCase):
                 handle.write(b"\0" * 16)
             return output_path
 
-        self.client.force_login(self.staff)
         with patch.object(utils, "create_property_video", side_effect=fake_video), \
              patch.object(utils, "_get_random_mp3_full_path", return_value="/a.mp3"), \
              patch.object(utils, "generate_caption_for_post",
@@ -474,24 +545,27 @@ class TikTokPageTests(TestCase):
              patch.object(utils.time, "sleep"), \
              patch.object(tiktok, "fetch_status", return_value={"status": "OK"}), \
              patch.object(tiktok, "publish_video", return_value="pub-1") as publish:
-            self.client.post("/tiktok/post/", data)
+            call_command("post_on_tiktok", *args, stdout=StringIO(),
+                         stderr=StringIO())
         return publish
 
-    def test_the_chosen_privacy_level_reaches_the_api(self):
-        publish = self.post_now({"privacy_level": "PUBLIC_TO_EVERYONE"})
+    def test_the_privacy_level_reaches_the_api(self):
+        publish = self.run_command("--privacy-level", "PUBLIC_TO_EVERYONE")
         self.assertEqual(
             publish.call_args.kwargs["privacy_level"], "PUBLIC_TO_EVERYONE"
         )
 
-    def test_the_chosen_switches_reach_the_api(self):
-        publish = self.post_now({
-            "privacy_level": "SELF_ONLY", "disable_comment": "on",
-        })
+    def test_the_switches_reach_the_api(self):
+        publish = self.run_command("--disable-comment")
         options = publish.call_args.kwargs["options"]
         self.assertTrue(options["disable_comment"])
         self.assertFalse(options["disable_duet"])
-        self.assertFalse(options["disable_stitch"])
 
-    def test_posting_records_the_post(self):
-        self.post_now({"privacy_level": "SELF_ONLY"})
+    def test_with_no_arguments_the_constants_apply(self):
+        """Which is how cron runs it: nobody chose, so the settings decide."""
+        publish = self.run_command()
+        self.assertIsNone(publish.call_args.kwargs["privacy_level"])
+
+    def test_the_post_is_recorded(self):
+        self.run_command()
         self.assertEqual(SocialPost.objects.filter(social_media="tiktok").count(), 1)
