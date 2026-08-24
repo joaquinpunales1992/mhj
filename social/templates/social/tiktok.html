@@ -13,7 +13,7 @@
   {% endif %}
 
   <h2>Connected account</h2>
-  {% if connected %}
+  {% if ready %}
     <div class="tt-card">
       {% comment %}
         Explicit branches rather than `profile.x|default:creator.y`: profile is
@@ -36,6 +36,16 @@
       </div>
     </div>
     <p><a href="{% url 'tiktok_connect' %}">Reconnect a different account</a></p>
+  {% elif has_tokens %}
+    <p>An account is authorised, but TikTok will not answer for it yet.</p>
+    {% if error %}<p class="tt-note tt-error">{{ error }}</p>{% endif %}
+    {% if granted_scope %}
+      <p class="tt-hint">The stored authorisation granted:
+         <code>{{ granted_scope }}</code>. Posting needs
+         <code>video.publish</code>; if it is missing there, it was not granted
+         when the account was connected.</p>
+    {% endif %}
+    <a class="cta" href="{% url 'tiktok_connect' %}">Reconnect TikTok</a>
   {% else %}
     <p>No TikTok account is connected yet.</p>
     {% if error %}<p class="tt-note tt-error">{{ error }}</p>{% endif %}
@@ -65,7 +75,7 @@
     <p>Nothing is queued — every eligible listing has been posted.</p>
   {% endif %}
 
-  {% if connected and property %}
+  {% if ready and property %}
     <h2>Post settings</h2>
     <form method="post" action="{% url 'tiktok_post_now' %}">
       {% csrf_token %}

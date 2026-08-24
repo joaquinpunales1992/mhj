@@ -390,12 +390,34 @@ class TikTokPageTests(TestCase):
         self.assertContains(response, "akiyainjapan")
         self.assertContains(response, "My Akiya in Japan")
 
+    def test_an_authorised_but_unusable_account_does_not_read_as_unconnected(self):
+        """It said "connected" and "no account connected" at the same time.
+
+        A token granted without video.publish fails every posting call, and the
+        page has to say that rather than pretend nobody ever authorised.
+        """
+        self.client.force_login(self.staff)
+        with patch.object(tiktok, "load_tokens",
+                          return_value={"refresh_token": "r",
+                                        "scope": "user.info.basic"}), \
+             patch.object(tiktok, "get_fresh_token", return_value="t"), \
+             patch.object(tiktok, "query_creator_info",
+                          side_effect=tiktok.TikTokError(
+                              "scope_not_authorized", code="scope_not_authorized")):
+            response = self.client.get("/tiktok/")
+
+        self.assertNotContains(response, "No TikTok account is connected yet")
+        self.assertContains(response, "user.info.basic")
+        self.assertContains(response, "video.publish")
+
     def test_an_unconnected_account_is_offered_the_connect_link(self):
         self.client.force_login(self.staff)
-        with patch.object(tiktok, "get_fresh_token",
+        with patch.object(tiktok, "load_tokens", return_value={}), \
+             patch.object(tiktok, "get_fresh_token",
                           side_effect=tiktok.TikTokError("no token")):
             response = self.client.get("/tiktok/")
         self.assertContains(response, "/tiktok/connect/")
+        self.assertContains(response, "No TikTok account is connected yet")
 
     def test_the_page_survives_tiktok_being_unreachable(self):
         """A dead API is a message on the page, not a 500."""

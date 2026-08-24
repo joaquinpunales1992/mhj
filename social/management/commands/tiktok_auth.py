@@ -82,6 +82,9 @@ class Command(BaseCommand):
         self.stdout.write(f"Client key: {key}")
         self.stdout.write(f"Token file: {tiktok._token_path()}")
 
+        granted = tiktok.load_tokens().get("scope", "")
+        self.stdout.write(f"Granted scopes: {granted or '(unknown)'}")
+
         token = tiktok.get_fresh_token()
         creator = tiktok.query_creator_info(token)
         self.stdout.write(self.style.SUCCESS(

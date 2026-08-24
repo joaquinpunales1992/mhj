@@ -66,6 +66,13 @@ def dashboard(request):
     allows are the account's business and can change, and a page showing a
     remembered list would be offering a choice TikTok may refuse.
     """
+    # Whether an account is connected is a question about the stored tokens,
+    # not about whether a call just succeeded. Conflating the two made the page
+    # say "connected" and "no account connected" at once when the token was
+    # missing a scope.
+    stored = tiktok.load_tokens()
+    has_tokens = bool(stored.get("refresh_token"))
+
     creator = None
     profile = {}
     error = ""
@@ -91,7 +98,12 @@ def dashboard(request):
         "creator": creator,
         "profile": profile,
         "error": error,
-        "connected": bool(creator),
+        "has_tokens": has_tokens,
+        # What TikTok actually granted, which is not always what was asked for:
+        # a token missing video.publish fails every posting call with
+        # scope_not_authorized, and nothing else on the page would say why.
+        "granted_scope": stored.get("scope", ""),
+        "ready": bool(creator),
         "property": _next_property(),
         "privacy_options": privacy_options,
         "privacy_default": (
