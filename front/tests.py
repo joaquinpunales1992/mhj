@@ -46,13 +46,15 @@ class LegalPageTests(TestCase):
             self.assertContains(self.client.get("/privacy/"), "Example K.K.")
 
     def test_no_jurisdiction_is_claimed_until_one_is_chosen(self):
+        """And the heading does not promise a clause that is not there."""
         with override_settings(LEGAL_GOVERNING_LAW=""):
             body = self.client.get("/terms/").content.decode()
-            self.assertIn("11. Law and contact", body)
+            self.assertIn("11. Contact", body)
+            self.assertNotIn("Law and contact", body)
             self.assertIn("hello@akiyainjapan.com", body)
 
-    def test_the_jurisdiction_shows_once_chosen(self):
+    def test_the_jurisdiction_and_its_heading_show_once_chosen(self):
         with override_settings(LEGAL_GOVERNING_LAW="Governed by the law of Japan."):
-            self.assertContains(
-                self.client.get("/terms/"), "Governed by the law of Japan."
-            )
+            response = self.client.get("/terms/")
+            self.assertContains(response, "Governed by the law of Japan.")
+            self.assertContains(response, "Law and contact")

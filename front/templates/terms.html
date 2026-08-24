@@ -103,7 +103,12 @@
   <p>These terms may change. The date at the top says when they last did, and
      continuing to use the site after a change means accepting it.</p>
 
-  <h2>11. Law and contact</h2>
+  {% comment %}
+    The heading follows the content. With no governing law set, "Law and
+    contact" announces a clause that is not there, which reads worse than not
+    raising the subject.
+  {% endcomment %}
+  <h2>11. {% if governing_law %}Law and contact{% else %}Contact{% endif %}</h2>
   {% if governing_law %}<p>{{ governing_law }}</p>{% endif %}
   <p>Questions about any of this:
      <a href="mailto:hello@akiyainjapan.com">hello@akiyainjapan.com</a>.</p>

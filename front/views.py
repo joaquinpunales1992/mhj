@@ -397,6 +397,8 @@ def _legal_context():
     """
     return {
         "last_updated": LEGAL_LAST_UPDATED,
+        # Only the privacy page uses the entity; only the terms use the law.
+        # Both pages drop the sentence, and its heading, when it is unset.
         "legal_entity": getattr(settings, "LEGAL_ENTITY", ""),
         "governing_law": getattr(settings, "LEGAL_GOVERNING_LAW", ""),
     }
