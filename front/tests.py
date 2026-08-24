@@ -247,6 +247,22 @@ class SharedPopupTests(TestCase):
     def test_the_home_page_carries_the_popup(self):
         self.assertContains(self.client.get("/"), 'id="pv-overlay"')
 
+    def test_the_popup_sits_below_the_share_menu(self):
+        """Both are children of body, so an equal z-index is settled by order.
+
+        The popup include comes after the share menu in home.html, so at equal
+        z-index the popup won and the share sheet opened behind it. This asserts
+        the numbers rather than the ordering, because the ordering is the thing
+        that will change.
+        """
+        import re
+
+        body = self.client.get("/").content.decode()
+        popup = re.search(r"#pv-overlay \{[^}]*z-index:\s*(\d+)", body)
+        share = re.search(r"\.share-overlay \{[^}]*z-index:\s*(\d+)", body)
+        self.assertTrue(popup and share, "both overlays should declare a z-index")
+        self.assertLess(int(popup.group(1)), int(share.group(1)))
+
     def test_the_map_carries_the_same_popup(self):
         self.assertContains(self.client.get("/map/"), 'id="pv-overlay"')
 

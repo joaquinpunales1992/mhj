@@ -25,7 +25,13 @@
 	   every button on the site — height, min-width, and white text — and a
 	   class selector loses to it: the close cross came out as an empty
 	   98x183 box, then as a white glyph on a white panel. */
-	#pv-overlay { position:fixed; inset:0; z-index:30000; display:none;
+	{% comment %}
+	  29500, not 30000. The home page's share menu is 30000 and both are direct
+	  children of body, so an equal z-index is settled by document order — and
+	  this include sits after the share menu, so it won and the share sheet
+	  opened behind the popup.
+	{% endcomment %}
+	#pv-overlay { position:fixed; inset:0; z-index:29500; display:none;
 	              background:rgba(0,0,0,.6); padding:2rem 1rem; overflow-y:auto; }
 	#pv-overlay.open { display:block; }
 	#pv-overlay .pv-panel { position:relative; background:#fff; color:#1f2224;
