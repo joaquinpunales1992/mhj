@@ -45,6 +45,10 @@
        logotype and page h1s, where it carries the brand; section headings
        are the body face at 600. */
     .wrap h2 { font-family:var(--font-body); font-weight:600; font-size:1.4rem; margin:2rem 0 .75rem; }
+    /* The reset above zeroes every margin, so an h3 with no rule of its own sits
+       flush against the paragraph before it. The legal pages are the first to
+       need a third level. */
+    .wrap h3 { font-family:var(--font-body); font-weight:600; font-size:1.08rem; margin:1.5rem 0 .4rem; }
     .wrap p, .wrap li { margin-bottom:.75rem; }
     .wrap ol, .wrap ul { padding-left:1.4rem; margin-bottom:1rem; }
     .lead { font-size:1.15rem; color:var(--muted); margin-bottom:1.25rem; }
@@ -85,6 +89,8 @@
         <a href="{% url 'faqs' %}">FAQs</a>
         <a href="{% url 'about' %}">About</a>
         <a href="{% url 'pricing' %}">Pricing</a>
+        <a href="{% url 'privacy' %}">Privacy</a>
+        <a href="{% url 'terms' %}">Terms</a>
       </div>
       <div class="site-footer-col">
         <h4>Popular regions</h4>

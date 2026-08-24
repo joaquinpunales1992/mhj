@@ -22,6 +22,12 @@ urlpatterns = [
     path("about/", front_views.about, name="about"),
     path("how-to-buy/", front_views.how_to_buy, name="how_to_buy"),
     path("faqs/", front_views.faqs, name="faqs"),
+    # Required by anyone who reviews an app that touches this site — TikTok's
+    # app registration will not accept a URL that is not one of these — and by
+    # the fact that the site has accounts, lead forms, analytics and recurring
+    # payments, and had neither page.
+    path("terms/", front_views.terms, name="terms"),
+    path("privacy/", front_views.privacy, name="privacy"),
     path("consultation/", front_views.consultation, name="consultation"),
     # Booking a paid call: hold + PayPal order, then PayPal's two redirects back.
     path(

@@ -383,6 +383,33 @@ def faqs(request):
     return render(request, "faqs.html")
 
 
+# Both legal pages carry the same date, because they were written together and a
+# reader comparing them should not have to wonder which is current.
+LEGAL_LAST_UPDATED = "24 August 2026"
+
+
+def _legal_context():
+    """The two things the templates cannot know about the business.
+
+    Neither is invented when unset: a privacy policy naming the wrong company,
+    or terms claiming a jurisdiction nobody chose, is worse than one that says
+    less. The templates omit the sentence entirely until these are filled in.
+    """
+    return {
+        "last_updated": LEGAL_LAST_UPDATED,
+        "legal_entity": getattr(settings, "LEGAL_ENTITY", ""),
+        "governing_law": getattr(settings, "LEGAL_GOVERNING_LAW", ""),
+    }
+
+
+def terms(request):
+    return render(request, "terms.html", _legal_context())
+
+
+def privacy(request):
+    return render(request, "privacy.html", _legal_context())
+
+
 def pricing(request):
     """One page showing every tier in order.
 

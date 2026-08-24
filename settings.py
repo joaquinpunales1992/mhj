@@ -425,6 +425,15 @@ CEREBRAS_API_KEY = env("CEREBRAS_API_KEY", default="")
 # key comes from AI Studio. Left unset, the bot behaves exactly as it did.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
 
+# The two facts the terms and privacy pages cannot get from the code. Left
+# empty, those pages simply omit the sentence that would need them — better than
+# a policy naming the wrong company or claiming a jurisdiction nobody chose.
+#   LEGAL_ENTITY="Joaquin Punales, sole trader" (or the company name)
+#   LEGAL_GOVERNING_LAW="These terms are governed by the law of Japan, and the
+#     courts of Tokyo have exclusive jurisdiction."
+LEGAL_ENTITY = env("LEGAL_ENTITY", default="")
+LEGAL_GOVERNING_LAW = env("LEGAL_GOVERNING_LAW", default="")
+
 # TikTok, from an app registered at developers.tiktok.com. The tokens the app
 # earns live in TIKTOK_TOKEN_FILE, not here: the refresh token rotates on every
 # use, so it is state rather than configuration and .env is the wrong place for
