@@ -315,6 +315,11 @@ class PreviewPanelTests(TestCase):
         # The verdict itself is a Pro field.
         self.assertNotContains(response, "Good potential")
 
+    def test_the_gates_carry_the_padlock_the_rest_of_the_site_uses(self):
+        """Same include as the listing page's gates, so locked looks locked."""
+        response = self.preview()
+        self.assertContains(response, "mhj-lock")
+
     def test_the_price_panel_is_offered_but_not_answered(self):
         response = self.preview()
         self.assertContains(response, "Price vs the local market")

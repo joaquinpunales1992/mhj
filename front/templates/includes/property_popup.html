@@ -193,6 +193,26 @@
 				return;
 			}
 
+			var share = t.closest('.pv-share');
+			if (share) {
+				var shareUrl = share.getAttribute('data-share-url');
+				var shareTitle = share.getAttribute('data-share-title') || 'My Akiya in Japan';
+				// The home page has a share menu with the networks on it; the map
+				// does not. Use it where it exists rather than offering two
+				// different share experiences on one site.
+				if (window.__mhjShare) { window.__mhjShare(shareUrl, shareTitle); return; }
+				if (navigator.share) {
+					navigator.share({ title: shareTitle, url: shareUrl }).catch(function () {});
+					return;
+				}
+				if (navigator.clipboard) {
+					navigator.clipboard.writeText(shareUrl).then(function () {
+						say('Link copied.');
+					}, function () { window.prompt('Copy this link:', shareUrl); });
+				} else { window.prompt('Copy this link:', shareUrl); }
+				return;
+			}
+
 			var desk = t.closest('.pv-desk');
 			if (desk) {
 				desk.disabled = true;

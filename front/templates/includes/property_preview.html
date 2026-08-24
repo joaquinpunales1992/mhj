@@ -184,7 +184,7 @@
             See how this asking price compares, per m², with other listings in
             {{ property.get_location_for_front }}.
           </p>
-          <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">Unlock with Pro</a>
+          <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">{% include "includes/icon_lock.html" %} Unlock with Pro</a>
           {% if pro_price %}<span class="pv-gate-note">{{ pro_price }} · cancel any time.</span>{% endif %}
         </div>
       {% endif %}
@@ -206,7 +206,7 @@
             We work out from this property's zoning whether a short-term let is
             likely to be allowed here.
           </p>
-          <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">Unlock with Pro</a>
+          <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">{% include "includes/icon_lock.html" %} Unlock with Pro</a>
           {% if pro_price %}<span class="pv-gate-note">{{ pro_price }} · cancel any time.</span>{% endif %}
         </div>
       {% endif %}
@@ -340,9 +340,19 @@
   #pv-overlay .pv-panel-note { margin:.25rem 0 0; font-size:.9rem; color:#4a4a4a; }
   #pv-overlay .pv-panel-fine { margin:.4rem 0 0; font-size:.76rem; color:#8a8a8a; }
   #pv-overlay .pv-gate { background:#f7f5f0; }
-  #pv-overlay .pv-gate-cta { display:inline-block; margin-top:.5rem; background:#477535;
-            color:#fff !important; border-radius:7px; padding:.4rem .8rem;
-            text-decoration:none; font-weight:600; font-size:.85rem; }
+  {% comment %}
+    The padlock is the same include the listing page's gates use, so a locked
+    thing looks locked in the same way wherever a visitor meets it. Its own rule
+    lives on that page, so the popup restates it — currentColor, so it follows
+    the button through hover.
+  {% endcomment %}
+  #pv-overlay .pv-gate-cta { display:inline-flex; align-items:center; gap:.4rem;
+            margin-top:.5rem; background:#477535; color:#fff !important;
+            border-radius:7px; padding:.4rem .8rem; text-decoration:none;
+            font-weight:600; font-size:.85rem; }
+  #pv-overlay .mhj-lock { flex:0 0 auto; width:1em; height:1em; fill:none;
+            stroke:currentColor; stroke-width:2; stroke-linecap:round;
+            stroke-linejoin:round; }
   #pv-overlay .pv-gate-note { display:block; margin-top:.35rem; font-size:.76rem;
             color:#8a8a8a; }
   #pv-overlay .pv-findings { list-style:none; margin:.45rem 0 0; padding:0; }
@@ -384,9 +394,21 @@
     #pv-overlay .pv-media { grid-column:1; grid-row:1 / 3; }
     #pv-overlay .pv-info { grid-column:2; grid-row:1; }
     #pv-overlay .pv-actions { grid-column:2; grid-row:2; flex-direction:column; }
+    {% comment %}
+      align-items defaults to stretch, which is what makes the three boxes the
+      same height whatever is in them — `start` sized each to its own content
+      and left a ragged row.
+    {% endcomment %}
     #pv-overlay .pv-analysis { grid-column:1 / -1; grid-row:3;
-                               display:grid; gap:.9rem; align-items:start;
+                               display:grid; gap:.9rem;
                                grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); }
+    {% comment %}
+      And the gate's call to action goes to the bottom of its box, so the three
+      buttons line up across the row rather than floating at three heights.
+    {% endcomment %}
+    #pv-overlay .pv-analysis .pv-panel-card { display:flex; flex-direction:column; }
+    #pv-overlay .pv-analysis .pv-panel-note { flex:1 1 auto; }
+    #pv-overlay .pv-analysis .pv-findings { flex:1 1 auto; }
     #pv-overlay .pv-analysis .pv-panel-card { margin-top:0; }
     #pv-overlay .pv-services { flex-direction:column; }
     #pv-overlay .pv-services > * { flex:0 0 auto; }
