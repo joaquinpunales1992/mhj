@@ -18,8 +18,17 @@
       <div class="pv-gallery" data-count="{{ images|length }}">
         <div class="pv-frame">
           {% for image in images %}
+            {% comment %}
+              data-full and the onerror are the same fallback the home page's
+              cards carry: src is a proxied WebP, and if the proxy is slow or
+              refuses this particular source image the original still loads.
+              Without it a proxy outage leaves a black frame where the photo is,
+              which is what happened while I was taking screenshots of this.
+            {% endcomment %}
             <img class="pv-shot{% if forloop.first %} is-current{% endif %}"
-                 src="{{ image.file|thumb:900 }}" data-index="{{ forloop.counter0 }}"
+                 src="{{ image.file|thumb:900 }}" data-full="{{ image.file }}"
+                 onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}"
+                 data-index="{{ forloop.counter0 }}"
                  alt="{{ property.get_title_for_front }}" loading="lazy" decoding="async">
           {% endfor %}
           {% if images|length > 1 %}
