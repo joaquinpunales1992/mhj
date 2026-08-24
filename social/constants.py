@@ -107,7 +107,11 @@ HASHTAGS_LIST = CORE_HASHTAGS + ROTATING_HASHTAGS
 # is refused rather than downgraded. So this starts at SELF_ONLY — the runs
 # work, they are simply private — and becomes PUBLIC_TO_EVERYONE the day the
 # audit clears. Nothing else needs to change.
-TIKTOK_PRIVACY_LEVEL = "SELF_ONLY"
+# Overridable from .env, because the day this changes is the day the audit
+# clears — and editing a constant and deploying is the wrong amount of ceremony
+# for flipping a switch you have been waiting weeks for:
+#   TIKTOK_PRIVACY_LEVEL=PUBLIC_TO_EVERYONE
+TIKTOK_PRIVACY_LEVEL = os.getenv("TIKTOK_PRIVACY_LEVEL", "SELF_ONLY")
 
 # Comments are where this account earns its reach — see the reply bot — so they
 # stay on. Duet and stitch are other people's remixes of our footage, which is
