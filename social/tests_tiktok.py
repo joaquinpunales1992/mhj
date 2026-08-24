@@ -290,3 +290,139 @@ class PostTikTokReelTests(TestCase):
     def test_nothing_to_post_is_not_an_error(self):
         Property.objects.all().update(show_in_front=False)
         self.assertFalse(self.run_post())
+
+
+class TikTokPageTests(TestCase):
+    """The staff page that TikTok's Direct Post rules and its app review need.
+
+    Two things are worth protecting here. It must not be reachable by visitors —
+    it posts as the site's own account. And the choices made on it must actually
+    reach the API, because a page that shows a privacy selector and then posts
+    whatever the constant says is worse than no page: it tells the operator
+    something untrue.
+    """
+
+    CREATOR = {
+        "creator_username": "akiyainjapan",
+        "creator_nickname": "My Akiya in Japan",
+        "privacy_level_options": ["PUBLIC_TO_EVERYONE", "SELF_ONLY"],
+    }
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+
+        self.staff = User.objects.create_user(
+            "staff", "staff@example.com", "pw", is_staff=True
+        )
+        self.visitor = User.objects.create_user("v", "v@example.com", "pw")
+        self.property = Property.objects.create(
+            url="https://example.com/house-1", price=200, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City",
+        )
+        PropertyImage.objects.create(
+            property=self.property, file="https://img.example.com/a.jpg"
+        )
+
+    def test_a_visitor_cannot_see_it(self):
+        self.client.force_login(self.visitor)
+        response = self.client.get("/tiktok/")
+        self.assertNotEqual(response.status_code, 200)
+
+    def test_an_anonymous_request_cannot_see_it(self):
+        self.assertNotEqual(self.client.get("/tiktok/").status_code, 200)
+
+    def test_a_visitor_cannot_post(self):
+        self.client.force_login(self.visitor)
+        with patch.object(tiktok, "publish_video") as publish:
+            self.client.post("/tiktok/post/", {"privacy_level": "SELF_ONLY"})
+        publish.assert_not_called()
+
+    def test_the_page_shows_the_account_and_the_levels_it_allows(self):
+        self.client.force_login(self.staff)
+        with patch.object(tiktok, "get_fresh_token", return_value="t"), \
+             patch.object(tiktok, "query_creator_info", return_value=self.CREATOR):
+            response = self.client.get("/tiktok/")
+        self.assertContains(response, "akiyainjapan")
+        self.assertContains(response, "PUBLIC_TO_EVERYONE")
+        self.assertContains(response, "SELF_ONLY")
+
+    def test_an_unconnected_account_is_offered_the_connect_link(self):
+        self.client.force_login(self.staff)
+        with patch.object(tiktok, "get_fresh_token",
+                          side_effect=tiktok.TikTokError("no token")):
+            response = self.client.get("/tiktok/")
+        self.assertContains(response, "/tiktok/connect/")
+
+    def test_the_page_survives_tiktok_being_unreachable(self):
+        """A dead API is a message on the page, not a 500."""
+        self.client.force_login(self.staff)
+        with patch.object(tiktok, "get_fresh_token", side_effect=OSError("dns")):
+            self.assertEqual(self.client.get("/tiktok/").status_code, 200)
+
+    def test_connect_sends_the_operator_to_tiktok_with_a_state(self):
+        self.client.force_login(self.staff)
+        with override_settings(TIKTOK_CLIENT_KEY="key", TIKTOK_CLIENT_SECRET="s"):
+            response = self.client.get("/tiktok/connect/")
+        self.assertEqual(response.status_code, 302)
+        self.assertIn("www.tiktok.com", response["Location"])
+        self.assertIn("scope=video.publish", response["Location"])
+        self.assertIn(self.client.session["tiktok_oauth_state"],
+                      response["Location"])
+
+    def test_a_callback_with_the_wrong_state_does_not_spend_the_code(self):
+        """Otherwise a crafted link could connect an account we did not choose."""
+        self.client.force_login(self.staff)
+        with patch.object(tiktok, "exchange_code") as exchange:
+            self.client.get("/tiktok/callback/?code=abc&state=forged")
+        exchange.assert_not_called()
+
+    def test_a_callback_with_the_right_state_stores_the_tokens(self):
+        self.client.force_login(self.staff)
+        with override_settings(TIKTOK_CLIENT_KEY="key", TIKTOK_CLIENT_SECRET="s"):
+            self.client.get("/tiktok/connect/")
+        state = self.client.session["tiktok_oauth_state"]
+        with patch.object(tiktok, "exchange_code",
+                          return_value={"open_id": "o"}) as exchange:
+            self.client.get(f"/tiktok/callback/?code=abc&state={state}")
+        exchange.assert_called_once()
+        self.assertEqual(exchange.call_args.args[0], "abc")
+
+    def post_now(self, data):
+        """Post through the page, with the encoder and the API mocked."""
+        from social import utils
+
+        def fake_video(property_id, output_path, audio_path,
+                       duration_per_image=3, meta=None):
+            with open(output_path, "wb") as handle:
+                handle.write(b"\0" * 16)
+            return output_path
+
+        self.client.force_login(self.staff)
+        with patch.object(utils, "create_property_video", side_effect=fake_video), \
+             patch.object(utils, "_get_random_mp3_full_path", return_value="/a.mp3"), \
+             patch.object(utils, "generate_caption_for_post",
+                          return_value=("ai", "US$14,000 · Oita", "angle")), \
+             patch.object(utils.time, "sleep"), \
+             patch.object(tiktok, "fetch_status", return_value={"status": "OK"}), \
+             patch.object(tiktok, "publish_video", return_value="pub-1") as publish:
+            self.client.post("/tiktok/post/", data)
+        return publish
+
+    def test_the_chosen_privacy_level_reaches_the_api(self):
+        publish = self.post_now({"privacy_level": "PUBLIC_TO_EVERYONE"})
+        self.assertEqual(
+            publish.call_args.kwargs["privacy_level"], "PUBLIC_TO_EVERYONE"
+        )
+
+    def test_the_chosen_switches_reach_the_api(self):
+        publish = self.post_now({
+            "privacy_level": "SELF_ONLY", "disable_comment": "on",
+        })
+        options = publish.call_args.kwargs["options"]
+        self.assertTrue(options["disable_comment"])
+        self.assertFalse(options["disable_duet"])
+        self.assertFalse(options["disable_stitch"])
+
+    def test_posting_records_the_post(self):
+        self.post_now({"privacy_level": "SELF_ONLY"})
+        self.assertEqual(SocialPost.objects.filter(social_media="tiktok").count(), 1)

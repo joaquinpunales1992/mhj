@@ -1,5 +1,6 @@
 from django.contrib import admin
 from front import views as front_views
+from social import views as social_views
 from membership.utils import notify_user_expressed_interest
 from membership import views as membership_views
 from membership import consultations as consultation_views
@@ -28,6 +29,13 @@ urlpatterns = [
     # payments, and had neither page.
     path("terms/", front_views.terms, name="terms"),
     path("privacy/", front_views.privacy, name="privacy"),
+    # Staff-only TikTok controls. The callback path must match the redirect URI
+    # registered on the TikTok app exactly, so it is spelled out here rather
+    # than derived.
+    path("tiktok/", social_views.dashboard, name="tiktok_dashboard"),
+    path("tiktok/connect/", social_views.connect, name="tiktok_connect"),
+    path("tiktok/callback/", social_views.callback, name="tiktok_callback"),
+    path("tiktok/post/", social_views.post_now, name="tiktok_post_now"),
     # Domain-ownership verification files, which have to answer at the root of
     # the site rather than under /static/. Narrow on purpose: only names that
     # look like a verification file reach the view, and the view only serves the

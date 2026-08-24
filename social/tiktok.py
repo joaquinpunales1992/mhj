@@ -230,15 +230,21 @@ def query_creator_info(token):
     return _call("/post/publish/creator_info/query/", token, {})
 
 
-def _post_info(caption, creator):
+def _post_info(caption, creator, privacy_level=None, options=None):
     """The post settings, reconciled with what the account permits.
+
+    `privacy_level` and `options` are what a person chose on the posting page,
+    when there was a person. They are still checked against the account rather
+    than trusted: a stale form, or a privacy level the account has since lost,
+    is a rejected post otherwise.
 
     An account that has comments off must be posted to with disable_comment
     set: sending the opposite is not a request TikTok argues with, it is a
     rejected post.
     """
+    options = options or {}
     allowed = creator.get("privacy_level_options") or []
-    privacy = TIKTOK_PRIVACY_LEVEL
+    privacy = privacy_level or TIKTOK_PRIVACY_LEVEL
     if allowed and privacy not in allowed:
         # SELF_ONLY is in every account's options, so this is a real fallback
         # rather than a different way to fail.
@@ -248,15 +254,24 @@ def _post_info(caption, creator):
         )
         privacy = "SELF_ONLY" if "SELF_ONLY" in allowed else allowed[0]
 
+    def flag(name, default):
+        # A choice made on the page wins over the constant, but neither can
+        # switch a feature back on that the account itself has disabled.
+        chosen = options.get(name)
+        return bool(default if chosen is None else chosen)
+
     return {
         # TikTok counts the title in UTF-16 runes and caps it at 2200. Our
         # captions are far shorter, but a caption is generated text and the cap
         # is cheaper to respect than to discover.
         "title": (caption or "")[:2200],
         "privacy_level": privacy,
-        "disable_comment": TIKTOK_DISABLE_COMMENT or bool(creator.get("comment_disabled")),
-        "disable_duet": TIKTOK_DISABLE_DUET or bool(creator.get("duet_disabled")),
-        "disable_stitch": TIKTOK_DISABLE_STITCH or bool(creator.get("stitch_disabled")),
+        "disable_comment": flag("disable_comment", TIKTOK_DISABLE_COMMENT)
+        or bool(creator.get("comment_disabled")),
+        "disable_duet": flag("disable_duet", TIKTOK_DISABLE_DUET)
+        or bool(creator.get("duet_disabled")),
+        "disable_stitch": flag("disable_stitch", TIKTOK_DISABLE_STITCH)
+        or bool(creator.get("stitch_disabled")),
     }
 
 
@@ -281,7 +296,7 @@ def _upload(upload_url, filepath, size):
         )
 
 
-def publish_video(filepath, caption):
+def publish_video(filepath, caption, privacy_level=None, options=None):
     """Post `filepath` to TikTok. Returns the publish id.
 
     Raises TikTokError with the code TikTok gave, so a caller can tell a banned
@@ -305,7 +320,7 @@ def publish_video(filepath, caption):
     )
 
     data = _call("/post/publish/video/init/", token, {
-        "post_info": _post_info(caption, creator),
+        "post_info": _post_info(caption, creator, privacy_level, options),
         "source_info": {
             "source": "FILE_UPLOAD",
             "video_size": size,

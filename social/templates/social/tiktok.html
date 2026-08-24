@@ -1,0 +1,120 @@
+{% extends "content_base.html" %}
+{% load inventory_tags %}
+{% block title %}Post to TikTok | My Akiya in Japan{% endblock %}
+{% block extra_head %}<meta name="robots" content="noindex, nofollow">{% endblock %}
+{% block content %}
+  <h1>Post to TikTok</h1>
+  <p class="lead">Publish the next queued listing to our TikTok account.</p>
+
+  {% if messages %}
+    {% for message in messages %}
+      <p class="tt-note tt-{{ message.tags }}">{{ message }}</p>
+    {% endfor %}
+  {% endif %}
+
+  <h2>Connected account</h2>
+  {% if connected %}
+    <div class="tt-card">
+      {% if creator.creator_avatar_url %}
+        <img class="tt-avatar" src="{{ creator.creator_avatar_url }}" alt="">
+      {% endif %}
+      <div>
+        <strong>@{{ creator.creator_username }}</strong>
+        <p>{{ creator.creator_nickname }}</p>
+      </div>
+    </div>
+    <p><a href="{% url 'tiktok_connect' %}">Reconnect a different account</a></p>
+  {% else %}
+    <p>No TikTok account is connected yet.</p>
+    {% if error %}<p class="tt-note tt-error">{{ error }}</p>{% endif %}
+    <a class="cta" href="{% url 'tiktok_connect' %}">Connect TikTok</a>
+  {% endif %}
+
+  <h2>Next in the queue</h2>
+  {% if property %}
+    <div class="tt-card">
+      {% comment %}
+        `photo.file`, not `photo.file.url`: the stored value is the source
+        listing's own URL, and .url prefixes MEDIA_URL onto it and produces a
+        broken image. The rest of the site renders listing photos the same way.
+      {% endcomment %}
+      {% with photo=property.get_ordered_images.first %}
+        {% if photo %}<img class="tt-thumb" src="{{ photo.file|thumb:300 }}" alt="">{% endif %}
+      {% endwith %}
+      <div>
+        <strong>{{ property.get_price_for_front }}</strong>
+        <p>{{ property.display_location }}</p>
+        <p><a href="{{ property.get_public_url }}">View the listing</a></p>
+      </div>
+    </div>
+    <p>A 9:16 video is generated from this listing's photographs, with the price
+       and location overlaid, and the caption is written from its own details.</p>
+  {% else %}
+    <p>Nothing is queued — every eligible listing has been posted.</p>
+  {% endif %}
+
+  {% if connected and property %}
+    <h2>Post settings</h2>
+    <form method="post" action="{% url 'tiktok_post_now' %}">
+      {% csrf_token %}
+      <label class="tt-field" for="privacy_level">Who can see this post</label>
+      <select class="tt-select" id="privacy_level" name="privacy_level" required>
+        {% for option in privacy_options %}
+          <option value="{{ option }}" {% if option == privacy_default %}selected{% endif %}>
+            {{ option }}
+          </option>
+        {% endfor %}
+      </select>
+      <p class="tt-hint">These are the privacy levels this account allows, read
+         from TikTok when the page loaded.</p>
+
+      <label class="tt-check">
+        <input type="checkbox" name="disable_comment"
+               {% if creator_defaults.disable_comment %}checked disabled{% endif %}>
+        Turn off comments
+        {% if creator_defaults.disable_comment %}<em>— off for this account</em>{% endif %}
+      </label>
+      <label class="tt-check">
+        <input type="checkbox" name="disable_duet"
+               {% if creator_defaults.disable_duet %}checked disabled{% endif %}>
+        Turn off duet
+        {% if creator_defaults.disable_duet %}<em>— off for this account</em>{% endif %}
+      </label>
+      <label class="tt-check">
+        <input type="checkbox" name="disable_stitch"
+               {% if creator_defaults.disable_stitch %}checked disabled{% endif %}>
+        Turn off stitch
+        {% if creator_defaults.disable_stitch %}<em>— off for this account</em>{% endif %}
+      </label>
+
+      <p class="tt-hint">Posting builds the video first, so this takes a few
+         seconds. TikTok finishes processing it after the upload.</p>
+      <button class="cta" type="submit">Post to TikTok</button>
+    </form>
+  {% endif %}
+
+  {% if last_posts %}
+    <h2>Recently posted</h2>
+    {% for post in last_posts %}
+      <div class="faq">
+        <strong>{{ post.datetime|date:"j M Y, H:i" }}</strong>
+        {{ post.property_url }}{% if post.media_id %} — publish id {{ post.media_id }}{% endif %}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  <style>
+    .tt-card { display:flex; gap:1rem; align-items:center; border:1px solid var(--border); border-radius:10px; padding:1rem; margin-bottom:1rem; }
+    .tt-card p { margin:.15rem 0 0; color:var(--muted); }
+    .tt-avatar { width:56px; height:56px; border-radius:50%; object-fit:cover; }
+    .tt-thumb { width:96px; height:120px; border-radius:8px; object-fit:cover; }
+    .tt-field { display:block; font-weight:600; margin:1rem 0 .35rem; }
+    .tt-select { font:inherit; padding:.6rem; border:1px solid var(--border); border-radius:8px; max-width:22rem; }
+    .tt-check { display:block; margin:.5rem 0; }
+    .tt-check em { color:var(--muted); font-style:normal; }
+    .tt-hint { color:var(--muted); font-size:.95rem; }
+    .tt-note { border-radius:8px; padding:.7rem 1rem; }
+    .tt-success { background:#e8f2e2; }
+    .tt-error { background:#f7e6e4; }
+  </style>
+{% endblock %}

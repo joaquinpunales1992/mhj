@@ -907,8 +907,12 @@ def post_instagram_reel():
         notify_social_token_expired(message=f"Error posting Instagram Reel: {e}")
 
 
-def post_tiktok_reel():
+def post_tiktok_reel(privacy_level=None, options=None):
     """Post the next queued property to TikTok, as a reel.
+
+    `privacy_level` and `options` carry the choices a person made on the posting
+    page. From cron there is nobody to choose, so both are None and the
+    constants apply.
 
     The same shape as post_instagram_reel and deliberately so: same queue, same
     encoder, same caption. What is different is only the last step — TikTok
@@ -981,7 +985,10 @@ def post_tiktok_reel():
         )
 
         try:
-            publish_id = tiktok.publish_video("property_video_tiktok.mp4", caption)
+            publish_id = tiktok.publish_video(
+                "property_video_tiktok.mp4", caption,
+                privacy_level=privacy_level, options=options,
+            )
         except tiktok.TikTokError as exc:
             # The code is the useful half. An unaudited app, a banned account and
             # a daily cap all arrive here and none of them is fixed by retrying.
