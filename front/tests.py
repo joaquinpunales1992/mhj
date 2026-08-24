@@ -431,9 +431,13 @@ class PreviewPanelTests(TestCase):
         self.assertContains(response, "At least")
         self.assertContains(response, "worth knowing about this house")
 
-    def test_the_desk_report_button_says_it_comes_with_pro(self):
-        """It reads as another paid extra beside the consultation otherwise."""
-        self.assertContains(self.preview(), "Included with Pro")
+    def test_the_desk_report_action_sits_with_its_findings(self):
+        """The button is about that panel, so it lives in it — and the panel's
+        own label already says it comes with Pro, so the button does not."""
+        body = self.preview().content.decode()
+        panel = body[body.index("Desk report"):]
+        self.assertIn("Request a desk report", panel)
+        self.assertIn("included with Pro", body)
 
     def test_the_panels_are_gone_once_the_allowance_is_spent(self):
         """The wall replaces the analysis; it does not sit above it."""

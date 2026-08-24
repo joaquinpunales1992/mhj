@@ -60,6 +60,39 @@
 	            color:#666 !important; padding:.1rem .4rem; width:auto; }
 	#pv-overlay .pv-close:hover { color:#1f2224 !important; }
 	#pv-overlay .pv-body { min-height:6rem; }
+	#pv-overlay .pv-body.is-loading { opacity:.85; }
+	#pv-overlay .pv-body.is-loaded { animation:pv-fade .18s ease-out; }
+	@keyframes pv-fade { from { opacity:0; transform:translateY(3px); } to { opacity:1; transform:none; } }
+
+	{% comment %}
+	  The skeleton carries its own layout because the real one does not exist
+	  yet: every rule the fragment uses ships inside the fragment. Its job is to
+	  be the right SHAPE — photo left, text right, three boxes under — so the
+	  panel is already about the right size when the content lands, instead of
+	  jumping from one line of "Loading…" to seven hundred pixels.
+	{% endcomment %}
+	#pv-overlay .pv-sk-grid { display:grid; gap:1.1rem 1.6rem; grid-template-columns:1fr; }
+	@media (min-width:760px) {
+	  #pv-overlay .pv-sk-grid { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); }
+	  #pv-overlay .pv-sk-analysis { grid-column:1 / -1; display:grid; gap:.9rem;
+	                                grid-template-columns:repeat(3,1fr); }
+	}
+	#pv-overlay .pv-sk-analysis { display:grid; gap:.9rem; }
+	#pv-overlay .pv-sk { background:#ecebe6; border-radius:8px;
+	                     animation:pv-pulse 1.3s ease-in-out infinite; }
+	#pv-overlay .pv-sk-photo { aspect-ratio:4/3; }
+	#pv-overlay .pv-sk-line { height:.85rem; margin-bottom:.6rem; }
+	#pv-overlay .pv-sk-line.w-price { height:1.7rem; width:55%; }
+	#pv-overlay .pv-sk-line.w-place { width:80%; }
+	#pv-overlay .pv-sk-line.w-size { width:60%; margin-bottom:1.4rem; }
+	#pv-overlay .pv-sk-btn { height:2.6rem; margin-bottom:.6rem; }
+	{% comment %}
+	  15rem because that is roughly what the real cards measure — a gated pair is
+	  252px and a subscriber's rental card is taller. A skeleton shorter than its
+	  content is still a jump, just a smaller one.
+	{% endcomment %}
+	#pv-overlay .pv-sk-card { height:15rem; }
+	@keyframes pv-pulse { 0%,100% { opacity:1; } 50% { opacity:.55; } }
 	#pv-overlay .pv-loading { color:#666; }
 	@media (max-width:900px) { #pv-overlay .pv-panel { padding:1.2rem; } }
 </style>
@@ -69,6 +102,9 @@
 		if (!overlay) return;
 		var body = overlay.querySelector('.pv-body');
 		var lastFocus = null;
+		// Bumped on every open, so an answer that arrives after the visitor has
+		// moved on is discarded rather than painted over the newer one.
+		var openToken = 0;
 
 		function csrf() {
 			return (document.cookie.match(/(?:^|;\s*)csrftoken=([^;]+)/) || [])[1] || '';
@@ -82,27 +118,75 @@
 			msg.classList.toggle('is-error', !!isError);
 		}
 
+		// Fragments already fetched. Reopening a listing costs no view — the
+		// metering returns early for an id already in the session — so serving
+		// it from here is the same answer, without the wait or the flash.
+		var cache = {};
+
+		function skeleton() {
+			return '<div class="pv-sk-grid">' +
+				'<div><div class="pv-sk pv-sk-photo"></div></div>' +
+				'<div>' +
+					'<div class="pv-sk pv-sk-line w-price"></div>' +
+					'<div class="pv-sk pv-sk-line w-place"></div>' +
+					'<div class="pv-sk pv-sk-line w-size"></div>' +
+					'<div class="pv-sk pv-sk-btn"></div>' +
+					'<div class="pv-sk pv-sk-btn"></div>' +
+				'</div>' +
+				'<div class="pv-sk-analysis">' +
+					'<div class="pv-sk pv-sk-card"></div>' +
+					'<div class="pv-sk pv-sk-card"></div>' +
+					'<div class="pv-sk pv-sk-card"></div>' +
+				'</div>' +
+			'</div>';
+		}
+
+		function show(html, animate) {
+			body.classList.remove('is-loading', 'is-loaded');
+			body.innerHTML = html;
+			if (animate) {
+				// Restart the animation rather than relying on the class being new.
+				void body.offsetWidth;
+				body.classList.add('is-loaded');
+			}
+			// The fragment arrives after units.js has already run.
+			if (window.mhjUnits) window.mhjUnits.apply();
+		}
+
 		function open(pk) {
 			lastFocus = document.activeElement;
-			body.innerHTML = '<p class="pv-loading">Loading…</p>';
 			overlay.hidden = false;
 			overlay.classList.add('open');
 			document.body.style.overflow = 'hidden';
+
+			if (cache[pk]) {
+				show(cache[pk], false);
+				var cached = overlay.querySelector('.pv-close');
+				if (cached) cached.focus();
+				return;
+			}
+
+			body.classList.add('is-loading');
+			body.innerHTML = skeleton();
+			var token = ++openToken;
 			fetch('/japanese-houses/' + pk + '/preview/', { credentials: 'same-origin' })
 				.then(function (r) {
 					if (!r.ok) throw new Error('unavailable');
 					return r.text();
 				})
 				.then(function (html) {
-					body.innerHTML = html;
-					// The fragment arrives after units.js has already run.
-					if (window.mhjUnits) window.mhjUnits.apply();
+					// A second listing may have been opened while this was in
+					// flight; without this the slower answer overwrites it.
+					if (token !== openToken) return;
+					cache[pk] = html;
+					show(html, true);
 					var close = overlay.querySelector('.pv-close');
 					if (close) close.focus();
 				})
 				.catch(function () {
-					body.innerHTML = '<p class="pv-loading">That listing could not be ' +
-						'loaded. It may have been taken down.</p>';
+					if (token !== openToken) return;
+					show('<p class="pv-loading">That listing could not be loaded. ' +
+						'It may have been taken down.</p>', true);
 				});
 		}
 
