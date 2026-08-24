@@ -206,12 +206,31 @@
     {% endcomment %}
     {% if not access.locked %}
       {% if comparison %}
+        {% comment %}
+          band_label, not label — that is the key price_per_sqm_comparison
+          returns, and Django renders a missing one as empty, so this panel showed
+          a blank line where the verdict goes for every Pro subscriber. The
+          rental signal below does use `label`; the two dicts disagree.
+
+          data-yen-per-m2 is what units.js converts, the same attribute the
+          listing page puts on this figure.
+        {% endcomment %}
         <div class="pv-panel-card">
           <p class="pv-panel-label">Price vs the local market</p>
-          <p class="pv-band pv-band-{{ comparison.band }}">{{ comparison.label }}</p>
+          <p class="pv-band pv-band-{{ comparison.band }}">{{ comparison.band_label }}</p>
+          <p class="pv-panel-figure" data-yen-per-m2="{{ comparison.value_per_m2 }}">{{ comparison.value_per_m2_display }}</p>
           <p class="pv-panel-note">
-            Cheaper per m² than {{ comparison.percentile }}% of
-            {{ comparison.sample_size }} listings in {{ comparison.area }}.
+            Cheaper per <span class="js-unit-label">m²</span> than
+            {{ comparison.percentile }}% of {{ comparison.sample_size }} listings
+            in {{ comparison.area }}.
+            {% comment %}
+              Two converted spans, not area_range_display: that string has "/m²"
+              baked into it, so beside a figure the unit switch had turned into
+              ft² the sentence read "US$157/ft² … typical US$1,603 – US$2,244/m²".
+              The listing page splits it the same way for the same reason.
+            {% endcomment %}
+            Typical here: <span data-yen-per-m2="{{ comparison.area_low }}">{{ comparison.area_low_display }}</span>
+            – <span data-yen-per-m2="{{ comparison.area_high }}">{{ comparison.area_high_display }}</span>.
           </p>
         </div>
       {% elif not access.premium %}
@@ -381,6 +400,8 @@
   #pv-overlay .pv-panel-label { margin:0; font-size:.72rem; font-weight:700;
             letter-spacing:.06em; text-transform:uppercase; color:#6f7570; }
   #pv-overlay .pv-band { margin:.3rem 0 .25rem; font-weight:700; font-size:1.05rem; }
+  #pv-overlay .pv-panel-figure { margin:0; font-size:1.15rem; font-weight:800;
+            color:#1f2224; }
   #pv-overlay .pv-band-great_value, #pv-overlay .pv-band-strong { color:#3f7d3f; }
   #pv-overlay .pv-band-average, #pv-overlay .pv-band-minpaku { color:#8a6d2f; }
   #pv-overlay .pv-band-premium, #pv-overlay .pv-band-restricted { color:#b3341f; }
@@ -454,9 +475,13 @@
       And the gate's call to action goes to the bottom of its box, so the three
       buttons line up across the row rather than floating at three heights.
     {% endcomment %}
+    {% comment %}
+      Only a gate grows its copy, so its button lands at the bottom of the box
+      and the two line up across the row. Doing it to every card opened a gap in
+      the middle of the desk report, between its sentence and its findings.
+    {% endcomment %}
     #pv-overlay .pv-analysis .pv-panel-card { display:flex; flex-direction:column; }
-    #pv-overlay .pv-analysis .pv-panel-note { flex:1 1 auto; }
-    #pv-overlay .pv-analysis .pv-findings { flex:1 1 auto; }
+    #pv-overlay .pv-analysis .pv-gate .pv-panel-note { flex:1 1 auto; }
     #pv-overlay .pv-analysis .pv-panel-card { margin-top:0; }
     #pv-overlay .pv-services { flex-direction:column; }
     #pv-overlay .pv-services > * { flex:0 0 auto; }

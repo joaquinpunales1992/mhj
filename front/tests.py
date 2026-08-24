@@ -320,6 +320,66 @@ class SharedPopupTests(TestCase):
         self.assertIn(".pv-place svg", body)
 
 
+class ProPanelTests(TestCase):
+    """The panels as a subscriber sees them — answers, not offers.
+
+    Written because the price panel rendered its verdict from `comparison.label`
+    and the dict returns `band_label`. Django renders a missing key as empty, so
+    the line was simply blank for every Pro subscriber and nothing failed.
+    """
+
+    def setUp(self):
+        from django.contrib.auth.models import User
+        from inventory.models import Property, PropertyImage
+
+        # Staff counts as Pro (membership.metering.user_is_pro).
+        self.user = User.objects.create_user(
+            "pro", "pro@example.com", "pw", is_staff=True
+        )
+        self.client.force_login(self.user)
+
+        self.property = Property.objects.create(
+            url="https://example.com/a", price=200, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City",
+            building_area="78.5㎡", zoning="Commercial district",
+        )
+        PropertyImage.objects.create(
+            property=self.property, file="https://img.example.com/1.jpg"
+        )
+        # Enough comparable listings in the same prefecture for the comparison
+        # to return anything at all (MIN_AREA_SAMPLE_FOR_COMPARISON).
+        for i in range(8):
+            Property.objects.create(
+                url=f"https://example.com/comp{i}", price=150 + i * 40,
+                show_in_front=True, location="Oita Prefecture",
+                building_area=f"{70 + i}㎡",
+            )
+
+    def preview(self):
+        return self.client.get(f"/japanese-houses/{self.property.pk}/preview/")
+
+    def test_the_price_panel_shows_a_verdict_not_a_blank_line(self):
+        response = self.preview()
+        self.assertContains(response, "Price vs the local market")
+        self.assertNotContains(response, "Unlock with Pro")
+        body = response.content.decode()
+        self.assertTrue(
+            any(v in body for v in ("Great value", "Around average", "Premium")),
+            "the band label should render; it came from the wrong dict key",
+        )
+
+    def test_the_price_panel_converts_with_the_unit_switch(self):
+        """Including the range: a baked-in "/m²" beside a converted ft² figure."""
+        response = self.preview()
+        self.assertContains(response, "data-yen-per-m2")
+        self.assertNotContains(response, "area_range_display")
+
+    def test_the_rental_panel_shows_the_verdict_and_the_caveat(self):
+        response = self.preview()
+        self.assertContains(response, "Good potential")
+        self.assertContains(response, "Not legal advice")
+
+
 class PreviewPanelTests(TestCase):
     """The three derived panels, and how they are gated.
 
