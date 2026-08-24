@@ -116,9 +116,11 @@ TIKTOK_DISABLE_COMMENT = False
 TIKTOK_DISABLE_DUET = False
 TIKTOK_DISABLE_STITCH = False
 
-# video.publish covers both the post and the creator_info query it requires.
-# user.info.basic is what makes the account identifiable in a log.
-TIKTOK_SCOPES = ["user.info.basic", "video.publish"]
+# video.publish only. It covers both the post and the creator_info query the
+# post requires, and creator_info already returns the username we log — so
+# user.info.basic would be a scope we ask for and never call, which is a
+# reason on its own for an app review to be refused.
+TIKTOK_SCOPES = ["video.publish"]
 
 # Seconds. Generous because one of these requests is a whole video going up a
 # domestic connection.
