@@ -379,24 +379,13 @@
             iconSize: null
           })
         });
-        m.bindPopup(
-          // The photo is fetched when the popup opens, not shipped in the
-          // points payload: image URLs here average ~137 characters, which
-          // would add well over a megabyte to a file whose job is placing
-          // markers. See popupopen below.
-          '<div class="pop-img" data-pop-img="' + p.i + '"></div>' +
-          '<div class="pop-body">' +
-            '<div class="pop-title">' + esc(p.t) + '</div>' +
-            '<div class="pop-meta">' + esc(p.l) + (p.f ? ' · ' + esc(p.f) : '') + '</div>' +
-            '<div class="pop-price">' + esc(p.p) + '</div>' +
-            // data-preview opens the shared property popup over the map;
-            // the href stays so it still works without JavaScript, and so the
-            // link is a real link to middle-click.
-            '<a class="pop-link" href="/japanese-houses/' + encodeURIComponent(p.i) + '/"' +
-              ' data-preview="' + encodeURIComponent(p.i) + '">View property</a>' +
-          '</div>',
-          { minWidth: 240, maxWidth: 260 }
-        );
+        // One click, not two. This used to bind a Leaflet bubble showing a
+        // thumbnail, a price and a "View property" link — so picking a house on
+        // the map meant clicking the marker, then clicking the link. The marker
+        // opens the property popup itself now, and the bubble is gone.
+        m.on('click', function () {
+          if (window.mhjPropertyPopup) window.mhjPropertyPopup.open(p.i);
+        });
         markersById[p.i] = m;
         return m;
       });

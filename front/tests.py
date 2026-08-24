@@ -196,11 +196,16 @@ class PropertyPreviewTests(TestCase):
         self.assertContains(response, 'class="pv-shot', count=3)
         self.assertContains(response, "more photo")
 
-    def test_a_visitor_is_asked_to_sign_in_for_a_desk_report(self):
-        """Rather than being offered a button that will refuse them."""
+    def test_a_visitor_is_sent_to_sign_in_for_a_desk_report(self):
+        """Same label either way; a visitor is routed through login first.
+
+        The label used to change to "Sign in to request a desk report", which
+        made the signed-out popup advertise the account rather than the service.
+        """
         response = self.preview()
-        self.assertContains(response, "Sign in to request a desk report")
-        self.assertNotContains(response, 'class="pv-desk"')
+        self.assertContains(response, "Request a desk report")
+        self.assertContains(response, "/accounts/login/")
+        self.assertNotContains(response, "pv-desk")
 
     def test_a_member_gets_the_desk_report_button(self):
         from django.contrib.auth.models import User
@@ -244,11 +249,19 @@ class SharedPopupTests(TestCase):
         """Without data-preview the card is just a link, and navigates away."""
         self.assertContains(self.client.get("/map/"), "data-preview=")
 
-    def test_the_map_marker_link_opens_it_too(self):
-        """Picking a property off the map is picking a marker, not a card."""
+    def test_a_marker_opens_the_popup_on_the_first_click(self):
+        """Picking a property off the map is picking a marker, not a card.
+
+        It used to bind a Leaflet bubble with a "View property" link in it, so
+        choosing a house took two clicks — the marker, then the link.
+        """
         body = self.client.get("/map/").content.decode()
-        self.assertIn("pop-link", body)
-        self.assertIn("data-preview=\"' + encodeURIComponent(p.i)", body)
+        self.assertIn("mhjPropertyPopup.open(p.i)", body)
+        self.assertNotIn("bindPopup", body)
+
+    def test_the_popup_is_reachable_without_a_dom_click(self):
+        """Which is what a marker needs: there is no element to tag."""
+        self.assertContains(self.client.get("/map/"), "window.mhjPropertyPopup")
 
     def test_the_map_loads_the_unit_script(self):
         """The popup's price and areas answer the same switches as everywhere."""

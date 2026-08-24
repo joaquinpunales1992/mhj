@@ -43,14 +43,19 @@
             cards.
           {% endcomment %}
           <div class="pv-media-actions">
-            {% if user.is_authenticated %}
-              <button type="button" class="pv-media-btn pv-heart{% if is_saved %} on{% endif %}"
-                      data-property="{{ property.pk }}"
-                      aria-pressed="{% if is_saved %}true{% else %}false{% endif %}"
-                      aria-label="Save this property" title="Save this property">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.7-9.6-9A5.4 5.4 0 0 1 12 6.2 5.4 5.4 0 0 1 21.6 12c-2.1 4.3-9.6 9-9.6 9z"/></svg>
-              </button>
-            {% endif %}
+            {% comment %}
+              Shown to everyone, as the map's card hearts are. A visitor who is
+              not signed in gets a 401 from the endpoint and an invitation to
+              create an account — which is the point of the heart. Hiding it
+              until they already have one asks for the account first and offers
+              the reason second.
+            {% endcomment %}
+            <button type="button" class="pv-media-btn pv-heart{% if is_saved %} on{% endif %}"
+                    data-property="{{ property.pk }}"
+                    aria-pressed="{% if is_saved %}true{% else %}false{% endif %}"
+                    aria-label="Save this property" title="Save this property">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.7-9.6-9A5.4 5.4 0 0 1 12 6.2 5.4 5.4 0 0 1 21.6 12c-2.1 4.3-9.6 9-9.6 9z"/></svg>
+            </button>
             <button type="button" class="pv-media-btn pv-share"
                     data-share-url="{{ request.scheme }}://{{ request.get_host }}{% url 'property_detail' property.pk %}"
                     data-share-title="{{ property.get_title_for_front }} — {{ property.get_location_for_front }}, Japan"
@@ -104,19 +109,41 @@
         {% endif %}
         {% if property.floor_plan %}<dt>Layout</dt><dd>{{ property.floor_plan }}</dd>{% endif %}
         {% if property.construction_date %}<dt>Built</dt><dd>{{ property.construction_date }}</dd>{% endif %}
-        {% if property.traffic %}<dt>Getting there</dt><dd>{{ property.traffic }}</dd>{% endif %}
+        {% comment %}
+          No `traffic` row. It is the scraper's raw station line — "JR Nippo Main
+          Line Kamiusuki Station 37 minutes on foot JR Nippo Main Line Usuki
+          Station 4.7km" — two stations run together with no punctuation, and it
+          took three lines of a four-line panel. It is on the full listing, where
+          there is room for it.
+        {% endcomment %}
       </dl>
     {% endif %}
 
+    {% comment %}
+      One primary and two secondary, all the same shape. They were underlined
+      green text beside a filled button, which read as small print rather than as
+      the two services the popup is here to offer.
+    {% endcomment %}
     <div class="pv-actions">
-      <a class="pv-cta" href="{% url 'property_detail' property.pk %}">View the full listing</a>
-      <a class="pv-link" href="{% url 'consultation' %}?property={{ property.pk }}">Book a consultation</a>
-      {% if user.is_authenticated %}
-        <button type="button" class="pv-link pv-desk" data-property="{{ property.pk }}"
-                data-url="{{ property.url }}">Request a desk report</button>
-      {% else %}
-        <a class="pv-link" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">Sign in to request a desk report</a>
-      {% endif %}
+      <a class="pv-btn pv-btn-primary" href="{% url 'property_detail' property.pk %}">View the full listing</a>
+      <div class="pv-services">
+        <a class="pv-btn" href="{% url 'consultation' %}?property={{ property.pk }}">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3M16 2v3M3.5 8.5h17M4.5 5h15a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+          Book a consultation
+        </a>
+        {% if user.is_authenticated %}
+          <button type="button" class="pv-btn pv-desk" data-property="{{ property.pk }}"
+                  data-url="{{ property.url }}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+            Request a desk report
+          </button>
+        {% else %}
+          <a class="pv-btn" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+            Request a desk report
+          </a>
+        {% endif %}
+      </div>
     </div>
     <p class="pv-msg" hidden></p>
   </div>
@@ -177,14 +204,28 @@
   #pv-overlay .pv-wall { background:#f4f2ec; border-radius:10px; padding:1rem 1.2rem; }
   #pv-overlay .pv-wall-title { font-weight:700; margin:0 0 .35rem; }
   #pv-overlay .pv-wall p { margin:0 0 .6rem; }
-  #pv-overlay .pv-actions { display:flex; flex-wrap:wrap; gap:.6rem 1rem; align-items:center;
-                margin-top:1.4rem; }
+  #pv-overlay .pv-actions { display:flex; flex-direction:column; align-items:stretch;
+                gap:.6rem; margin-top:1.4rem; }
+  #pv-overlay .pv-services { display:flex; flex-wrap:wrap; gap:.6rem; }
+  #pv-overlay .pv-services > * { flex:1 1 12rem; }
+  #pv-overlay .pv-btn { display:inline-flex; align-items:center; justify-content:center;
+            gap:.5rem; border:1px solid #cfd6cb; background:#fff; color:#477535 !important;
+            border-radius:8px; padding:.62rem 1rem !important; text-decoration:none;
+            font-weight:600; font-size:.95rem; cursor:pointer; text-align:center;
+            transition:background .15s ease, border-color .15s ease; }
+  #pv-overlay .pv-btn:hover { background:#f1f5ee; border-color:#477535; }
+  #pv-overlay .pv-btn svg { width:17px; height:17px; flex:0 0 auto; fill:none;
+            stroke:currentColor; stroke-width:1.8; stroke-linecap:round;
+            stroke-linejoin:round; }
+  #pv-overlay .pv-btn-primary { background:#477535; border-color:#477535;
+            color:#fff !important; }
+  #pv-overlay .pv-btn-primary:hover { background:#38602a; border-color:#38602a; }
+  #pv-overlay .pv-btn[disabled] { opacity:.6; cursor:default; }
+  /* The wall still uses the plain call to action. */
   #pv-overlay .pv-cta { display:inline-block; background:#477535; color:#fff !important;
             border-radius:8px; padding:.6rem 1.1rem !important; text-decoration:none;
             font-weight:600; }
   #pv-overlay .pv-cta:hover { background:#38602a; }
-  #pv-overlay .pv-link { background:none; border:0; color:#477535 !important; font:inherit;
-             font-weight:600; cursor:pointer; text-decoration:underline; padding:0 !important; }
   #pv-overlay .pv-msg { margin:.9rem 0 0; padding:.6rem .9rem; border-radius:8px; background:#f4f2ec; }
   #pv-overlay .pv-msg.is-error { background:#f7e6e4; }
 </style>

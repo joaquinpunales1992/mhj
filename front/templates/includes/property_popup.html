@@ -101,6 +101,11 @@
 		// Capture phase, like the share button above: poptrox binds these
 		// same links and stops the bubble-phase click, so the only way to
 		// get there first is on the way down.
+		// Exposed for callers that are not a DOM click — the map opens this
+		// straight from a Leaflet marker, which has no element to hang
+		// data-preview on.
+		window.mhjPropertyPopup = { open: open, close: close };
+
 		document.addEventListener('click', function (e) {
 			// Anything carrying data-preview, not a.image: the home page puts it
 			// on a card's photo, the map puts it on its sidebar cards and on the
@@ -146,24 +151,42 @@
 
 			var heart = t.closest('.pv-heart');
 			if (heart) {
-				var saved = heart.classList.contains('is-saved');
-				// Flipped before the request answers: hearting is reversible
-				// and instant feedback matters more than being right for the
-				// 200ms it takes to find out.
-				heart.classList.toggle('is-saved', !saved);
+				var saved = heart.classList.contains('on');
+				// Flipped before the request answers: hearting is reversible and
+				// instant feedback matters more than being right for the 200ms it
+				// takes to find out.
+				heart.classList.toggle('on', !saved);
 				heart.setAttribute('aria-pressed', String(!saved));
-				fetch('/api/toggle-saved-property', {
+				// JSON, not a form body: the endpoint reads json.loads(request.body),
+				// so a form-encoded post was answered 400 "property_id required"
+				// every time — the heart filled in and quietly emptied again.
+				fetch('{% url "toggle_saved_property" %}', {
 					method: 'POST',
 					headers: {
 						'X-CSRFToken': csrf(),
-						'Content-Type': 'application/x-www-form-urlencoded'
+						'Content-Type': 'application/json'
 					},
 					credentials: 'same-origin',
-					body: 'property_id=' + encodeURIComponent(heart.getAttribute('data-property'))
+					body: JSON.stringify({
+						property_id: Number(heart.getAttribute('data-property'))
+					})
 				}).then(function (r) {
+					if (r.status === 401) {
+						// Not a failure: it is the invitation the heart exists for.
+						heart.classList.toggle('on', saved);
+						heart.setAttribute('aria-pressed', String(saved));
+						say('Create a free account to save properties and come back ' +
+							'to them later.');
+						return null;
+					}
 					if (!r.ok) throw new Error('failed');
+					return r.json();
+				}).then(function (data) {
+					if (!data) return;
+					heart.classList.toggle('on', !!data.saved);
+					heart.setAttribute('aria-pressed', String(!!data.saved));
 				}).catch(function () {
-					heart.classList.toggle('is-saved', saved);
+					heart.classList.toggle('on', saved);
 					heart.setAttribute('aria-pressed', String(saved));
 					say('That could not be saved. Please try again.', true);
 				});
