@@ -454,6 +454,18 @@ def property_preview(request, pk):
         )
 
     access = check_access(request, property.pk)
+
+    # Both of these are Pro fields on the listing page (FIELDS_PREMIUM), so the
+    # popup gates them the same way — a teaser for everyone, the answer for Pro.
+    #
+    # The rental signal is field parsing and costs nothing. The price comparison
+    # queries every listing in the prefecture, so it only runs when there is
+    # somebody entitled to read the numbers: this fragment is fetched on every
+    # card click, and the listing page's own desk-report teaser leaves this rule
+    # out for exactly the same reason.
+    rental = property.short_term_rental_potential()
+    comparison = property.price_per_sqm_comparison() if access.get("premium") else None
+
     photo_cap = access.get("photo_limit")
     images = list(property.get_ordered_images()[: photo_cap or PREVIEW_PHOTO_LIMIT])
     withheld = max(0, property.images.count() - len(images))
@@ -461,6 +473,13 @@ def property_preview(request, pk):
     return render(request, "includes/property_preview.html", {
         "property": property,
         "access": access,
+        "rental": rental,
+        "comparison": comparison,
+        # What the desk report found on this listing, titles only. The same
+        # teaser the listing page shows, and cheap for the same reason: the
+        # rules read this property's own fields and make no queries.
+        "desk_preview": desk_preview(property),
+        "pro_price": getattr(settings, "PRO_PRICE_LABEL", ""),
         "images": images,
         "photos_withheld": withheld,
         "is_saved": (

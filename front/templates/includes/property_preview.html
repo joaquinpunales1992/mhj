@@ -119,34 +119,125 @@
       </dl>
     {% endif %}
 
+  </div>
+
+  <div class="pv-analysis">
     {% comment %}
+      The three derived panels, in the order a buyer asks them: is it a fair
+      price, can I let it, what is wrong with it. Each is a Pro field on the
+      listing page and is gated the same way here — the question in full, the
+      answer behind Pro — because a teaser that does not say what it is hiding
+      is just a locked door.
+    {% endcomment %}
+    {% if not access.locked %}
+      {% if comparison %}
+        <div class="pv-panel-card">
+          <p class="pv-panel-label">Price vs the local market</p>
+          <p class="pv-band pv-band-{{ comparison.band }}">{{ comparison.label }}</p>
+          <p class="pv-panel-note">
+            Cheaper per m² than {{ comparison.percentile }}% of
+            {{ comparison.sample_size }} listings in {{ comparison.area }}.
+          </p>
+        </div>
+      {% elif not access.premium %}
+        <div class="pv-panel-card pv-gate">
+          <p class="pv-panel-label">Price vs the local market</p>
+          <p class="pv-panel-note">
+            See how this asking price compares, per m², with other listings in
+            {{ property.get_location_for_front }}.
+          </p>
+          <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">Unlock with Pro</a>
+          {% if pro_price %}<span class="pv-gate-note">{{ pro_price }} · cancel any time.</span>{% endif %}
+        </div>
+      {% endif %}
+
+      {% if rental and access.premium %}
+        <div class="pv-panel-card">
+          <p class="pv-panel-label">Short-term rental (Airbnb) potential</p>
+          <p class="pv-band pv-band-{{ rental.band }}">{{ rental.label }}</p>
+          <p class="pv-panel-note">{{ rental.note }}</p>
+          <p class="pv-panel-fine">
+            Indicative only — eligibility depends on the local minpaku ordinance,
+            registration and building compliance. Not legal advice.
+          </p>
+        </div>
+      {% elif rental %}
+        <div class="pv-panel-card pv-gate">
+          <p class="pv-panel-label">Short-term rental (Airbnb) potential</p>
+          <p class="pv-panel-note">
+            We work out from this property's zoning whether a short-term let is
+            likely to be allowed here.
+          </p>
+          <a class="pv-gate-cta" href="{% url 'upgrade_pro' %}?next={% url 'property_detail' property.pk %}">Unlock with Pro</a>
+          {% if pro_price %}<span class="pv-gate-note">{{ pro_price }} · cancel any time.</span>{% endif %}
+        </div>
+      {% endif %}
+
+      {% if desk_preview.titles %}
+        {% comment %}
+          Titles only, never the reasoning — the same withholding the listing
+          page does. Two, because the popup is a glance and the third would push
+          the buttons below the fold.
+        {% endcomment %}
+        <div class="pv-panel-card">
+          <p class="pv-panel-label">Desk report · included with Pro</p>
+          <p class="pv-panel-note">
+            {{ desk_preview.findings|length }} thing{{ desk_preview.findings|length|pluralize }}
+            worth knowing about this house:
+          </p>
+          <ul class="pv-findings">
+            {% for finding in desk_preview.titles|slice:":2" %}
+              <li class="pv-finding pv-sev-{{ finding.severity }}">
+                <span class="pv-sev">{{ finding.severity_label }}</span>
+                {{ finding.title }}
+              </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    {% endif %}
+
+  </div>
+
+  {% comment %}
       One primary and two secondary, all the same shape. They were underlined
       green text beside a filled button, which read as small print rather than as
       the two services the popup is here to offer.
     {% endcomment %}
-    <div class="pv-actions">
+  <div class="pv-actions">
       <a class="pv-btn pv-btn-primary" href="{% url 'property_detail' property.pk %}">View the full listing</a>
       <div class="pv-services">
         <a class="pv-btn" href="{% url 'consultation' %}?property={{ property.pk }}">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 2v3M16 2v3M3.5 8.5h17M4.5 5h15a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
           Book a consultation
         </a>
+        {% comment %}
+          Two lines: what it is, and what it costs. It reads as another paid
+          extra beside the consultation otherwise, and it is not — it comes with
+          the subscription.
+        {% endcomment %}
         {% if user.is_authenticated %}
-          <button type="button" class="pv-btn pv-desk" data-property="{{ property.pk }}"
+          <button type="button" class="pv-btn pv-btn-stacked pv-desk" data-property="{{ property.pk }}"
                   data-url="{{ property.url }}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
-            Request a desk report
+            <span class="pv-btn-line">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+              Request a desk report
+            </span>
+            <span class="pv-btn-sub">Included with Pro</span>
           </button>
         {% else %}
-          <a class="pv-btn" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">
-            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
-            Request a desk report
+          <a class="pv-btn pv-btn-stacked" href="{% url 'account_login' %}?next={% url 'property_detail' property.pk %}">
+            <span class="pv-btn-line">
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7l-4-4z"/><path d="M14 3v4h4M9 12h6M9 16h6"/></svg>
+              Request a desk report
+            </span>
+            <span class="pv-btn-sub">Included with Pro</span>
           </a>
         {% endif %}
       </div>
-    </div>
-    <p class="pv-msg" hidden></p>
   </div>
+
+  <p class="pv-msg" hidden></p>
 </div>
 
 <style>
@@ -160,10 +251,16 @@
   #pv-overlay button { height:auto; line-height:normal; min-width:0; box-shadow:none;
                        text-transform:none; letter-spacing:normal; padding:0;
                        white-space:normal; font-size:inherit; font-weight:inherit; }
-  #pv-overlay .pv-grid { display:grid; grid-template-columns:1fr; gap:1.4rem; }
-  @media (min-width:760px) {
-    #pv-overlay .pv-grid { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr); gap:1.6rem; }
-  }
+  {% comment %}
+    Four blocks in one column on a phone, in the order a buyer reads them: the
+    photo, the price and the facts, the analysis, then what to do about it.
+
+    Above 760px the first two sit side by side and the last two run underneath
+    across the full width. The alternative — everything but the photo stacked in
+    the right-hand column — left the bottom half of the left column empty and
+    made the popup twice as tall as it needed to be.
+  {% endcomment %}
+  #pv-overlay .pv-grid { display:grid; grid-template-columns:1fr; gap:1.2rem; }
   #pv-overlay .pv-price { font-size:1.8rem; font-weight:700; margin:0; line-height:1.15; }
   #pv-overlay .pv-place { color:#666; margin:.3rem 0 1rem; font-size:.95rem; }
   {% comment %}
@@ -221,6 +318,34 @@
             color:#fff !important; }
   #pv-overlay .pv-btn-primary:hover { background:#38602a; border-color:#38602a; }
   #pv-overlay .pv-btn[disabled] { opacity:.6; cursor:default; }
+  #pv-overlay .pv-btn-stacked { flex-direction:column; gap:.15rem; padding:.5rem 1rem !important; }
+  #pv-overlay .pv-btn-line { display:inline-flex; align-items:center; gap:.5rem; }
+  #pv-overlay .pv-btn-sub { font-weight:500; font-size:.8rem; color:#6f7570; }
+  #pv-overlay .pv-panel-card { border:1px solid #e6e3db; border-radius:10px;
+            padding:.75rem .9rem; margin-top:.9rem; }
+  #pv-overlay .pv-panel-label { margin:0; font-size:.72rem; font-weight:700;
+            letter-spacing:.06em; text-transform:uppercase; color:#6f7570; }
+  #pv-overlay .pv-band { margin:.3rem 0 .25rem; font-weight:700; font-size:1.05rem; }
+  #pv-overlay .pv-band-great_value, #pv-overlay .pv-band-strong { color:#3f7d3f; }
+  #pv-overlay .pv-band-average, #pv-overlay .pv-band-minpaku { color:#8a6d2f; }
+  #pv-overlay .pv-band-premium, #pv-overlay .pv-band-restricted { color:#b3341f; }
+  #pv-overlay .pv-band-verify { color:#6f7570; }
+  #pv-overlay .pv-panel-note { margin:.25rem 0 0; font-size:.9rem; color:#4a4a4a; }
+  #pv-overlay .pv-panel-fine { margin:.4rem 0 0; font-size:.76rem; color:#8a8a8a; }
+  #pv-overlay .pv-gate { background:#f7f5f0; }
+  #pv-overlay .pv-gate-cta { display:inline-block; margin-top:.5rem; background:#477535;
+            color:#fff !important; border-radius:7px; padding:.4rem .8rem;
+            text-decoration:none; font-weight:600; font-size:.85rem; }
+  #pv-overlay .pv-gate-note { display:block; margin-top:.35rem; font-size:.76rem;
+            color:#8a8a8a; }
+  #pv-overlay .pv-findings { list-style:none; margin:.45rem 0 0; padding:0; }
+  #pv-overlay .pv-finding { display:flex; gap:.5rem; align-items:baseline;
+            font-size:.88rem; margin-bottom:.3rem; }
+  #pv-overlay .pv-sev { flex:0 0 auto; font-size:.68rem; font-weight:700;
+            text-transform:uppercase; letter-spacing:.04em; border-radius:4px;
+            padding:.1rem .35rem; background:#eee; color:#555; }
+  #pv-overlay .pv-sev-critical .pv-sev { background:#fbeae6; color:#b3341f; }
+  #pv-overlay .pv-sev-unknown .pv-sev { background:#f3ece2; color:#8a6d2f; }
   /* The wall still uses the plain call to action. */
   #pv-overlay .pv-cta { display:inline-block; background:#477535; color:#fff !important;
             border-radius:8px; padding:.6rem 1.1rem !important; text-decoration:none;
@@ -228,4 +353,22 @@
   #pv-overlay .pv-cta:hover { background:#38602a; }
   #pv-overlay .pv-msg { margin:.9rem 0 0; padding:.6rem .9rem; border-radius:8px; background:#f4f2ec; }
   #pv-overlay .pv-msg.is-error { background:#f7e6e4; }
+
+  {% comment %}
+    Last on purpose. These override base rules of the same specificity, and CSS
+    settles that tie by document order: sitting beside the .pv-grid rules they
+    belong to, `flex-direction: row` lost to the `column` declared below it, and
+    the actions stayed stacked on a wide screen.
+  {% endcomment %}
+  @media (min-width:760px) {
+    #pv-overlay .pv-grid { grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);
+                           gap:1.2rem 1.6rem; align-items:start; }
+    #pv-overlay .pv-analysis, #pv-overlay .pv-actions { grid-column:1 / -1; }
+    #pv-overlay .pv-analysis { display:grid; gap:.9rem; align-items:start;
+                               grid-template-columns:repeat(auto-fit,minmax(15rem,1fr)); }
+    #pv-overlay .pv-analysis .pv-panel-card { margin-top:0; }
+    #pv-overlay .pv-actions { flex-direction:row; align-items:stretch; }
+    #pv-overlay .pv-actions > .pv-btn-primary { flex:1 1 13rem; }
+    #pv-overlay .pv-services { flex:2 1 20rem; }
+  }
 </style>

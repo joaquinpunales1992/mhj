@@ -277,3 +277,68 @@ class SharedPopupTests(TestCase):
         """The pin ships without dimensions and rendered 392px on the map."""
         body = self.client.get(f"/japanese-houses/{self.property.pk}/preview/").content.decode()
         self.assertIn(".pv-place svg", body)
+
+
+class PreviewPanelTests(TestCase):
+    """The three derived panels, and how they are gated.
+
+    Both the price comparison and the rental signal are FIELDS_PREMIUM on the
+    listing page. A popup that gave them away would be selling Pro on one page
+    and giving it away on another.
+    """
+
+    def setUp(self):
+        from inventory.models import Property, PropertyImage
+
+        self.property = Property.objects.create(
+            url="https://example.com/a", price=200, show_in_front=True,
+            location="Oita Prefecture, Bungo-ono City", floor_plan="3DK",
+            building_area="78.5㎡", zoning="Commercial district",
+            construction_date="1971年4月",
+        )
+        PropertyImage.objects.create(
+            property=self.property, file="https://img.example.com/1.jpg"
+        )
+
+    def preview(self):
+        return self.client.get(f"/japanese-houses/{self.property.pk}/preview/")
+
+    def test_the_rental_panel_is_offered_but_not_answered(self):
+        response = self.preview()
+        self.assertContains(response, "Short-term rental (Airbnb) potential")
+        self.assertContains(response, "Unlock with Pro")
+        # The verdict itself is a Pro field.
+        self.assertNotContains(response, "Good potential")
+
+    def test_the_price_panel_is_offered_but_not_answered(self):
+        response = self.preview()
+        self.assertContains(response, "Price vs the local market")
+        self.assertNotContains(response, "Cheaper per m")
+
+    def test_the_desk_report_findings_show_titles_without_the_reasoning(self):
+        """The same withholding the listing page does — the titles sell it."""
+        response = self.preview()
+        self.assertContains(response, "Desk report")
+        self.assertContains(response, "worth knowing about this house")
+
+    def test_the_desk_report_button_says_it_comes_with_pro(self):
+        """It reads as another paid extra beside the consultation otherwise."""
+        self.assertContains(self.preview(), "Included with Pro")
+
+    def test_the_panels_are_gone_once_the_allowance_is_spent(self):
+        """The wall replaces the analysis; it does not sit above it."""
+        from inventory.models import Property, PropertyImage
+
+        with override_settings(VIEW_LIMIT_ANONYMOUS=1):
+            other = Property.objects.create(
+                url="https://example.com/b", price=300, show_in_front=True,
+                location="Oita Prefecture", zoning="Commercial district",
+            )
+            PropertyImage.objects.create(
+                property=other, file="https://img.example.com/2.jpg"
+            )
+            self.client.get(f"/japanese-houses/{other.pk}/preview/")
+            response = self.preview()
+
+        self.assertContains(response, "You have opened all")
+        self.assertNotContains(response, "Short-term rental (Airbnb) potential")
