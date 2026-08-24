@@ -131,6 +131,11 @@ def _oauth(payload):
     # TikTok returns a lifetime; what a later run needs is a deadline. Stamped
     # here so both the initial exchange and every refresh carry it.
     body["expires_at"] = time.time() + int(body.get("expires_in") or 0)
+    # Which app these tokens belong to. Sandbox and production are separate
+    # apps with separate keys, and a token issued by one is meaningless to the
+    # other — swapping the credentials without reconnecting otherwise fails at
+    # refresh time with an error that says nothing about the cause.
+    body["client_key"] = key
     return body
 
 
@@ -172,6 +177,15 @@ def refresh_access_token():
     if not refresh_token:
         raise TikTokError(
             "No TikTok refresh token stored. Run `manage.py tiktok_auth` first."
+        )
+
+    key, _ = _credentials()
+    issued_for = stored.get("client_key")
+    if issued_for and issued_for != key:
+        raise TikTokError(
+            f"The stored tokens were issued to client key {issued_for}, and the "
+            f"configured key is {key} — sandbox and production are separate apps. "
+            "Reconnect the account to get tokens for this one."
         )
 
     tokens = _oauth({"grant_type": "refresh_token", "refresh_token": refresh_token})

@@ -73,6 +73,15 @@ class Command(BaseCommand):
     # execute() before handle() ever runs. Overriding it made every invocation
     # of this command try to reach TikTok during startup.
     def report_account(self):
+        from django.conf import settings
+
+        # Which credentials are in play, said out loud. Sandbox and production
+        # are different apps with different keys, and having the wrong pair in
+        # .env looks exactly like a broken integration.
+        key = settings.TIKTOK_CLIENT_KEY or "(unset)"
+        self.stdout.write(f"Client key: {key}")
+        self.stdout.write(f"Token file: {tiktok._token_path()}")
+
         token = tiktok.get_fresh_token()
         creator = tiktok.query_creator_info(token)
         self.stdout.write(self.style.SUCCESS(

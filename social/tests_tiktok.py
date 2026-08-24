@@ -110,6 +110,31 @@ class TokenStoreTests(SimpleTestCase):
             tiktok.refresh_access_token()
         self.assertIn("tiktok_auth", str(caught.exception))
 
+    def test_tokens_from_the_other_app_are_refused_by_name(self):
+        """Sandbox and production are separate apps with separate keys.
+
+        Swapping the credentials without reconnecting otherwise fails at refresh
+        time with an error from TikTok that says nothing about the cause.
+        """
+        tiktok.save_tokens({
+            "access_token": "a", "refresh_token": "r", "client_key": "sandboxkey",
+        })
+        with patch.object(tiktok.requests, "post") as post:
+            with self.assertRaises(tiktok.TikTokError) as caught:
+                tiktok.refresh_access_token()
+
+        post.assert_not_called()
+        self.assertIn("sandboxkey", str(caught.exception))
+        self.assertIn("Reconnect", str(caught.exception))
+
+    def test_a_refresh_stamps_the_app_that_issued_the_tokens(self):
+        tiktok.save_tokens({"refresh_token": "r"})
+        with patch.object(tiktok.requests, "post", return_value=http(200, {
+            "access_token": "new", "refresh_token": "r", "expires_in": 86400,
+        })):
+            tiktok.refresh_access_token()
+        self.assertEqual(tiktok.load_tokens()["client_key"], "key")
+
     def test_a_failed_refresh_does_not_destroy_the_stored_token(self):
         """Otherwise one bad night costs the year-long refresh token."""
         tiktok.save_tokens({"access_token": "old", "refresh_token": "precious"})
