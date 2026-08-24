@@ -245,6 +245,32 @@ class PropertyPreviewTests(TestCase):
         self.assertContains(self.client.get("/"), "data-preview=")
 
 
+class ConsultationCtaTests(TestCase):
+    """One thing per button.
+
+    The floating pill opened the interest modal AND followed its own href, so
+    the form appeared and the browser navigated away from it in the same click.
+    """
+
+    def test_the_floating_button_goes_to_the_consultation_page(self):
+        body = self.client.get("/").content.decode()
+        self.assertIn('id="eoi-fab"', body)
+        self.assertIn('href="/consultation/"', body)
+
+    def test_the_interest_modal_is_gone_rather_than_unreachable(self):
+        """Nothing opened it once the handler went; a hidden form nobody can
+        reach is a trap for whoever reads this next."""
+        body = self.client.get("/").content.decode()
+        self.assertNotIn("eoi-overlay", body)
+        self.assertNotIn("eoi-form", body)
+
+    def test_the_interest_endpoint_still_exists(self):
+        """The property pages post to it; only the home page's modal went."""
+        from django.urls import reverse
+
+        self.assertTrue(reverse("submit_interest_request"))
+
+
 class SharedPopupTests(TestCase):
     """One popup, both pages.
 

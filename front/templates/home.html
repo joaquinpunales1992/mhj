@@ -1084,61 +1084,6 @@
 			}
 			#eoi-fab { text-decoration: none; display: inline-flex; align-items: center; height: auto; line-height: 1.4; }
 			#eoi-fab:hover { background-color: var(--primary-dark); color: #fff !important; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
-			#eoi-overlay {
-				display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 10011;
-				background: rgba(0,0,0,0.6); align-items: center; justify-content: center; padding: 16px;
-			}
-			#eoi-overlay.open { display: flex; }
-			#eoi-box {
-				background: #fff; color: #333; width: 100%; max-width: 460px; border-radius: 10px;
-				padding: 28px; position: relative; font-family: var(--font-body);
-				max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 50px rgba(0,0,0,0.4);
-			}
-			#eoi-box h3 { margin: 0 0 8px; color: #477535; font-size: 22px; font-weight: 700; text-transform: none; letter-spacing: normal; }
-			#eoi-box p { color: #555; font-size: 15px; line-height: 1.5; }
-			#eoi-box label { display: block; font-size: 13px; font-weight: 600; color: #333; margin-bottom: 5px; text-transform: none; letter-spacing: normal; }
-			#eoi-box input, #eoi-box textarea, #eoi-box select {
-				display: block; width: 100%; height: auto; line-height: 1.4; padding: 11px 12px; margin: 0 0 16px;
-				border: 1px solid #ccc; border-radius: 6px; background: #fff; color: #333 !important;
-				font-family: inherit; font-size: 15px; font-weight: 400; text-transform: none; letter-spacing: normal;
-				box-shadow: none; box-sizing: border-box; -webkit-appearance: none; appearance: none;
-			}
-			#eoi-box input:focus, #eoi-box textarea:focus, #eoi-box select:focus { outline: none; border-color: #477535; box-shadow: 0 0 0 2px rgba(52,165,142,0.2); }
-			#eoi-box textarea { resize: vertical; min-height: 90px; }
-			#eoi-box .eoi-hint { font-size: 12px; color: #888; margin: -12px 0 16px; }
-			/* Region picker = tappable chips (a native multi-select needs Cmd/Ctrl
-			   and doesn't work on touch). Scoped under #eoi-box to override the
-			   generic `#eoi-box input/label` block styling. */
-			#eoi-box #eoi-regions-box {
-				display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto;
-				border: 1px solid #ccc; border-radius: 6px; padding: 8px; margin: 0 0 8px; box-sizing: border-box;
-			}
-			#eoi-box .eoi-region { display: inline-flex; margin: 0; }
-			#eoi-box .eoi-region input { position: absolute; opacity: 0; width: 0; height: 0; margin: 0; padding: 0; }
-			#eoi-box .eoi-region span {
-				display: inline-block; padding: 6px 12px; border: 1px solid #ccc; border-radius: 9999px;
-				font-size: 13px; font-weight: 400; color: #333; cursor: pointer; user-select: none;
-			}
-			#eoi-box .eoi-region input:checked + span { background: #477535; color: #fff; border-color: #477535; }
-			#eoi-box .eoi-region input:focus + span { box-shadow: 0 0 0 2px rgba(52,165,142,0.3); }
-			#eoi-close {
-				position: absolute; top: 10px; right: 14px; width: auto; height: auto; min-height: 0;
-				background: none; border: none; box-shadow: none; padding: 4px 8px; margin: 0;
-				font-size: 26px; line-height: 1; color: #999 !important; cursor: pointer;
-				text-transform: none; letter-spacing: normal;
-			}
-			#eoi-close:hover { color: #333 !important; background: none; box-shadow: none; }
-			#eoi-submit {
-				display: block; width: 100%; height: auto; line-height: 1.2; margin-top: 4px; padding: 13px 16px;
-				background-color: #477535; color: #fff !important; border: none; border-radius: 6px;
-				font-family: inherit; font-size: 15px; font-weight: 600; text-transform: none; letter-spacing: normal;
-				box-shadow: none; cursor: pointer;
-			}
-			#eoi-submit:hover { background-color: var(--primary-dark); color: #fff !important; box-shadow: none; }
-			#eoi-submit:disabled { opacity: 0.6; cursor: default; }
-			#eoi-error { color: #c0392b; display: none; margin-bottom: 12px; font-size: 14px; }
-			#eoi-success { display: none; text-align: center; padding: 8px 0; }
-			#eoi-success h3 { color: #477535; }
 			/* On screens <= 736px the site's nav bar moves to the top (top: 0),
 			   so the bottom is free and the button can sit at the bottom edge. */
 			@media (max-width: 736px) {
@@ -1168,95 +1113,17 @@
 			the property pages offered different things under different names.
 		{% endcomment %}
 		<a id="eoi-fab" href="{% url 'consultation' %}">Book a consultation</a>
-		<div id="eoi-overlay" role="dialog" aria-modal="true" aria-labelledby="eoi-title">
-			<div id="eoi-box">
-				<button id="eoi-close" type="button" aria-label="Close">&times;</button>
-				<form id="eoi-form">
-					<h3 id="eoi-title">Get help finding the right property</h3>
-					<p style="margin-bottom:16px;">Tell us what you're looking for and we'll connect you with an English-speaking agent in Japan who finds options that fit &mdash; no listing pressure, no fee to talk.</p>
-					<label for="eoi-name">Name</label>
-					<input type="text" id="eoi-name" name="name" required placeholder="Your name">
-					<label for="eoi-email">Email</label>
-					<input type="email" id="eoi-email" name="email" required placeholder="you@example.com">
-					<label>Region(s) of interest</label>
-					<div id="eoi-regions-box">
-						{% for c in cities %}
-							<label class="eoi-region"><input type="checkbox" name="regions" value="{{ c.name }}"><span>{{ c.name }}</span></label>
-						{% endfor %}
-					</div>
-					<p class="eoi-hint">Tap all that apply.</p>
-					<label for="eoi-budget">Budget range</label>
-					<select id="eoi-budget" name="budget">
-						<option value="">No preference</option>
-						<option value="Under US$50k">Under US$50k</option>
-						<option value="US$50k – US$100k">US$50k – US$100k</option>
-						<option value="US$100k+">US$100k+</option>
-					</select>
-					<label for="eoi-timeline">Timeline</label>
-					<select id="eoi-timeline" name="timeline">
-						<option value="">Select one</option>
-						<option value="Just exploring">Just exploring</option>
-						<option value="Next 6 months">Next 6 months</option>
-						<option value="Ready now">Ready now</option>
-					</select>
-					<label for="eoi-visited">Have you visited Japan?</label>
-					<select id="eoi-visited" name="visited_japan">
-						<option value="">Select one</option>
-						<option value="Yes">Yes</option>
-						<option value="No">No</option>
-					</select>
-					<p id="eoi-error"></p>
-					<button type="submit" id="eoi-submit">Get matched with an agent</button>
-				</form>
-				<div id="eoi-success">
-					<h3>Thank you!</h3>
-					<p>We've received your request and will be in touch shortly.</p>
-				</div>
-			</div>
-		</div>
-		<script>
-			(function() {
-				var fab = document.getElementById('eoi-fab');
-				var overlay = document.getElementById('eoi-overlay');
-				var form = document.getElementById('eoi-form');
-				var closeBtn = document.getElementById('eoi-close');
-				function open() { overlay.classList.add('open'); }
-				function close() { overlay.classList.remove('open'); }
-				fab.addEventListener('click', open);
-				closeBtn.addEventListener('click', close);
-				overlay.addEventListener('click', function(e) { if (e.target === overlay) close(); });
-				form.addEventListener('submit', function(e) {
-					e.preventDefault();
-					var btn = document.getElementById('eoi-submit');
-					var errorEl = document.getElementById('eoi-error');
-					errorEl.style.display = 'none';
-					btn.disabled = true; btn.textContent = 'Sending...';
-					var regions = Array.prototype.map.call(form.querySelectorAll('input[name="regions"]:checked'), function(c) { return c.value; });
-					fetch('{% url "submit_interest_request" %}', {
-						method: 'POST',
-						headers: { 'Content-Type': 'application/json' },
-						body: JSON.stringify({
-							name: form.elements['name'].value,
-							email: form.elements['email'].value,
-							regions: regions,
-							budget: form.elements['budget'].value,
-							timeline: form.elements['timeline'].value,
-							visited_japan: form.elements['visited_japan'].value
-						})
-					})
-					.then(function(r) {
-						if (!r.ok) throw new Error('Request failed');
-						form.style.display = 'none';
-						document.getElementById('eoi-success').style.display = 'block';
-					})
-					.catch(function() {
-						errorEl.textContent = 'Something went wrong. Please try again.';
-						errorEl.style.display = 'block';
-						btn.disabled = false; btn.textContent = 'Get matched with an agent';
-					});
-				});
-			})();
-		</script>
+		{% comment %}
+			The interest modal used to live here, opened by the button above. The
+			button's href was changed to the consultation page — see the note on
+			it — but its click handler was left attached, so it opened the modal
+			and then navigated away from it: the form flashed and vanished.
+
+			Removing the handler leaves the modal unreachable, so it goes too.
+			submit_interest_request and the InterestRequest model stay; the
+			property pages' own enquiry forms still post to them.
+		{% endcomment %}
+
 
 		<script>
 			// Source listings (SUUMO / homes.co.jp) get taken down at any time,
