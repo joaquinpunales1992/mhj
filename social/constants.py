@@ -169,6 +169,31 @@ TIKTOK_POST_TIMEOUT = 600
 TIKTOK_STATUS_POLLS = 3
 TIKTOK_STATUS_POLL_SECONDS = 20
 
+# Photos to leave out of anything posted to social, by position in the
+# listing's own order.
+#
+# The second one is nearly always the 間取り — the floor plan. It belongs on the
+# listing page, where somebody is reading the property; in a carousel or a reel
+# it is a diagram between two photographs of a house, and it stops the scroll
+# for the wrong reason.
+#
+# Empty, because position turned out to be the wrong test. Across 32 images
+# from 8 listings, exactly one was a drawing — at position 1 — and skipping that
+# position everywhere would have discarded seven photographs to remove it. Put a
+# position in here to drop it regardless of what it contains.
+SOCIAL_SKIP_PHOTO_POSITIONS = ()
+
+# Share of the image that is paper white — flat, exactly neutral — above which
+# it is treated as a floor plan rather than a photograph. Measured over 96
+# images from 20 listings: 12 drawings scored 0.40-0.79, every photograph 0.12
+# or less, so this sits in the middle of a wide gap. Set it to 1.0 to turn the
+# check off.
+SOCIAL_DRAWING_PAPER_MIN = 0.25
+
+# Slides in a reel. Four at three seconds each is twelve seconds, which is what
+# the encoder has always produced.
+REEL_MAX_PHOTOS = 4
+
 # --- Listing carousel cards (tunable) --------------------------------------
 # A listing post used to be the scraped photos, unaltered. The price and the
 # place — the only two facts that sell an akiya — lived in a caption Instagram

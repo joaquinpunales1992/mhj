@@ -18,7 +18,7 @@ from io import StringIO
 from unittest.mock import patch
 
 from django.core.management import call_command
-from django.test import TestCase
+from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from inventory.models import Property, PropertyImage
@@ -503,6 +503,162 @@ class CommentReplyTests(TestCase):
         self.assertTrue(comment.replied)
         self.assertEqual(comment.comment, "It depends on the town — ask us!",
                          "the reply text belongs here, not the API's response object")
+
+
+class SocialPhotoSelectionTests(TestCase):
+    """Which photos go out, and which are left behind.
+
+    Listings carry 間取り floor plans and 立面図 elevations among the photographs.
+    A line drawing between two pictures of a house is what stops a scroll for
+    the wrong reason.
+    """
+
+    def listing(self, photos):
+        listing = Property.objects.create(
+            url="https://example.com/a", price=200, show_in_front=True,
+            featured=True, location="Oita Prefecture",
+        )
+        for i in range(photos):
+            PropertyImage.objects.create(
+                property=listing, file=f"https://img.example.com/{i}.jpg"
+            )
+        return listing
+
+    def chosen(self, listing, limit=4):
+        from social.utils import social_photos
+
+        return [p.file.name for p in social_photos(listing, limit)]
+
+    def test_every_photo_is_a_candidate_by_default(self):
+        """Position is not the test; see looks_like_a_drawing for why."""
+        listing = self.listing(4)
+        every = [p.file.name for p in listing.get_ordered_images()]
+        self.assertEqual(self.chosen(listing), every)
+
+    def test_a_position_can_still_be_skipped_if_configured(self):
+        from unittest.mock import patch
+        from social import utils
+
+        listing = self.listing(5)
+        every = [p.file.name for p in listing.get_ordered_images()]
+        with patch.object(utils, "SOCIAL_SKIP_PHOTO_POSITIONS", (1,)):
+            self.assertEqual(self.chosen(listing, limit=4),
+                             [every[0], every[2], every[3], every[4]])
+
+    def test_a_few_extra_candidates_come_back(self):
+        """Drawings are found after downloading, so dropping one there must not
+        leave the post a photo short."""
+        self.assertEqual(len(self.chosen(self.listing(20), limit=4)), 6)
+
+    def test_a_listing_with_one_photo_keeps_it(self):
+        self.assertEqual(len(self.chosen(self.listing(1))), 1)
+
+    def test_skipping_never_empties_a_listing_that_has_photos(self):
+        from unittest.mock import patch
+        from social import utils
+
+        listing = self.listing(2)
+        with patch.object(utils, "SOCIAL_SKIP_PHOTO_POSITIONS", (0, 1)):
+            self.assertEqual(len(self.chosen(listing)), 2)
+
+
+class DrawingDetectionTests(SimpleTestCase):
+    """Telling a plan from a photograph, by its pixels.
+
+    The threshold comes from measuring 96 real images across 20 listings: the
+    12 drawings scored 0.40-0.79 paper white, every photograph 0.12 or less.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def drawing(self, name="plan.jpg"):
+        """A floor plan: white, with a few black lines on it."""
+        from PIL import Image, ImageDraw
+
+        path = os.path.join(self.dir, name)
+        canvas = Image.new("RGB", (600, 450), (255, 255, 255))
+        draw = ImageDraw.Draw(canvas)
+        for box in [(60, 60, 300, 250), (300, 60, 540, 160), (60, 250, 540, 390)]:
+            draw.rectangle(box, outline=(0, 0, 0), width=3)
+        canvas.save(path, "JPEG", quality=92)
+        return path
+
+    def photograph(self, name="photo.jpg"):
+        """A photograph: colour everywhere, almost no white."""
+        from PIL import Image
+
+        path = os.path.join(self.dir, name)
+        canvas = Image.new("RGB", (600, 450))
+        canvas.putdata([
+            ((x * 7 + y * 3) % 200, (x * 3 + y * 11) % 190, (x + y * 5) % 210)
+            for y in range(450) for x in range(600)
+        ])
+        canvas.save(path, "JPEG", quality=92)
+        return path
+
+    def looks_like_a_drawing(self, path):
+        from social.constants import SOCIAL_DRAWING_PAPER_MIN
+        from social.content.listing_cards import looks_like_a_drawing
+
+        return looks_like_a_drawing(path, SOCIAL_DRAWING_PAPER_MIN)
+
+    def test_a_plan_is_recognised(self):
+        self.assertTrue(self.looks_like_a_drawing(self.drawing()))
+
+    def test_a_photograph_is_not(self):
+        self.assertFalse(self.looks_like_a_drawing(self.photograph()))
+
+    def test_a_white_house_in_snow_is_not(self):
+        """The case that sank the first version of this: a white building under
+        a white sky measured 45% white and was a listing's opening photo. Sky
+        and snow shade, and JPEG leaves them off neutral; paper does neither."""
+        from PIL import Image
+
+        path = os.path.join(self.dir, "snow.jpg")
+        canvas = Image.new("RGB", (600, 450))
+        canvas.putdata([
+            # Near-white everywhere, but shading and never exactly neutral.
+            (250 - y // 40, 252 - y // 50, 247 - y // 45)
+            for y in range(450) for _ in range(600)
+        ])
+        canvas.save(path, "JPEG", quality=92)
+        self.assertGreater(self.white_share(path), 0.40)
+        self.assertFalse(self.looks_like_a_drawing(path))
+
+    def white_share(self, path):
+        """Plain whiteness — the metric this detector used to use."""
+        from PIL import Image
+
+        with Image.open(path) as raw:
+            pixels = list(raw.convert("RGB").resize((160, 120)).getdata())
+        white = sum(1 for r, g, b in pixels if r > 235 and g > 235 and b > 235)
+        return white / len(pixels)
+
+    def test_an_unreadable_file_is_kept(self):
+        """Guessing here would drop a photo for the wrong reason; the renderer
+        already skips files it cannot open."""
+        path = os.path.join(self.dir, "broken.jpg")
+        with open(path, "w") as handle:
+            handle.write("<html>404</html>")
+        self.assertFalse(self.looks_like_a_drawing(path))
+
+    def test_drawings_are_dropped_from_a_set(self):
+        from social.utils import drop_drawings
+
+        photos = [self.photograph("a.jpg"), self.photograph("b.jpg")]
+        paths = [photos[0], self.drawing(), photos[1]]
+        self.assertEqual(drop_drawings(paths), photos)
+
+    def test_a_listing_of_nothing_but_drawings_is_still_posted(self):
+        """A diagram is a worse post. No post is not a better one."""
+        from social.utils import drop_drawings
+
+        paths = [self.drawing("a.jpg"), self.drawing("b.jpg")]
+        self.assertEqual(drop_drawings(paths), paths)
 
 
 class QueueOrderTests(TestCase):

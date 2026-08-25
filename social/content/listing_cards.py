@@ -94,6 +94,51 @@ def trim_white_borders(im):
     return im
 
 
+def looks_like_a_drawing(path, paper_min):
+    """True when the image is a plan or elevation rather than a photograph.
+
+    Listings carry 間取り floor plans and 立面図 elevations among the photos, and
+    a line drawing between two pictures of a house is what stops a scroll for
+    the wrong reason.
+
+    Position is the obvious test and it does not work. Across 96 images from 20
+    listings the drawings turned up at positions 1 through 5, and the second
+    photo — the one they were expected to be — was a photograph in every
+    listing but one.
+
+    "Mostly white" does not work either, and fails in the worst direction: a
+    white house against a snowy street and a white sky measured 45% white, and
+    it was a listing's first photo.
+
+    What separates them is *paper* white — flat, exactly neutral, the same
+    value across the whole background. Sky and snow are near-white but they
+    shade, and JPEG leaves them a point or two off neutral. Measured over those
+    96 images: 12 drawings scored 0.40-0.79 on this, every photograph scored
+    0.12 or less, and the threshold sits in that gap. No false positives, and
+    nothing missed.
+
+    Cheap: the image is already on disk by the time this is asked, and it is
+    read at 160x120.
+    """
+    try:
+        with Image.open(path) as raw:
+            raw.draft("RGB", (160, 120))
+            small = raw.convert("RGB").resize((160, 120), Image.NEAREST)
+            pixels = list(small.getdata())
+    except Exception as exc:
+        # An unreadable file is somebody else's problem — the renderer already
+        # skips those, and guessing here would drop a photo for the wrong reason.
+        logger.warning("Could not inspect %s: %s", path, exc)
+        return False
+
+    # NEAREST, not the default resample: averaging neighbours would invent
+    # off-white pixels along every line in a plan and blur the thing being
+    # measured.
+    paper = sum(1 for r, g, b in pixels
+                if min(r, g, b) >= 250 and max(r, g, b) - min(r, g, b) <= 3)
+    return paper / len(pixels) > paper_min
+
+
 def _photo_band(local_path, width, target_height):
     """The photo cover-cropped into a full-width band `target_height` tall.
 

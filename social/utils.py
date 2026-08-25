@@ -37,6 +37,7 @@ from social.content.listing_cards import (
     MARGIN as CARD_MARGIN,
     _details_line,
     _photo_band,
+    looks_like_a_drawing,
 )
 from membership.utils import notify_social_token_expired
 import logging
@@ -388,6 +389,47 @@ def generate_caption_for_post(
 LISTING_CARD_DIR = os.path.join(settings.MEDIA_ROOT, "social_cards")
 
 
+def social_photos(property, limit):
+    """The listing's photos, minus the ones social should not show.
+
+    One place, because there were three: the carousel took
+    get_ordered_images(), the raw-photo fallback took the same, and the reel
+    took order_by("id") — so a reel and a carousel of the same house could open
+    on different pictures.
+
+    Never returns an empty list when the listing has photos at all. Skipping is
+    a preference about which photo is best, and it must not turn a listing with
+    two photos into a listing we cannot post.
+    """
+    photos = list(property.get_ordered_images())
+    kept = [
+        photo for index, photo in enumerate(photos)
+        if index not in SOCIAL_SKIP_PHOTO_POSITIONS
+    ]
+    # A few more than asked for: the drawings are found after downloading, and
+    # dropping one there should not leave the post a photo short.
+    return (kept or photos)[: limit + 2]
+
+
+def drop_drawings(paths, keep_at_least=1):
+    """Discard downloaded images that are plans or elevations, not photographs.
+
+    After the download rather than before, because the test is on the pixels and
+    the file has to exist to look at. Both callers already have it on disk.
+
+    Never returns nothing: a listing whose photos are all drawings still gets
+    posted with them. A diagram is a worse post; no post is not a better one.
+    """
+    photos = [
+        path for path in paths
+        if not looks_like_a_drawing(path, SOCIAL_DRAWING_PAPER_MIN)
+    ]
+    dropped = len(paths) - len(photos)
+    if dropped:
+        logger.info("Left %s plan/elevation image(s) out of the post.", dropped)
+    return photos if len(photos) >= keep_at_least else list(paths)
+
+
 def _card_location(property: Property, max_chars: int = 70) -> str:
     """A place name fit to be burnt into an image: Latin script, short, specific.
 
@@ -426,7 +468,7 @@ def _listing_card_urls(property: Property):
 
     temp_paths = []
     try:
-        for image in property.get_ordered_images()[:LISTING_CARDS_MAX_PHOTOS]:
+        for image in social_photos(property, LISTING_CARDS_MAX_PHOTOS):
             raw_url = prepare_image_url_for_facebook(image.file.url)
             try:
                 temp_paths.append(_download_image_to_tempfile(raw_url))
@@ -439,8 +481,10 @@ def _listing_card_urls(property: Property):
             logger.warning("No photo could be downloaded; not rendering cards.")
             return None
 
+        chosen = drop_drawings(temp_paths)[:LISTING_CARDS_MAX_PHOTOS]
+
         card_paths = render_listing_cards(
-            temp_paths,
+            chosen,
             price=property.get_price_for_front,
             location=_card_location(property),
             building_area=_clean_area(property.building_area),
@@ -487,7 +531,7 @@ def _listing_media_urls(property: Property):
             return urls
     return [
         prepare_image_url_for_facebook(image.file.url)
-        for image in property.get_ordered_images()[:5]
+        for image in social_photos(property, 5)
     ]
 
 
@@ -1189,8 +1233,11 @@ def create_property_video(
     black_font = os.path.join(settings.STATIC_ROOT, "fonts", "Montserrat-Black.ttf")
 
     llm = ai_client()
-    images = PropertyImage.objects.filter(property_id=property_id).order_by("id")[:4]
     property = Property.objects.get(pk=property_id)
+    # Same selection as the carousel: the listing's own order, minus the floor
+    # plan. This used to be order_by("id"), so the reel and the carousel of one
+    # house could open on different photographs.
+    images = social_photos(property, 4)
     if not images:
         logger.error("No images found for the property.")
         return None
@@ -1219,17 +1266,26 @@ def create_property_video(
         bg = ColorClip((W, H), color=REEL_BG_COLOR, duration=duration_per_image)
         return CompositeVideoClip([bg, img], size=(W, H))
 
-    slides = []
-    gone = 0
+    # Download first, then choose: whether an image is a plan or a photograph is
+    # a question about its pixels, and _make_slide overwrites the file with the
+    # cropped band — so the test has to happen between the two.
+    downloaded, gone = [], 0
     for img_obj in images:
         img_url = prepare_image_url_for_facebook(img_obj.file.url)
         logger.info(f"Preparing image URL: {img_url}")
         try:
-            slides.append(_make_slide(_download_image_to_tempfile(img_url)))
+            downloaded.append(_download_image_to_tempfile(img_url))
         except Exception as e:
             if is_permanently_gone(e):
                 gone += 1
             logger.warning(f" Skipping image {img_url}: {e}")
+
+    slides = []
+    for local_path in drop_drawings(downloaded)[:REEL_MAX_PHOTOS]:
+        try:
+            slides.append(_make_slide(local_path))
+        except Exception as e:
+            logger.warning(f" Skipping image {local_path}: {e}")
 
     if not slides:
         logger.error("No valid images to create video.")

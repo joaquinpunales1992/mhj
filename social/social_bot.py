@@ -170,6 +170,10 @@ def _reply_comments_instagram_reels():
             SocialComment.objects.create(
                 post=reel_id,
                 comment_id=comment_id,
+                # Their words, kept. This is the FAQ pipeline's eventual source
+                # of questions — see social/content/faq.py. It was being
+                # fetched and thrown away on every run.
+                question=(comment or "")[:500],
                 # The text we sent, not the API's response object — the old code
                 # stored the raw dict in a 200-char field.
                 comment=(ai_comment or "")[:200],

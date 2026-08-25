@@ -22,6 +22,7 @@ from social.utils import (
     _download_image_to_tempfile,
     prepare_image_url_for_facebook,
     select_properties_to_post,
+    social_photos,
 )
 
 
@@ -58,7 +59,9 @@ class Command(BaseCommand):
         self.stdout.write(f"Rendering {property.pk}: {property.title}")
 
         temp_paths = []
-        for image in property.get_ordered_images()[:LISTING_CARDS_MAX_PHOTOS]:
+        # The same selection the poster uses, or the preview would be showing
+        # photos that never go out.
+        for image in social_photos(property, LISTING_CARDS_MAX_PHOTOS):
             url = prepare_image_url_for_facebook(image.file.url)
             try:
                 temp_paths.append(_download_image_to_tempfile(url))
