@@ -548,16 +548,33 @@ class QueueOrderTests(TestCase):
             [cheap.pk, middling.pk, expensive.pk],
         )
 
-    def test_a_featured_but_expensive_house_does_not_jump_the_queue(self):
-        """The regression. It cost every run one of its two slots."""
+    def test_a_featured_house_leads_whatever_it_costs(self):
+        """The flag is the point of the flag.
+
+        It used to be capped: only a featured listing under 500man led. That
+        never fired — the one flagged listing in the table is 1400man — so the
+        flag did nothing on social at all.
+        """
         featured = self.property(1400, featured=True)
         cheap = self.property(200)
-        self.assertEqual([p.pk for p in self.queue()], [cheap.pk, featured.pk])
+        self.assertEqual([p.pk for p in self.queue()], [featured.pk, cheap.pk])
 
-    def test_a_featured_cheap_house_leads(self):
+    def test_a_featured_cheap_house_leads_too(self):
         featured = self.property(400, featured=True)
         cheaper = self.property(200)
         self.assertEqual([p.pk for p in self.queue()], [featured.pk, cheaper.pk])
+
+    def test_featured_cannot_own_the_queue_the_way_it_used_to(self):
+        """The turn is worth one post, and the never-posted rule is what bounds
+        it — not the price cap that replaced it."""
+        featured = self.property(
+            1400, featured=True, posted=timezone.now() - timedelta(days=1)
+        )
+        never_posted = self.property(3000)
+        self.assertEqual(
+            [p.pk for p in self.queue()], [never_posted.pk, featured.pk],
+            "a posted featured listing waits behind anything never posted",
+        )
 
     def test_the_boost_is_worth_one_turn_and_not_a_tenancy(self):
         """Posted once, a featured listing rejoins the rotation like the rest."""

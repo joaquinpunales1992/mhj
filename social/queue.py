@@ -12,7 +12,6 @@ change.
 from django.db.models import Max
 
 from inventory.models import Property
-from social.constants import FEATURED_BOOST_PRICE_LIMIT
 
 
 def select_properties_to_post(posts_queryset, price_limit, limit=None):
@@ -24,10 +23,9 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
     it's only a tiebreaker.
 
     Ordering: never-posted properties get a turn before anything is reposted,
-    then a featured listing that is also cheap, then the least-recently-posted
-    (to keep the rotation fair), then cheapest first — which, since everything
-    never posted has the same empty posting history, is what actually decides
-    the queue day to day.
+    then featured ones, then the least-recently-posted (to keep the rotation
+    fair), then cheapest first — which, since everything never posted has the
+    same empty posting history, is what actually decides the queue day to day.
 
     Featured used to be the first key, on the reasoning that the social feed
     should mirror the home page grid. On the home page that ordering costs
@@ -35,8 +33,9 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
     A queue is not a page. One featured 1400万 listing sat at the head of it
     ahead of 1,558 never-posted properties, kept sitting there after it had been
     posted, and would have been next on every run for the rest of the year.
-    Featured now boosts a listing once, and only under
-    FEATURED_BOOST_PRICE_LIMIT.
+    Featured now boosts a listing exactly once. It cannot repeat, because the
+    first key puts every never-posted listing ahead of anything already posted —
+    which is what the old featured-first ordering lacked, not a price cap.
 
     `posts_queryset` is the SocialPost rows for the relevant channel; matching
     is by property_url == Property.url (same value written when a post is made).
@@ -52,23 +51,17 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
             price__lte=price_limit,
         ).distinct()
     )
-    def _boosted(property):
-        """Featured *and* cheap. Featured alone is a home page decision."""
-        return bool(property.featured) and (
-            (property.price or 0) <= FEATURED_BOOST_PRICE_LIMIT
-        )
-
     # Sort key, in priority order:
     #   1. already-posted?    never-posted ahead of posted, so the boost below
     #                         is worth exactly one turn and cannot repeat
-    #   2. not boosted        a cheap featured listing leads its group
+    #   2. not featured       a featured listing leads its group, once
     #   3. last-posted-time   oldest repost first (only separates the posted
     #                         group — everything never posted ties at 0 here)
     #   4. price              cheapest first
     candidates.sort(
         key=lambda p: (
             last_posted.get(p.url) is not None,
-            not _boosted(p),
+            not p.featured,
             last_posted.get(p.url) or 0,
             p.price or 0,
         )

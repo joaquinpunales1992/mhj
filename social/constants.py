@@ -31,18 +31,22 @@ BATCH_SIZE_FACEBOOK = 2
 PRICE_LIMIT_INSTAGRAM = 5000
 BATCH_SIZE_INSTAGRAM = 2
 
-# A featured listing gets one turn at the head of the social queue — but only if
-# it is also cheap.
+# A featured listing gets one turn at the head of the social queue.
 #
 # `featured` alone used to be the first thing the queue sorted on, so a single
 # featured 1400万 (US$98,000) listing outranked 1,558 never-posted properties on
 # every run, including the 200万 ones directly behind it, and it did so after it
 # had already been posted. It could never stop being next.
 #
-# Above this, a featured listing is promoted on the home page — which is where
-# the flag is set and what it was built for — and takes its turn here like
-# anything else. The account's promise is cheap houses.
-FEATURED_BOOST_PRICE_LIMIT = 500  # 万, about US$35,000
+# There was a price cap here, so that only a cheap featured listing led the
+# queue. It never fired: the one flagged listing in the table is 1400万 and the
+# cap was 500万, so the sort key evaluated the same for every row and the flag
+# did nothing at all on social.
+#
+# The cap existed to stop an expensive featured listing owning the queue. It was
+# a second lock on a bolted door: never-posted listings already outrank reposts,
+# so a featured one leads once and then rejoins the rotation. Any featured
+# listing under the posting price limit now gets that turn.
 
 USE_AI_CAPTION = True
 
