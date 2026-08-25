@@ -551,13 +551,13 @@ class QueueOrderTests(TestCase):
             price_limit=PRICE_LIMIT_INSTAGRAM, limit=limit,
         )
 
-    def test_the_cheapest_never_posted_house_goes_first(self):
+    def test_the_dearest_never_posted_house_goes_first(self):
         expensive = self.property(1400)
         cheap = self.property(200)
         middling = self.property(700)
         self.assertEqual(
             [p.pk for p in self.queue()],
-            [cheap.pk, middling.pk, expensive.pk],
+            [expensive.pk, middling.pk, cheap.pk],
         )
 
     def test_a_featured_house_leads_whatever_it_costs(self):
@@ -599,11 +599,14 @@ class QueueOrderTests(TestCase):
         fresh = self.property(4000)
         self.assertEqual([p.pk for p in self.queue()], [fresh.pk, posted.pk])
 
-    def test_reposts_go_oldest_first_rather_than_cheapest_first(self):
-        """Otherwise the cheapest house is reposted every run, forever."""
-        recent = self.property(200, posted=timezone.now() - timedelta(days=2))
-        stale = self.property(3000, posted=timezone.now() - timedelta(days=90))
-        self.assertEqual([p.pk for p in self.queue()], [stale.pk, recent.pk])
+    def test_reposts_go_oldest_first_rather_than_by_price(self):
+        """Otherwise one house is reposted every run, forever."""
+        recent = self.property(3000, posted=timezone.now() - timedelta(days=2))
+        stale = self.property(200, posted=timezone.now() - timedelta(days=90))
+        self.assertEqual(
+            [p.pk for p in self.queue()], [stale.pk, recent.pk],
+            "the older repost leads even though it is the cheaper one",
+        )
 
     def test_a_house_over_the_price_limit_is_not_eligible_at_all(self):
         self.property(PRICE_LIMIT_INSTAGRAM + 1)
@@ -685,12 +688,12 @@ class FeaturedFilterTests(TestCase):
         warn.assert_not_called()
 
     def test_turning_the_filter_off_restores_the_whole_pool(self):
-        featured = self.listing("https://example.com/1", featured=True, price=900)
-        cheap = self.listing("https://example.com/2", price=100)
+        featured = self.listing("https://example.com/1", featured=True, price=100)
+        dearer = self.listing("https://example.com/2", price=900)
         self.assertEqual(
             [p.pk for p in self.queue(only_featured=False)],
-            [featured.pk, cheap.pk],
-            "featured still leads, but everything eligible is in the queue",
+            [featured.pk, dearer.pk],
+            "featured leads on the flag, not on price, and the rest follow",
         )
 
 

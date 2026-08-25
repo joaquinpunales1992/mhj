@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 
 def select_properties_to_post(posts_queryset, price_limit, limit=None):
-    """Properties with images under price_limit, cheapest first.
+    """Properties with images under price_limit, dearest first.
 
     Eligibility matches the homepage grid (show_in_front=True, price in
     (0, price_limit]) plus the social-only requirement of at least one image —
@@ -34,8 +34,9 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
 
     Ordering: never-posted properties get a turn before anything is reposted,
     then featured ones, then the least-recently-posted (to keep the rotation
-    fair), then cheapest first — which, since everything never posted has the
-    same empty posting history, is what actually decides the queue day to day.
+    fair), then dearest first — which, since everything never posted has the
+    same empty posting history, is what actually decides the order within the
+    shortlist.
 
     Featured used to be the first key, on the reasoning that the social feed
     should mirror the home page grid. On the home page that ordering costs
@@ -78,13 +79,14 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
     #   2. not featured       a featured listing leads its group, once
     #   3. last-posted-time   oldest repost first (only separates the posted
     #                         group — everything never posted ties at 0 here)
-    #   4. price              cheapest first
+    #   4. price              dearest first
     candidates.sort(
         key=lambda p: (
             last_posted.get(p.url) is not None,
             not p.featured,
             last_posted.get(p.url) or 0,
-            p.price or 0,
+            # Negated for descending: dearest first.
+            -(p.price or 0),
         )
     )
     return candidates[:limit] if limit else candidates

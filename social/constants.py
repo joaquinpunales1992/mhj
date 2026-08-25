@@ -35,7 +35,7 @@ BATCH_SIZE_INSTAGRAM = 2
 # on social unless somebody has marked it in the admin.
 #
 # Set this False and featured goes back to being an ordering preference —
-# featured first, then everything else eligible, cheapest first.
+# featured first, then everything else eligible, dearest first.
 #
 # WATCH THE SIZE OF THE SHORTLIST. The queue can only rotate through what is
 # flagged, so with one listing marked, that listing is posted on every run

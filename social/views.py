@@ -63,7 +63,7 @@ def _redirect_uri(request):
 
 
 def _next_property():
-    """Whatever the TikTok queue would post next — cheapest first."""
+    """Whatever the TikTok queue would post next."""
     candidates = select_properties_to_post(
         SocialPost.objects.filter(social_media="tiktok"),
         PRICE_LIMIT_INSTAGRAM,
