@@ -9,18 +9,28 @@ social.utils re-exports it, so nothing that already imported it from there had t
 change.
 """
 
+import logging
+
 from django.db.models import Max
 
 from inventory.models import Property
+from social.constants import POST_ONLY_FEATURED
+
+logger = logging.getLogger(__name__)
 
 
 def select_properties_to_post(posts_queryset, price_limit, limit=None):
     """Properties with images under price_limit, cheapest first.
 
     Eligibility matches the homepage grid (show_in_front=True, price in
-    (0, price_limit]) plus the social-only requirement of at least one image
-    — we can't build a reel/post without a photo. Featured is NOT required;
-    it's only a tiebreaker.
+    (0, price_limit]) plus the social-only requirement of at least one image —
+    we can't build a reel/post without a photo — and, while POST_ONLY_FEATURED
+    is on, the featured flag. The flag is the shortlist: nothing goes out unless
+    somebody marked it in the admin.
+
+    That makes the size of the shortlist the thing to watch. The queue rotates
+    through what is flagged and nothing else, so one flagged listing is not a
+    queue, it is the same post every run.
 
     Ordering: never-posted properties get a turn before anything is reposted,
     then featured ones, then the least-recently-posted (to keep the rotation
@@ -43,14 +53,25 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
     rows = posts_queryset.values("property_url").annotate(last=Max("datetime"))
     last_posted = {r["property_url"]: r["last"] for r in rows}
 
-    candidates = list(
-        Property.objects.filter(
-            show_in_front=True,
-            images__isnull=False,
-            price__gt=0,
-            price__lte=price_limit,
-        ).distinct()
+    eligible = Property.objects.filter(
+        show_in_front=True,
+        images__isnull=False,
+        price__gt=0,
+        price__lte=price_limit,
     )
+    if POST_ONLY_FEATURED:
+        eligible = eligible.filter(featured=True)
+    candidates = list(eligible.distinct())
+
+    # The queue can only rotate through what is flagged. Below the batch size it
+    # is not a rotation, it is the same listing going out again — which is worth
+    # a line in the log rather than a quiet repeat nobody connects to the admin.
+    if POST_ONLY_FEATURED and len(candidates) < (limit or 1) + 1:
+        logger.warning(
+            "Only %s featured listing(s) are eligible to post. The queue will "
+            "repeat them until more are marked featured in the admin.",
+            len(candidates),
+        )
     # Sort key, in priority order:
     #   1. already-posted?    never-posted ahead of posted, so the boost below
     #                         is worth exactly one turn and cannot repeat

@@ -271,7 +271,7 @@ class PostTikTokReelTests(TestCase):
     def setUp(self):
         self.property = Property.objects.create(
             url="https://example.com/house-1", price=200, show_in_front=True,
-            location="Oita Prefecture, Bungo-ono City",
+            featured=True, location="Oita Prefecture, Bungo-ono City",
             building_area="78.5m 2", land_area="198.73m 2",
         )
         PropertyImage.objects.create(
@@ -350,9 +350,11 @@ class TikTokPageTests(TestCase):
             "staff", "staff@example.com", "pw", is_staff=True
         )
         self.visitor = User.objects.create_user("v", "v@example.com", "pw")
+        # featured, because the queue only serves featured listings now
+        # (POST_ONLY_FEATURED) and these tests post through it.
         self.property = Property.objects.create(
             url="https://example.com/house-1", price=200, show_in_front=True,
-            location="Oita Prefecture, Bungo-ono City",
+            featured=True, location="Oita Prefecture, Bungo-ono City",
         )
         PropertyImage.objects.create(
             property=self.property, file="https://img.example.com/a.jpg"
@@ -521,9 +523,11 @@ class PostOnTikTokCommandTests(TestCase):
     """The command the page spawns, and cron runs unattended."""
 
     def setUp(self):
+        # featured, because the queue only serves featured listings now
+        # (POST_ONLY_FEATURED) and these tests post through it.
         self.property = Property.objects.create(
             url="https://example.com/house-1", price=200, show_in_front=True,
-            location="Oita Prefecture, Bungo-ono City",
+            featured=True, location="Oita Prefecture, Bungo-ono City",
         )
         PropertyImage.objects.create(
             property=self.property, file="https://img.example.com/a.jpg"

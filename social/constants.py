@@ -31,7 +31,19 @@ BATCH_SIZE_FACEBOOK = 2
 PRICE_LIMIT_INSTAGRAM = 5000
 BATCH_SIZE_INSTAGRAM = 2
 
-# A featured listing gets one turn at the head of the social queue.
+# Only featured listings are posted. The flag is the shortlist: nothing goes out
+# on social unless somebody has marked it in the admin.
+#
+# Set this False and featured goes back to being an ordering preference —
+# featured first, then everything else eligible, cheapest first.
+#
+# WATCH THE SIZE OF THE SHORTLIST. The queue can only rotate through what is
+# flagged, so with one listing marked, that listing is posted on every run
+# forever; with three, they cycle. select_properties_to_post logs a warning
+# when the pool is smaller than the batch it is being asked for.
+POST_ONLY_FEATURED = True
+
+# When POST_ONLY_FEATURED is False, a featured listing still leads the queue.
 #
 # `featured` alone used to be the first thing the queue sorted on, so a single
 # featured 1400万 (US$98,000) listing outranked 1,558 never-posted properties on

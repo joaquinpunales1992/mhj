@@ -413,10 +413,11 @@ class ReelPostingTests(TestCase):
     """
 
     def setUp(self):
+        # featured, because the queue only serves featured listings now.
         self.property = Property.objects.create(
             url="https://example.com/house-1", price=1800, show_in_front=True,
-            location="Oita Prefecture, Bungo-ono City", floor_plan="3DK",
-            building_area="78.5m 2", land_area="198.73m 2",
+            featured=True, location="Oita Prefecture, Bungo-ono City",
+            floor_plan="3DK", building_area="78.5m 2", land_area="198.73m 2",
         )
         PropertyImage.objects.create(property=self.property, file="properties/a.jpg")
 
@@ -505,7 +506,11 @@ class CommentReplyTests(TestCase):
 
 
 class QueueOrderTests(TestCase):
-    """Which house goes out next.
+    """Which house goes out next, among the listings that are eligible.
+
+    Ordering only. The featured flag is a filter now (POST_ONLY_FEATURED), so
+    these patch it off: what they cover is how eligible listings are ranked
+    against each other, which is the same logic either way.
 
     Untested until now, and it was wrong: `featured` was the first sort key, so
     one featured 1400man listing was the head of the queue on every run — after
@@ -532,8 +537,15 @@ class QueueOrderTests(TestCase):
         return property
 
     def queue(self, limit=None):
+        from social import queue as queue_module
         from social.utils import select_properties_to_post
 
+        # Patched rather than overridden: the module reads the constant at
+        # import, so override_settings would not reach it. start/addCleanup
+        # rather than enterContext, which is 3.11+ and the server is on 3.9.
+        patcher = patch.object(queue_module, "POST_ONLY_FEATURED", False)
+        patcher.start()
+        self.addCleanup(patcher.stop)
         return select_properties_to_post(
             SocialPost.objects.filter(social_media="instagram"),
             price_limit=PRICE_LIMIT_INSTAGRAM, limit=limit,
@@ -549,12 +561,7 @@ class QueueOrderTests(TestCase):
         )
 
     def test_a_featured_house_leads_whatever_it_costs(self):
-        """The flag is the point of the flag.
-
-        It used to be capped: only a featured listing under 500man led. That
-        never fired — the one flagged listing in the table is 1400man — so the
-        flag did nothing on social at all.
-        """
+        """With the filter off, featured is still an ordering preference."""
         featured = self.property(1400, featured=True)
         cheap = self.property(200)
         self.assertEqual([p.pk for p in self.queue()], [featured.pk, cheap.pk])
@@ -616,6 +623,75 @@ class QueueOrderTests(TestCase):
         for price in (200, 300, 400):
             self.property(price)
         self.assertEqual(len(self.queue(limit=2)), 2)
+
+
+class FeaturedFilterTests(TestCase):
+    """POST_ONLY_FEATURED: the flag is the shortlist.
+
+    Nothing goes out on social unless somebody marked it in the admin. The size
+    of that shortlist is the thing to watch — the queue rotates through what is
+    flagged and nothing else.
+    """
+
+    def listing(self, url, featured=False, price=200):
+        listing = Property.objects.create(
+            url=url, price=price, show_in_front=True, featured=featured,
+            location="Oita Prefecture",
+        )
+        PropertyImage.objects.create(property=listing, file="properties/a.jpg")
+        return listing
+
+    def queue(self, limit=None, only_featured=True):
+        from social import queue as queue_module
+        from social.utils import select_properties_to_post
+
+        with patch.object(queue_module, "POST_ONLY_FEATURED", only_featured):
+            return select_properties_to_post(
+                SocialPost.objects.filter(social_media="instagram"),
+                price_limit=PRICE_LIMIT_INSTAGRAM, limit=limit,
+            )
+
+    def test_only_featured_listings_are_posted(self):
+        featured = self.listing("https://example.com/1", featured=True)
+        self.listing("https://example.com/2")
+        self.listing("https://example.com/3")
+        self.assertEqual([p.pk for p in self.queue()], [featured.pk])
+
+    def test_nothing_featured_means_nothing_to_post(self):
+        """Rather than quietly falling back to the whole table."""
+        self.listing("https://example.com/1")
+        self.assertEqual(self.queue(), [])
+
+    def test_a_featured_listing_still_has_to_be_eligible(self):
+        """Flagging a listing does not override the other requirements."""
+        self.listing("https://example.com/hidden", featured=True).__class__ \
+            .objects.filter(url="https://example.com/hidden").update(show_in_front=False)
+        self.assertEqual(self.queue(), [])
+
+    def test_the_shortlist_being_too_small_is_logged(self):
+        """One flagged listing is not a rotation, it is the same post again."""
+        self.listing("https://example.com/1", featured=True)
+        with self.assertLogs("social.queue", level="WARNING") as logs:
+            self.queue(limit=2)
+        self.assertIn("featured listing(s) are eligible", logs.output[0])
+        self.assertIn("admin", logs.output[0])
+
+    def test_a_full_shortlist_is_not_logged_about(self):
+        for i in range(4):
+            self.listing(f"https://example.com/{i}", featured=True, price=200 + i)
+        import logging
+        with patch.object(logging.getLogger("social.queue"), "warning") as warn:
+            self.assertEqual(len(self.queue(limit=2)), 2)
+        warn.assert_not_called()
+
+    def test_turning_the_filter_off_restores_the_whole_pool(self):
+        featured = self.listing("https://example.com/1", featured=True, price=900)
+        cheap = self.listing("https://example.com/2", price=100)
+        self.assertEqual(
+            [p.pk for p in self.queue(only_featured=False)],
+            [featured.pk, cheap.pk],
+            "featured still leads, but everything eligible is in the queue",
+        )
 
 
 class ListingCardTests(TestCase):
@@ -871,6 +947,7 @@ class ReelRenderSmokeTests(TestCase):
 
         property = Property.objects.create(
             url="https://example.com/render", price=1800, show_in_front=True,
+            featured=True,
             location="Oita Prefecture, Bungo-ono City, Mitsuke", floor_plan="3DK",
             # Areas, so the render exercises the brass size line as well.
             building_area="118.12㎡", land_area="1,074㎡ (public book)",
