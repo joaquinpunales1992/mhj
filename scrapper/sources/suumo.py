@@ -125,7 +125,7 @@ def _split_ratios(combined: str) -> tuple[str, str]:
     return combined, ""
 
 
-def parse_listing(url: str) -> dict | None:
+def parse_listing(url: str, translate: bool = True) -> dict | None:
     response = fetch(url)
     if not response:
         return None
@@ -170,9 +170,15 @@ def parse_listing(url: str) -> dict | None:
     ):
         _add("https://suumo.jp/front/" + urllib.parse.unquote(enc))
 
-    translator = GoogleTranslator(source="auto", target="en")
+    # translate=False returns the raw Japanese untouched. Repairing one bad
+    # field does not need the other twenty-two re-translated, and issuing those
+    # calls anyway is what rate-limited the translator into returning error
+    # pages — the exact failure the repair exists to clean up.
+    translator = GoogleTranslator(source="auto", target="en") if translate else None
 
     def t(value: str | None) -> str:
+        if not translate:
+            return value or ""
         return safe_translate(value, translator=translator)
 
     raw_price = table.get("価格", "")

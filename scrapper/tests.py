@@ -10,6 +10,7 @@ Every fixture here is a real value taken from a live SUUMO detail page.
 """
 
 from datetime import date
+from unittest.mock import patch
 
 from bs4 import BeautifulSoup
 from django.test import TestCase
@@ -238,3 +239,131 @@ class RepairTranslationsTests(TestCase):
         prop.refresh_from_db()
         self.assertEqual(prop.title, "A real house")
         self.assertIn("0 properties", output)
+
+
+class RepairSafetyTests(TestCase):
+    """The repair must not do damage when the translator is failing.
+
+    The first version did. Run against 193 rows it re-parsed each listing —
+    about twenty-three translation calls apiece — the translator began
+    rate-limiting, and safe_translate correctly handed back the untranslated
+    Japanese, which the command then stored. A row holding Japanese no longer
+    matches the error markers, so those rows could not be found or repaired
+    afterwards. It destroyed the thing it was there to fix.
+    """
+
+    ERROR_PAGE = TranslationErrorPageTests.ERROR_PAGE
+
+    def listing(self, url="https://suumo.jp/chukoikkodate/nc_1/", **fields):
+        from inventory.models import Property
+
+        values = {"url": url, "price": 200, "title": self.ERROR_PAGE}
+        values.update(fields)
+        return Property.objects.create(**values)
+
+    def run_command(self, *args, **kwargs):
+        from io import StringIO
+
+        from django.core.management import call_command
+
+        out, err = StringIO(), StringIO()
+        call_command("repair_translations", *args, stdout=out, stderr=err, **kwargs)
+        return out.getvalue() + err.getvalue()
+
+    def test_a_share_of_japanese_means_untranslated(self):
+        from inventory.management.commands.repair_translations import (
+            looks_untranslated,
+        )
+
+        self.assertTrue(looks_untranslated("永興2丁目　中古"))
+        self.assertTrue(looks_untranslated("北海道釧路市文苑4丁目"))
+
+    def test_a_stray_kanji_in_english_is_not(self):
+        """An address can keep a character and still be translated. Treating
+        that as failure would refuse good translations."""
+        from inventory.management.commands.repair_translations import (
+            looks_untranslated,
+        )
+
+        self.assertFalse(looks_untranslated(
+            "25 minutes by bus from Kushiro Station on the JR Nemuro Main線"))
+        self.assertFalse(looks_untranslated("104.6m2 (31.64 tsubo)"))
+
+    def test_it_refuses_to_run_when_the_translator_is_down(self):
+        prop = self.listing()
+        with patch("inventory.management.commands.repair_translations."
+                   "translator_is_working", return_value=False), \
+             patch("scrapper.sources.suumo.parse_listing",
+                   return_value={"property_title": "成田町１"}):
+            output = self.run_command()
+        prop.refresh_from_db()
+        self.assertEqual(prop.title, self.ERROR_PAGE, "nothing may be written")
+        self.assertIn("not translating", output)
+
+    def test_a_japanese_answer_is_never_stored(self):
+        """safe_translate returns the original when it fails. Storing that is
+        what made the damaged rows unfindable."""
+        prop = self.listing()
+        with patch("inventory.management.commands.repair_translations."
+                   "translator_is_working", return_value=True), \
+             patch("scrapper.sources.suumo.parse_listing",
+                   return_value={"property_title": "成田町１（岡谷駅） 390万円"}), \
+             patch("scrapper.scrapper.safe_translate",
+                   side_effect=lambda v, translator=None: v):
+            output = self.run_command()
+        prop.refresh_from_db()
+        self.assertEqual(prop.title, self.ERROR_PAGE,
+                         "the row stays findable rather than holding Japanese")
+        self.assertIn("left alone", output)
+
+    def test_it_stops_once_the_translator_is_clearly_rate_limiting(self):
+        for n in range(5):
+            self.listing(url=f"https://suumo.jp/chukoikkodate/nc_{n}/")
+        with patch("inventory.management.commands.repair_translations."
+                   "translator_is_working", return_value=True), \
+             patch("scrapper.sources.suumo.parse_listing",
+                   return_value={"property_title": "成田町１"}), \
+             patch("scrapper.scrapper.safe_translate",
+                   side_effect=lambda v, translator=None: v), \
+             patch("inventory.management.commands.repair_translations."
+                   "REQUEST_INTERVAL_SECONDS", 0):
+            output = self.run_command()
+        self.assertIn("rate-limiting", output)
+
+    def test_a_real_translation_is_stored(self):
+        prop = self.listing()
+        with patch("inventory.management.commands.repair_translations."
+                   "translator_is_working", return_value=True), \
+             patch("scrapper.sources.suumo.parse_listing",
+                   return_value={"property_title": "成田町１（岡谷駅）"}), \
+             patch("scrapper.scrapper.safe_translate",
+                   side_effect=lambda v, translator=None: "Narita-cho 1 (Okaya Station)"):
+            self.run_command()
+        prop.refresh_from_db()
+        self.assertEqual(prop.title, "Narita-cho 1 (Okaya Station)")
+
+    def test_the_listing_is_parsed_without_translating_it(self):
+        """One call for the broken field, not twenty-three for the whole row."""
+        self.listing()
+        with patch("inventory.management.commands.repair_translations."
+                   "translator_is_working", return_value=True), \
+             patch("scrapper.sources.suumo.parse_listing") as parse, \
+             patch("scrapper.scrapper.safe_translate", return_value="A house"):
+            parse.return_value = {"property_title": "家"}
+            self.run_command()
+        self.assertEqual(parse.call_args.kwargs.get("translate"), False)
+
+
+class RepairUnreachableTests(RepairSafetyTests):
+    """A listing we cannot reach is not a listing that is gone."""
+
+    def test_an_unreachable_listing_is_left_alone_not_cleared(self):
+        """parse_listing returns None for a 404, a block and a dropped
+        connection alike. Clearing on that would blank every title the moment
+        SUUMO starts rate-limiting the scraper."""
+        prop = self.listing()
+        with patch("scrapper.sources.suumo.parse_listing", return_value=None):
+            output = self.run_command()
+        prop.refresh_from_db()
+        self.assertEqual(prop.title, self.ERROR_PAGE)
+        self.assertIn("could not re-read", output)
