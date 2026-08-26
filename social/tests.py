@@ -22,7 +22,7 @@ from django.test import SimpleTestCase, TestCase
 from django.utils import timezone
 
 from inventory.models import Property, PropertyImage
-from social.constants import PRICE_LIMIT_INSTAGRAM
+from social.constants import PRICE_LIMIT_INSTAGRAM, REPOST_COOLDOWN_DAYS
 from social.models import SocialComment, SocialPost
 
 
@@ -668,10 +668,11 @@ class QueueOrderTests(TestCase):
     these patch it off: what they cover is how eligible listings are ranked
     against each other, which is the same logic either way.
 
-    Untested until now, and it was wrong: `featured` was the first sort key, so
-    one featured 1400man listing was the head of the queue on every run — after
-    it had already been posted — ahead of 1,558 never-posted properties, the
-    cheapest of which were 200man.
+    Featured and cheap are the priority and they outrank posting history. The
+    cooldown is what keeps that from collapsing into the old bug, where
+    `featured` was the first key and one featured 1400man listing was the head
+    of the queue on every run — after it had already been posted — ahead of
+    1,558 never-posted properties.
     """
 
     def property(self, price, featured=False, url=None, posted=None):
@@ -707,61 +708,82 @@ class QueueOrderTests(TestCase):
             price_limit=PRICE_LIMIT_INSTAGRAM, limit=limit,
         )
 
-    def test_the_dearest_never_posted_house_goes_first(self):
+    def test_the_cheapest_house_goes_first(self):
         expensive = self.property(1400)
         cheap = self.property(200)
         middling = self.property(700)
         self.assertEqual(
             [p.pk for p in self.queue()],
-            [expensive.pk, middling.pk, cheap.pk],
+            [cheap.pk, middling.pk, expensive.pk],
         )
 
     def test_a_featured_house_leads_whatever_it_costs(self):
-        """With the filter off, featured is still an ordering preference."""
+        """With the filter off, featured is still an ordering preference, and
+        it outranks price."""
         featured = self.property(1400, featured=True)
         cheap = self.property(200)
         self.assertEqual([p.pk for p in self.queue()], [featured.pk, cheap.pk])
 
-    def test_a_featured_cheap_house_leads_too(self):
-        featured = self.property(400, featured=True)
-        cheaper = self.property(200)
-        self.assertEqual([p.pk for p in self.queue()], [featured.pk, cheaper.pk])
+    def test_a_posted_cheap_house_still_leads_once_it_is_off_cooldown(self):
+        """The point of the change: posting history no longer sends a cheap
+        listing to the back of the queue."""
+        posted = self.property(
+            200, posted=timezone.now() - timedelta(days=REPOST_COOLDOWN_DAYS + 1)
+        )
+        never_posted = self.property(4000)
+        self.assertEqual(
+            [p.pk for p in self.queue()], [posted.pk, never_posted.pk],
+            "the cheaper listing leads even though it has been posted before",
+        )
 
-    def test_featured_cannot_own_the_queue_the_way_it_used_to(self):
-        """The turn is worth one post, and the never-posted rule is what bounds
-        it — not the price cap that replaced it."""
+    def test_a_posted_featured_house_still_leads_once_it_is_off_cooldown(self):
         featured = self.property(
-            1400, featured=True, posted=timezone.now() - timedelta(days=1)
+            1400, featured=True,
+            posted=timezone.now() - timedelta(days=REPOST_COOLDOWN_DAYS + 1),
         )
-        never_posted = self.property(3000)
+        never_posted = self.property(200)
+        self.assertEqual([p.pk for p in self.queue()], [featured.pk, never_posted.pk])
+
+    def test_a_house_posted_this_week_waits(self):
+        """Being the cheapest cannot mean going out twice in a week."""
+        just_posted = self.property(200, posted=timezone.now() - timedelta(days=1))
+        dearer = self.property(4000)
         self.assertEqual(
-            [p.pk for p in self.queue()], [never_posted.pk, featured.pk],
-            "a posted featured listing waits behind anything never posted",
+            [p.pk for p in self.queue()], [dearer.pk, just_posted.pk],
+            "the cooldown outranks both price and featured",
         )
 
-    def test_the_boost_is_worth_one_turn_and_not_a_tenancy(self):
-        """Posted once, a featured listing rejoins the rotation like the rest."""
+    def test_the_cooldown_outranks_featured_too(self):
         featured = self.property(
-            400, featured=True, posted=timezone.now() - timedelta(days=1)
+            200, featured=True, posted=timezone.now() - timedelta(days=1)
         )
-        never_posted = self.property(1400)
+        plain = self.property(4000)
+        self.assertEqual([p.pk for p in self.queue()], [plain.pk, featured.pk])
+
+    def test_when_everything_is_cooling_the_longest_wait_leads(self):
+        """A small shortlist has every listing on cooldown at once. Falling
+        back to price there would repost the cheapest one every run, which is
+        what the cooldown exists to prevent."""
+        cheap_recent = self.property(200, posted=timezone.now() - timedelta(days=1))
+        dear_older = self.property(4000, posted=timezone.now() - timedelta(days=5))
         self.assertEqual(
-            [p.pk for p in self.queue()], [never_posted.pk, featured.pk],
-            "anything never posted comes before a repost, featured or not",
+            [p.pk for p in self.queue()], [dear_older.pk, cheap_recent.pk],
+            "the longest-waiting leads, even though the other is cheaper",
         )
 
-    def test_nothing_is_reposted_while_something_has_never_been_posted(self):
-        posted = self.property(200, posted=timezone.now() - timedelta(days=30))
-        fresh = self.property(4000)
-        self.assertEqual([p.pk for p in self.queue()], [fresh.pk, posted.pk])
-
-    def test_reposts_go_oldest_first_rather_than_by_price(self):
-        """Otherwise one house is reposted every run, forever."""
-        recent = self.property(3000, posted=timezone.now() - timedelta(days=2))
-        stale = self.property(200, posted=timezone.now() - timedelta(days=90))
+    def test_a_never_posted_house_sorts_against_posted_ones_on_merit(self):
+        """Never-posted and posted-long-ago share a group now, ranked by
+        timestamp — never posted is 0.0, which is to say the longest wait of
+        all. A timestamp rather than the datetime because comparing a datetime
+        against 0 raises, and these two are now in the same group."""
+        never = self.property(4000)
+        self.property(
+            4000, url="https://example.com/long-ago",
+            posted=timezone.now() - timedelta(days=90),
+        )
         self.assertEqual(
-            [p.pk for p in self.queue()], [stale.pk, recent.pk],
-            "the older repost leads even though it is the cheaper one",
+            self.queue()[0].pk, never.pk,
+            "same price, so the one that has waited longest leads",
         )
 
     def test_a_house_over_the_price_limit_is_not_eligible_at_all(self):

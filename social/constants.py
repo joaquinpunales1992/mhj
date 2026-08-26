@@ -43,6 +43,19 @@ BATCH_SIZE_INSTAGRAM = 2
 # when the pool is smaller than the batch it is being asked for.
 POST_ONLY_FEATURED = True
 
+# How long a listing rests after going out before it can be posted again.
+#
+# Featured and cheap now outrank posting history — a cheap featured listing
+# leads the queue again once it has been posted, instead of waiting behind
+# everything that never has. This is the only thing stopping that from meaning
+# "the cheapest featured listing, every single run, forever", which is the bug
+# the never-posted-first rule used to prevent.
+#
+# A week: long enough that the same house is not in the feed twice in a
+# fortnight, short enough that a three-listing shortlist still has something to
+# say. Raise it if the shortlist grows.
+REPOST_COOLDOWN_DAYS = 7
+
 # When POST_ONLY_FEATURED is False, a featured listing still leads the queue.
 #
 # `featured` alone used to be the first thing the queue sorted on, so a single

@@ -10,17 +10,19 @@ change.
 """
 
 import logging
+from datetime import timedelta
 
 from django.db.models import Max
+from django.utils import timezone
 
 from inventory.models import Property
-from social.constants import POST_ONLY_FEATURED
+from social.constants import POST_ONLY_FEATURED, REPOST_COOLDOWN_DAYS
 
 logger = logging.getLogger(__name__)
 
 
 def select_properties_to_post(posts_queryset, price_limit, limit=None):
-    """Properties with images under price_limit, dearest first.
+    """Properties with images under price_limit, cheapest first.
 
     Eligibility matches the homepage grid (show_in_front=True, price in
     (0, price_limit]) plus the social-only requirement of at least one image —
@@ -32,21 +34,32 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
     through what is flagged and nothing else, so one flagged listing is not a
     queue, it is the same post every run.
 
-    Ordering: never-posted properties get a turn before anything is reposted,
-    then featured ones, then the least-recently-posted (to keep the rotation
-    fair), then dearest first — which, since everything never posted has the
-    same empty posting history, is what actually decides the order within the
-    shortlist.
+    ORDERING. Featured and cheap are the priority, and they outrank posting
+    history: a cheap featured listing leads the queue again after it has been
+    posted, rather than waiting behind everything that has not. The one thing
+    that displaces it is the cooldown — a listing posted within the last
+    REPOST_COOLDOWN_DAYS drops behind everything that is not, so being the
+    cheapest cannot mean going out twice in a week.
 
-    Featured used to be the first key, on the reasoning that the social feed
-    should mirror the home page grid. On the home page that ordering costs
-    nothing: every listing is on the page, featured ones are simply at the top.
-    A queue is not a page. One featured 1400万 listing sat at the head of it
-    ahead of 1,558 never-posted properties, kept sitting there after it had been
-    posted, and would have been next on every run for the rest of the year.
-    Featured now boosts a listing exactly once. It cannot repeat, because the
-    first key puts every never-posted listing ahead of anything already posted —
-    which is what the old featured-first ordering lacked, not a price cap.
+    Off cooldown:  featured first, then cheapest, then least-recently-posted.
+    On cooldown:   least-recently-posted first, then featured, then cheapest.
+
+    The second line matters when the shortlist is small enough that everything
+    is cooling at once: with nothing eligible on merit, the queue falls back to
+    whoever has waited longest rather than posting the cheapest one again.
+
+    The history keys are timestamps (0.0 for never posted), not datetimes, so
+    that never-posted and long-ago-posted listings sort against each other in
+    the same group. Comparing a datetime with 0 raises, and the previous key
+    only avoided it because posted and never-posted were never in the same
+    group.
+
+    This ordering has been reversed twice, so the reasoning is worth keeping:
+    featured was once the FIRST key with no cooldown, and one featured 1400万
+    listing was the head of the queue on every run — after it had already been
+    posted — ahead of 1,558 never-posted properties. The cooldown is what makes
+    "prioritise featured and cheap even if already posted" survivable; without
+    it that instruction and the old bug are the same thing.
 
     `posts_queryset` is the SocialPost rows for the relevant channel; matching
     is by property_url == Property.url (same value written when a post is made).
@@ -73,20 +86,23 @@ def select_properties_to_post(posts_queryset, price_limit, limit=None):
             "repeat them until more are marked featured in the admin.",
             len(candidates),
         )
-    # Sort key, in priority order:
-    #   1. already-posted?    never-posted ahead of posted, so the boost below
-    #                         is worth exactly one turn and cannot repeat
-    #   2. not featured       a featured listing leads its group, once
-    #   3. last-posted-time   oldest repost first (only separates the posted
-    #                         group — everything never posted ties at 0 here)
-    #   4. price              dearest first
-    candidates.sort(
-        key=lambda p: (
-            last_posted.get(p.url) is not None,
-            not p.featured,
-            last_posted.get(p.url) or 0,
-            # Negated for descending: dearest first.
-            -(p.price or 0),
-        )
-    )
+
+    cooldown_starts = (
+        timezone.now() - timedelta(days=REPOST_COOLDOWN_DAYS)
+    ).timestamp()
+
+    def posted_at(property):
+        """When this last went out, as a timestamp. 0.0 if it never has."""
+        when = last_posted.get(property.url)
+        return when.timestamp() if when else 0.0
+
+    def rank(property):
+        when = posted_at(property)
+        if when > cooldown_starts:
+            # Cooling: wait your turn, longest-waiting first.
+            return (1, when, not property.featured, property.price or 0)
+        # Eligible on merit: featured, then cheapest, then longest-waiting.
+        return (0, not property.featured, property.price or 0, when)
+
+    candidates.sort(key=rank)
     return candidates[:limit] if limit else candidates
