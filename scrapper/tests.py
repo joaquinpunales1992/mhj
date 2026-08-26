@@ -154,18 +154,56 @@ class TranslationErrorPageTests(TestCase):
             "Please report any error in this listing to the agent."))
 
     def test_an_error_page_is_never_returned_as_a_translation(self):
-        """With no model configured, the Japanese is what is kept."""
-        with patch("scrapper.scrapper.translate_with_model", return_value=""):
+        """With nothing behind it, the Japanese is what is kept."""
+        with patch("scrapper.scrapper.translate_with_mymemory", return_value=""), \
+             patch("scrapper.scrapper.translate_with_model", return_value=""):
             self.assertEqual(
                 self.translate("新潟県糸魚川市の中古一戸建て", self.ERROR_PAGE),
                 "新潟県糸魚川市の中古一戸建て",
             )
 
+    def test_mymemory_is_tried_before_the_model(self):
+        """A translation service, not a language model. The Gemini free tier
+        allows twenty requests per model per day; MyMemory needs no key and is
+        not the scarce resource."""
+        with patch("scrapper.scrapper.translate_with_mymemory",
+                   return_value="Used detached house"), \
+             patch("scrapper.scrapper.translate_with_model") as model:
+            self.assertEqual(self.translate("中古一戸建て", self.ERROR_PAGE),
+                             "Used detached house")
+        model.assert_not_called()
+
+    def test_the_model_is_the_last_resort(self):
+        with patch("scrapper.scrapper.translate_with_mymemory", return_value=""), \
+             patch("scrapper.scrapper.translate_with_model",
+                   return_value="Used detached house"):
+            self.assertEqual(self.translate("中古一戸建て", self.ERROR_PAGE),
+                             "Used detached house")
+
+    def test_mymemorys_own_refusal_is_never_stored(self):
+        """It announces a spent quota in the response body, the same way Google
+        announces a 500 — so the same test has to catch it."""
+        from scrapper.scrapper import translate_with_mymemory
+
+        warning = ("MYMEMORY WARNING: YOU USED ALL AVAILABLE FREE TRANSLATIONS "
+                   "FOR TODAY. NEXT AVAILABLE IN 12 HOURS")
+        with patch("deep_translator.MyMemoryTranslator") as translator:
+            translator.return_value.translate.return_value = warning
+            self.assertEqual(translate_with_mymemory("中古"), "")
+
+    def test_mymemory_failing_is_not_an_error(self):
+        from scrapper.scrapper import translate_with_mymemory
+
+        with patch("deep_translator.MyMemoryTranslator",
+                   side_effect=RuntimeError("service down")):
+            self.assertEqual(translate_with_mymemory("中古"), "")
+
     def test_the_model_translates_when_the_endpoint_will_not(self):
         """The free endpoint blocks the address a burst came from, which is not
         a cooldown a server with one IP can wait out. The keyed API is not
         subject to it."""
-        with patch("scrapper.scrapper.translate_with_model",
+        with patch("scrapper.scrapper.translate_with_mymemory", return_value=""), \
+             patch("scrapper.scrapper.translate_with_model",
                    return_value="Used detached house in Itoigawa, Niigata"):
             self.assertEqual(
                 self.translate("新潟県糸魚川市の中古一戸建て", self.ERROR_PAGE),

@@ -130,6 +130,11 @@ TRANSLATION_ERROR_MARKERS = (
     "That's all we know",
     "That’s an error",
     "That's an error",
+    # MyMemory does the same thing Google does — hands back its refusal as if
+    # it were the translation, in capitals.
+    "MYMEMORY WARNING",
+    "YOU USED ALL AVAILABLE FREE TRANSLATIONS",
+    "PLEASE SELECT TWO DISTINCT LANGUAGES",
 )
 
 
@@ -165,9 +170,56 @@ def safe_translate(value: str | None, translator: GoogleTranslator | None = None
     if looks_like_an_error_page(translated):
         # Not raised, so the try above cannot catch it: the request "succeeded"
         # and returned a page about having failed.
-        print(f"Translator returned an error page for {original[:40]!r}; asking the model.")
-        return translate_with_model(original) or original
+        print(f"Translator returned an error page for {original[:40]!r}; trying MyMemory.")
+        return (
+            translate_with_mymemory(original)
+            or translate_with_model(original)
+            or original
+        )
     return translated
+
+
+# MyMemory refuses anything longer in a single request.
+MYMEMORY_MAX_CHARS = 500
+
+
+def translate_with_mymemory(value: str) -> str:
+    """A second translation service, before reaching for a model.
+
+    The free Google endpoint blocks the address a burst came from. A model can
+    translate its way around that, but it is the wrong tool and the scarcest
+    one: the Gemini free tier allows twenty requests per model per day, which
+    does not go far against a hundred fields.
+
+    MyMemory is a translation service, needs no key, and handles these strings
+    as well as Google did — "接道と段差有、建築基準法第22条" comes back as
+    "Access roads and steps available, Building Standards Act Article 22".
+
+    Japanese in, English out, stated rather than auto-detected: this is only
+    ever reached for fields scraped from Japanese listing sites, and MyMemory
+    wants a concrete pair.
+
+    Returns "" when it fails or refuses, which sends the caller on to the model.
+    """
+    if not value:
+        return ""
+    try:
+        from deep_translator import MyMemoryTranslator
+
+        answer = MyMemoryTranslator(source="ja-JP", target="en-GB").translate(
+            value[:MYMEMORY_MAX_CHARS]
+        )
+    except Exception as exc:
+        print(f"MyMemory failed: {exc}")
+        return ""
+
+    answer = (answer or "").strip()
+    # It announces a spent quota in the response body, the same way Google
+    # announces a 500 — so the same test has to be applied to the answer.
+    if not answer or looks_like_an_error_page(answer):
+        print("MyMemory refused; asking the model.")
+        return ""
+    return answer
 
 
 # Enough of the field to be sure, and short enough that a stray instruction
