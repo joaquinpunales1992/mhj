@@ -397,6 +397,18 @@ def social_photos(property, limit):
     took order_by("id") — so a reel and a carousel of the same house could open
     on different pictures.
 
+    Two filters, and they catch different things. The label is what the source
+    called the photo: SUUMO leaves the property's own gallery unlabelled and
+    labels the surroundings it appends — 病院, 公園, スーパー, 駅 — so more than
+    half of a listing's stored images can be the local hospital and the nearest
+    supermarket. Those are photographs, and no amount of looking at their pixels
+    would say otherwise. The floor plan is the opposite case: unlabelled, in the
+    gallery with the house, and obvious from its pixels. See drop_drawings.
+
+    Labels only exist for listings scraped after the field did, so this is a
+    filter that does more as the catalogue turns over, and nothing at all for
+    the rows already stored.
+
     Never returns an empty list when the listing has photos at all. Skipping is
     a preference about which photo is best, and it must not turn a listing with
     two photos into a listing we cannot post.
@@ -405,7 +417,17 @@ def social_photos(property, limit):
     kept = [
         photo for index, photo in enumerate(photos)
         if index not in SOCIAL_SKIP_PHOTO_POSITIONS
+        and (photo.label or "") not in SOCIAL_SKIP_PHOTO_LABELS
     ]
+    # A listing can be mostly surroundings — one sampled had eight neighbourhood
+    # photos and one of the house. Posting the house alone is right, and a reel
+    # built from one slide is still worth knowing about.
+    dropped = len(photos) - len(kept)
+    if dropped and len(kept) < 2:
+        logger.warning(
+            "%s: %s of %s photos are labelled as surroundings, leaving %s to "
+            "post.", property.url, dropped, len(photos), len(kept),
+        )
     # A few more than asked for: the drawings are found after downloading, and
     # dropping one there should not leave the post a photo short.
     return (kept or photos)[: limit + 2]

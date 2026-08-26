@@ -562,6 +562,59 @@ class SocialPhotoSelectionTests(TestCase):
             self.assertEqual(len(self.chosen(listing)), 2)
 
 
+class PhotoLabelTests(TestCase):
+    """Photos the source told us are not the house.
+
+    SUUMO appends a surroundings section to a listing's gallery and labels it —
+    病院, 公園, スーパー, 駅 — while leaving the property's own photos
+    unlabelled. In a sample of stored images 54% carried one of those labels.
+    They are photographs of real places, so the plan detector cannot help: only
+    the label separates the house from the hospital across the road.
+    """
+
+    def listing(self, labels):
+        listing = Property.objects.create(
+            url="https://suumo.jp/x", price=200, show_in_front=True,
+            featured=True, location="Oita Prefecture",
+        )
+        for i, label in enumerate(labels):
+            PropertyImage.objects.create(
+                property=listing, file=f"https://img.example.com/{i}.jpg",
+                label=label,
+            )
+        return listing
+
+    def chosen(self, listing, limit=4):
+        from social.utils import social_photos
+
+        return [p.label for p in social_photos(listing, limit)]
+
+    def test_the_neighbourhood_is_left_out(self):
+        listing = self.listing(["", "病院", "", "公園", "スーパー", "駅"])
+        self.assertEqual(self.chosen(listing), ["", ""])
+
+    def test_the_agents_headshot_is_left_out(self):
+        """担当者 — the person selling it, not the thing being sold."""
+        self.assertEqual(self.chosen(self.listing(["担当者", ""])), [""])
+
+    def test_the_propertys_own_equipment_is_kept(self):
+        """その他設備 is labelled too, and it is the kitchen and the sink. A
+        blanket 'drop anything labelled' would throw away good photographs."""
+        listing = self.listing(["", "その他設備", "病院"])
+        self.assertEqual(self.chosen(listing), ["", "その他設備"])
+
+    def test_unlabelled_photos_are_all_kept(self):
+        """Everything scraped before the field existed, which is most of it."""
+        listing = self.listing(["", "", ""])
+        self.assertEqual(len(self.chosen(listing)), 3)
+
+    def test_a_listing_of_nothing_but_surroundings_is_still_postable(self):
+        """Better a hospital than no post at all — and better still that the
+        warning in the log says why."""
+        listing = self.listing(["病院", "公園"])
+        self.assertEqual(len(self.chosen(listing)), 2)
+
+
 class DrawingDetectionTests(SimpleTestCase):
     """Telling a plan from a photograph, by its pixels.
 

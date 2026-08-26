@@ -335,6 +335,16 @@ class PropertyImage(models.Model):
     )
     show_in_front = models.BooleanField(default=True)
     first_image = models.BooleanField(default=False)
+    label = models.CharField(
+        max_length=64,
+        blank=True,
+        default="",
+        db_index=True,
+        help_text="What the source called this photo — SUUMO's alt text, e.g. "
+        "病院 (hospital), 公園 (park), 担当者 (the agent). Blank for the "
+        "property's own photos, and for everything scraped before this field "
+        "existed.",
+    )
 
     class Meta:
         verbose_name = "Property Image"

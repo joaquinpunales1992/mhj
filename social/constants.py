@@ -196,6 +196,38 @@ TIKTOK_STATUS_POLL_SECONDS = 20
 # position in here to drop it regardless of what it contains.
 SOCIAL_SKIP_PHOTO_POSITIONS = ()
 
+# Photo labels that mean "this is not the house".
+#
+# SUUMO labels the surroundings section it appends to a listing's photos, and
+# leaves the property's own gallery unlabelled. Across a sample of stored
+# images, 54% carried one of these — hospitals, schools, parks, supermarkets,
+# stations — and they are photographs, so the plan detector cannot see them.
+# 担当者 is the estate agent's headshot.
+#
+# A deny-list rather than "drop anything labelled", because その他設備 is
+# labelled too and it is the property's own kitchen and sink. Everything here
+# is a place near the house; nothing here is the house.
+#
+# Untranslated: this is matched against what the source wrote, not against
+# anything we display.
+SOCIAL_SKIP_PHOTO_LABELS = (
+    "担当者",            # the agent's photograph
+    "その他環境写真",     # "other environment photo"
+    "公園",              # park
+    "小学校",            # elementary school
+    "中学校",            # junior high school
+    "高校",              # high school
+    "幼稚園・保育園",     # kindergarten / nursery
+    "病院",              # hospital
+    "スーパー",          # supermarket
+    "コンビニ",          # convenience store
+    "ドラッグストア",     # drugstore
+    "ホームセンター",     # DIY store
+    "銀行",              # bank
+    "郵便局",            # post office
+    "駅",                # station
+)
+
 # Share of the image that is paper white — flat, exactly neutral — above which
 # it is treated as a floor plan rather than a photograph. Measured over 96
 # images from 20 listings: 12 drawings scored 0.40-0.79, every photograph 0.12

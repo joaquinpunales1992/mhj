@@ -174,6 +174,25 @@ def parse_listing(url: str, translate: bool = True) -> dict | None:
     # field does not need the other twenty-two re-translated, and issuing those
     # calls anyway is what rate-limited the translator into returning error
     # pages — the exact failure the repair exists to clean up.
+    # What SUUMO calls each photo. The main gallery — the house itself, and the
+    # floor plan with it — carries no alt at all; everything the surroundings
+    # section adds is labelled 病院, 公園, スーパー, 駅 and so on, and the
+    # agent's own headshot is 担当者. Half of what we store for a listing can be
+    # neighbourhood photography, so the label is the difference between posting
+    # a house and posting the local hospital.
+    #
+    # Matched by filename because the same photo appears both as a clean
+    # gazo/bukken original and inside a resizeImage src, and only one of the two
+    # is what we store.
+    photo_labels: dict[str, str] = {}
+    for tag in soup.find_all("img"):
+        tag_src = tag.get("src") or tag.get("data-src") or ""
+        found = re.search(r"(gazo%2[Ff]bukken[^&\"']+|gazo/bukken/[^\"'?]+)", tag_src)
+        if not found:
+            continue
+        name = urllib.parse.unquote(found.group(1)).rsplit("/", 1)[-1]
+        photo_labels.setdefault(name, (tag.get("alt") or "").strip())
+
     translator = GoogleTranslator(source="auto", target="en") if translate else None
 
     def t(value: str | None) -> str:
@@ -217,4 +236,10 @@ def parse_listing(url: str, translate: bool = True) -> dict | None:
         # Parsed from the raw Japanese, not the translation: see parse_jp_date.
         "listed_on": parse_jp_date(table.get("情報提供日", "")),
         "image_urls": image_urls,
+        # {url: label}. Untranslated on purpose: it is matched against a fixed
+        # list, never shown, and translating it would put it at the mercy of the
+        # endpoint that has been returning error pages.
+        "image_labels": {
+            url: photo_labels.get(url.rsplit("/", 1)[-1], "") for url in image_urls
+        },
     }

@@ -292,8 +292,12 @@ def persist_property(property_data: dict) -> None:
             # curation survives.
             image_urls = property_data.get("image_urls", [])
             if image_urls and not property_obj.property_has_any_image():
+                labels = property_data.get("image_labels") or {}
                 for image_url in image_urls:
-                    PropertyImage.objects.create(property=property_obj, file=image_url)
+                    PropertyImage.objects.create(
+                        property=property_obj, file=image_url,
+                        label=labels.get(image_url, ""),
+                    )
                 print(
                     f"Backfilled {len(image_urls)} images: {property_obj.title!r}"
                 )
@@ -343,7 +347,10 @@ def persist_property(property_data: dict) -> None:
         property_obj.save()
 
         for image_url in property_data.get("image_urls", []):
-            PropertyImage.objects.create(property=property_obj, file=image_url)
+            PropertyImage.objects.create(
+                property=property_obj, file=image_url,
+                label=(property_data.get("image_labels") or {}).get(image_url, ""),
+            )
 
         print(f"Saved: {property_obj.title!r}")
 
