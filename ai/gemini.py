@@ -59,7 +59,19 @@ class GeminiAI:
     # whatever else it does have is used as a further fallback — same approach
     # as the Cerebras client, and for the same reason: model names get retired
     # and a caption should not stop going out over a rename.
-    PREFERRED_MODELS = ["gemini-2.5-flash", "gemini-2.0-flash"]
+    # The alias first, deliberately. Pinning a version is what broke this:
+    # gemini-2.5-flash and gemini-2.0-flash were the preference, both were
+    # retired, and — worse — the API goes on LISTING 2.5-flash while answering
+    # a call to it with "no longer available to new users". So the availability
+    # check passed and every generation spent two guaranteed 404s before
+    # reaching a model that works. An alias that tracks the current flash model
+    # cannot go stale that way.
+    PREFERRED_MODELS = ["gemini-flash-latest", "gemini-3.6-flash"]
+
+    # Models that answered 404. A retired model does not come back, so asking it
+    # again — on every call, for the life of the process — is pure latency and
+    # pure quota. Class-level: one process should learn this once.
+    _RETIRED: set = set()
 
     # …but not just anything. Cerebras lists a handful of chat models, so
     # "whatever else is there" is a safe fallback. Google lists dozens, most of
@@ -156,11 +168,19 @@ class GeminiAI:
 
         last_exception = None
         for model in self._resolve_models():
+            if model in self._RETIRED:
+                continue
             try:
                 response = requests.post(
                     f"{API_ROOT}/models/{model}:generateContent",
                     headers=self._headers(), json=payload, timeout=self.TIMEOUT,
                 )
+                if response.status_code == 404:
+                    # Retired, not broken. Remember it: the listing endpoint
+                    # still advertises models that answer 404 here, so this is
+                    # the only place that finds out.
+                    self._RETIRED.add(model)
+                    raise RuntimeError(f"HTTP 404 (retired): {response.text[:200]}")
                 if response.status_code != 200:
                     # The body says which of quota, key and model is wrong;
                     # the status code on its own has sent me looking in the

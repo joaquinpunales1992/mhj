@@ -151,12 +151,35 @@ class GeminiClientTests(SimpleTestCase):
 
     def test_the_preferred_model_goes_first(self):
         with patch.object(gemini.requests, "get",
-                          return_value=model_list("gemini-9-turbo", "gemini-2.5-flash")):
+                          return_value=model_list("gemini-9-turbo",
+                                                  "gemini-flash-latest")):
             self.assertEqual(
                 GeminiAI()._resolve_models(),
-                ["gemini-2.5-flash", "gemini-9-turbo"],
+                ["gemini-flash-latest", "gemini-9-turbo"],
                 "and a model we have never heard of stays on as a fallback",
             )
+
+    def test_a_retired_model_is_not_asked_twice(self):
+        """The listing endpoint advertises models that answer 404 when called,
+        so this is the only place that finds out — and a retired model does not
+        come back. Asking it again on every call is pure latency and pure
+        quota: two wasted requests per generation, against a free tier that
+        allows twenty a day."""
+        GeminiAI._RETIRED.clear()
+        self.addCleanup(GeminiAI._RETIRED.clear)
+
+        gone = http(404, text="no longer available to new users")
+        with patch.object(gemini.requests, "get",
+                          return_value=model_list("gemini-flash-latest")), \
+             patch.object(gemini.requests, "post", return_value=gone) as post:
+            client = GeminiAI(api_key="k")
+            for _ in range(3):
+                with self.assertRaises(RuntimeError):
+                    client.generate_text("hello")
+
+        self.assertEqual(post.call_count, 1,
+                         "asked once, then remembered")
+        self.assertIn("gemini-flash-latest", GeminiAI._RETIRED)
 
     def test_a_speech_or_image_model_is_never_used_for_a_caption(self):
         """A caption was attempted against gemini-2.5-pro-tts.
