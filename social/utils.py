@@ -545,16 +545,49 @@ def _listing_card_urls(property: Property):
                 pass
 
 
+def _raw_photo_urls(images, limit=5):
+    """Source photo URLs, with the plans taken out.
+
+    The third of the three photo paths, and the one that used to leak. The
+    carousel and the reel both have the files on disk by the time they choose,
+    so drop_drawings can look at them; this one hands the source URLs straight
+    to the API and downloads nothing, so an unlabelled floor plan went out
+    whenever card rendering failed.
+
+    It downloads them now purely to ask the question, and throws them away
+    again. Rendering having failed does not mean the images are unreachable —
+    and if they are, the URL is kept rather than dropped: an image we could not
+    fetch is not an image we know to be a plan.
+    """
+    remote = [prepare_image_url_for_facebook(image.file.url) for image in images]
+    local = {}
+    for url in remote:
+        try:
+            local[url] = _download_image_to_tempfile(url)
+        except Exception as exc:
+            logger.warning("Could not inspect %s: %s", url, exc)
+
+    try:
+        if not local:
+            return remote[:limit]
+        kept = set(drop_drawings(list(local.values())))
+        return [url for url in remote
+                if url not in local or local[url] in kept][:limit]
+    finally:
+        for path in local.values():
+            try:
+                os.remove(path)
+            except OSError:
+                pass
+
+
 def _listing_media_urls(property: Property):
     """What a listing post should actually upload, branded if we can manage it."""
     if LISTING_CARDS_ENABLED:
         urls = _listing_card_urls(property)
         if urls:
             return urls
-    return [
-        prepare_image_url_for_facebook(image.file.url)
-        for image in social_photos(property, 5)
-    ]
+    return _raw_photo_urls(social_photos(property, 5))
 
 
 def post_to_instagram(

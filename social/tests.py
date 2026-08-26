@@ -627,6 +627,51 @@ class PhotoLabelTests(TestCase):
         self.assertEqual(len(self.chosen(listing)), 2)
 
 
+class RawPhotoFallbackTests(TestCase):
+    """The path taken when card rendering fails.
+
+    It uploads source URLs rather than files, so it never downloaded anything —
+    and so the plan detector, which reads pixels, never ran on it. A floor plan
+    went out whenever the renderer fell over.
+    """
+
+    def setUp(self):
+        self.listing = Property.objects.create(
+            url="https://suumo.jp/x", price=200, show_in_front=True,
+            location="Oita Prefecture",
+        )
+        for i in range(3):
+            PropertyImage.objects.create(
+                property=self.listing, file=f"https://img.example.com/{i}.jpg"
+            )
+
+    def urls(self, drawings=()):
+        """Run the fallback with a stubbed download and a stubbed detector."""
+        from social import utils
+
+        def fake_download(url):
+            return f"/tmp/{url.rsplit('/', 1)[-1]}"
+
+        def fake_drop(paths, keep_at_least=1):
+            kept = [p for p in paths if p.rsplit("/", 1)[-1] not in drawings]
+            return kept if len(kept) >= keep_at_least else list(paths)
+
+        with patch.object(utils, "_download_image_to_tempfile", fake_download), \
+             patch.object(utils, "drop_drawings", fake_drop), \
+             patch.object(utils, "os") as fake_os:
+            fake_os.remove.side_effect = lambda p: None
+            return utils._raw_photo_urls(list(self.listing.get_ordered_images()))
+
+    def test_a_plan_is_dropped_from_the_raw_photos(self):
+        self.assertEqual(
+            [u.rsplit("/", 1)[-1] for u in self.urls(drawings={"1.jpg"})],
+            ["0.jpg", "2.jpg"],
+        )
+
+    def test_nothing_is_dropped_when_there_are_no_plans(self):
+        self.assertEqual(len(self.urls()), 3)
+
+
 class DrawingDetectionTests(SimpleTestCase):
     """Telling a plan from a photograph, by its pixels.
 
