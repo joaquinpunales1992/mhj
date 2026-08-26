@@ -116,15 +116,58 @@ def parse_jp_date(text: str):
         return None
 
 
+# Google's error pages, as they read once the translator has stripped the HTML
+# out of them. The endpoint answers 500 with a page rather than an error status
+# the client library recognises, so what comes back looks like a successful
+# translation and gets saved as one.
+#
+# Matching on text is unpleasant, but the alternative is not available: by the
+# time safe_translate sees this, deep-translator has thrown the status code
+# away. Both apostrophes are here because the page uses a typographic one and
+# it is not worth betting that it always will.
+TRANSLATION_ERROR_MARKERS = (
+    "That’s all we know",
+    "That's all we know",
+    "That’s an error",
+    "That's an error",
+)
+
+
+def looks_like_an_error_page(text: str) -> bool:
+    """True when a 'translation' is actually Google's error page.
+
+    This is how listings ended up titled "Error 500 (Server Error)!!1500.
+    That's an error..." on the site — and, since get_title_for_front cuts at 20
+    characters, how a row of cards ended up reading "Error 500 (Server Er...".
+    """
+    return any(marker in text for marker in TRANSLATION_ERROR_MARKERS)
+
+
 def safe_translate(value: str | None, translator: GoogleTranslator | None = None) -> str:
+    """Translate to English, or give back the original untouched.
+
+    Never returns something that was not a translation. A failure here is
+    written to the database and displayed for as long as the row lives, so the
+    Japanese source text is the right thing to keep: it is honest about what we
+    have, and a later run can still translate it. Google's apology cannot be
+    turned back into a house.
+    """
     if not value:
         return ""
     translator = translator or GoogleTranslator(source="auto", target="en")
+    original = value[:MAX_TRANSLATE_CHARS]
     try:
-        return translator.translate(value[:MAX_TRANSLATE_CHARS]) or ""
+        translated = translator.translate(original) or ""
     except Exception as exc:
         print(f"Translation error: {exc}")
-        return value[:MAX_TRANSLATE_CHARS]
+        return original
+
+    if looks_like_an_error_page(translated):
+        # Not raised, so the try above cannot catch it: the request "succeeded"
+        # and returned a page about having failed.
+        print(f"Translator returned an error page for {original[:40]!r}; keeping the original.")
+        return original
+    return translated
 
 
 def run_source(
