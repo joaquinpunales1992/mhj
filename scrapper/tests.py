@@ -154,10 +154,45 @@ class TranslationErrorPageTests(TestCase):
             "Please report any error in this listing to the agent."))
 
     def test_an_error_page_is_never_returned_as_a_translation(self):
-        self.assertEqual(
-            self.translate("新潟県糸魚川市の中古一戸建て", self.ERROR_PAGE),
-            "新潟県糸魚川市の中古一戸建て",
-        )
+        """With no model configured, the Japanese is what is kept."""
+        with patch("scrapper.scrapper.translate_with_model", return_value=""):
+            self.assertEqual(
+                self.translate("新潟県糸魚川市の中古一戸建て", self.ERROR_PAGE),
+                "新潟県糸魚川市の中古一戸建て",
+            )
+
+    def test_the_model_translates_when_the_endpoint_will_not(self):
+        """The free endpoint blocks the address a burst came from, which is not
+        a cooldown a server with one IP can wait out. The keyed API is not
+        subject to it."""
+        with patch("scrapper.scrapper.translate_with_model",
+                   return_value="Used detached house in Itoigawa, Niigata"):
+            self.assertEqual(
+                self.translate("新潟県糸魚川市の中古一戸建て", self.ERROR_PAGE),
+                "Used detached house in Itoigawa, Niigata",
+            )
+
+    def test_the_model_is_not_asked_when_the_endpoint_works(self):
+        """It is the fallback, not the translator. The free one is free."""
+        with patch("scrapper.scrapper.translate_with_model") as model:
+            self.translate("中古一戸建て", "Used detached house")
+        model.assert_not_called()
+
+    def test_a_model_that_explains_itself_is_ignored(self):
+        """A paragraph back from a phrase is a refusal or a preamble, and the
+        Japanese is better than either."""
+        from scrapper.scrapper import translate_with_model
+
+        essay = "I cannot translate this, but here is some context: " + "x" * 500
+        with patch("ai.providers.ai_client") as client:
+            client.return_value.generate_text.return_value = essay
+            self.assertEqual(translate_with_model("中古"), "")
+
+    def test_no_model_configured_is_not_an_error(self):
+        from scrapper.scrapper import translate_with_model
+
+        with patch("ai.providers.ai_client", side_effect=RuntimeError("no key")):
+            self.assertEqual(translate_with_model("中古"), "")
 
     def test_a_real_translation_is_returned(self):
         self.assertEqual(self.translate("中古一戸建て", "Used detached house"),

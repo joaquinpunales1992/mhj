@@ -165,9 +165,52 @@ def safe_translate(value: str | None, translator: GoogleTranslator | None = None
     if looks_like_an_error_page(translated):
         # Not raised, so the try above cannot catch it: the request "succeeded"
         # and returned a page about having failed.
-        print(f"Translator returned an error page for {original[:40]!r}; keeping the original.")
-        return original
+        print(f"Translator returned an error page for {original[:40]!r}; asking the model.")
+        return translate_with_model(original) or original
     return translated
+
+
+# Enough of the field to be sure, and short enough that a stray instruction
+# inside a listing cannot turn into a paragraph.
+MODEL_TRANSLATION_PROMPT = (
+    "Translate this Japanese real-estate listing text into English.\n"
+    "Reply with the translation and nothing else — no quotes, no notes, no "
+    "explanation. Keep numbers, areas and measurements exactly as they are. "
+    "If it is already English, reply with it unchanged.\n\n"
+    "{text}"
+)
+
+
+def translate_with_model(value: str) -> str:
+    """Translate through the LLM chain, for when the free endpoint will not.
+
+    The scraped endpoint answers a burst of requests by blocking the address it
+    came from, which is not a cooldown you can wait out on a server with one IP.
+    The bot already holds keys for Gemini and Cerebras; an authenticated API is
+    not subject to that block, and translating a listing title is well inside
+    what it does.
+
+    Second, not first: the free endpoint is free, and this runs only for fields
+    that would otherwise be stored as an error page.
+
+    Returns "" when there is no model configured or it fails, which leaves the
+    caller holding the Japanese — the same outcome as before this existed.
+    """
+    try:
+        from ai.providers import ai_client
+
+        answer = ai_client().generate_text(MODEL_TRANSLATION_PROMPT.format(text=value))
+    except Exception as exc:
+        print(f"Model translation failed: {exc}")
+        return ""
+
+    answer = (answer or "").strip()
+    # A model that has decided to explain itself has not translated anything.
+    # Listing fields are short; a paragraph back from a phrase is a refusal or
+    # a preamble, and the Japanese is better than either.
+    if not answer or len(answer) > max(400, len(value) * 6):
+        return ""
+    return answer
 
 
 def run_source(
