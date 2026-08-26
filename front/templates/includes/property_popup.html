@@ -151,6 +151,9 @@
 			}
 			// The fragment arrives after units.js has already run.
 			if (window.mhjUnits) window.mhjUnits.apply();
+			// Start on the second photo before it is asked for, so the first
+			// arrow click is a cache hit like every one after it.
+			warm(body.querySelectorAll('.pv-shot'), 0);
 		}
 
 		function open(pk) {
@@ -226,6 +229,31 @@
 			if (e.key === 'Escape' && overlay.classList.contains('open')) close();
 		});
 
+		/* Fetch the slides either side of the one on screen.
+		 *
+		 * The slides are display:none until they are current, and a lazy image
+		 * that is never rendered is never fetched — so without this, every
+		 * arrow click started a cold request to the image proxy and showed the
+		 * frame's black background for about a second while it ran. Warming the
+		 * neighbours while the visitor looks at the current photo turns that
+		 * into a cache hit.
+		 *
+		 * new Image() rather than touching the <img>: the elements already
+		 * carry their src, so this only has to put the bytes in the HTTP cache
+		 * and let the browser find them there. Nothing is rendered, nothing
+		 * needs cleaning up, and a failed warm is silent — the real <img> still
+		 * has its own onerror fallback to the unproxied original.
+		 */
+		function warm(shots, at) {
+			if (!shots || !shots.length) return;
+			[at - 1, at + 1].forEach(function (i) {
+				var shot = shots[(i + shots.length) % shots.length];
+				if (!shot || shot.dataset.warm || !shot.getAttribute('src')) return;
+				shot.dataset.warm = '1';
+				new Image().src = shot.getAttribute('src');
+			});
+		}
+
 		// Everything inside the panel is delegated, because the panel's
 		// contents arrive after this script has run and are replaced each
 		// time a different listing is opened.
@@ -246,6 +274,9 @@
 				shots[at].classList.add('is-current');
 				var counter = body.querySelector('.pv-at');
 				if (counter) counter.textContent = at + 1;
+				// Both ways: whichever arrow was used, the visitor is as likely
+				// to carry on in that direction as to turn back.
+				warm(shots, at);
 				return;
 			}
 

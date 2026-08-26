@@ -5,6 +5,8 @@ with a 404 at a URL that a payment provider, an app reviewer or a regulator is
 the one to discover. A template rename would do it silently.
 """
 
+import re
+
 from django.core.cache import cache
 from django.test import TestCase, override_settings
 
@@ -260,6 +262,45 @@ class PropertyPreviewTests(HomePageTestCase):
     def test_the_card_links_carry_the_hook_the_popup_binds_to(self):
         """The home page opens this; without data-preview nothing would."""
         self.assertContains(self.client.get("/"), "data-preview=")
+
+
+class PreviewImageLoadingTests(PropertyPreviewTests):
+    """What the popup asks the network for.
+
+    The popup opens on top of a card that is already showing the same photo.
+    If it asks for that photo at a different width it is a different URL, the
+    browser cache cannot help, and the visitor waits on the image proxy for a
+    picture that is on screen behind the popup — measured at 1.42s cold against
+    0.23s warm.
+    """
+
+    def first_shot_src(self):
+        body = self.preview().content.decode()
+        at = body.index('class="pv-shot')
+        return re.search(r'src="([^"]+)"', body[at:]).group(1)
+
+    def card_src(self):
+        """What the home page's card renders for the same listing."""
+        grid = self.client.get("/").content.decode()
+        at = grid.index(f'data-preview="{self.property.pk}"')
+        return re.search(r'src="([^"]+)"', grid[at:]).group(1)
+
+    def test_the_first_photo_is_the_url_the_card_already_loaded(self):
+        self.assertEqual(self.first_shot_src(), self.card_src())
+
+    def test_the_first_photo_is_not_deferred(self):
+        """It is the one image guaranteed to be looked at."""
+        body = self.preview().content.decode()
+        first = body[body.index('class="pv-shot'):]
+        self.assertIn('loading="eager"', first[: first.index(">")])
+
+    def test_the_rest_are_deferred(self):
+        """Eight eager images would be eight cold proxy fetches on open, for
+        photos most visitors never advance to. The popup's script warms the
+        neighbours instead."""
+        body = self.preview().content.decode()
+        self.assertEqual(body.count('loading="eager"'), 1)
+        self.assertGreater(body.count('loading="lazy"'), 1)
 
 
 class ConsultationCtaTests(HomePageTestCase):

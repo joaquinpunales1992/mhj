@@ -24,12 +24,30 @@
               refuses this particular source image the original still loads.
               Without it a proxy outage leaves a black frame where the photo is,
               which is what happened while I was taking screenshots of this.
+
+              thumb:700 is not a guess and must match home.html's card exactly.
+              The popup opens on top of a card showing this very photo — same
+              get_ordered_images().first() — so an identical URL is already in
+              the browser's cache and the first slide paints instantly. It used
+              to ask for 900, which changes nothing about the image (these
+              sources cap at 600px, and `we` does not upscale, so 700 and 900
+              return the same bytes) and everything about the cache: a URL the
+              browser has never seen. Measured against the proxy, that is 1.42s
+              cold against 0.23s warm, for a photo already on screen.
+
+              The first slide loads eagerly. The rest cannot lazy-load anyway —
+              they are display:none, and a lazy image that is never rendered is
+              never fetched — so they are warmed by the popup's script as the
+              visitor advances, rather than each arrow click starting a cold
+              fetch against a black frame.
             {% endcomment %}
             <img class="pv-shot{% if forloop.first %} is-current{% endif %}"
-                 src="{{ image.file|thumb:900 }}" data-full="{{ image.file }}"
+                 src="{{ image.file|thumb:700 }}" data-full="{{ image.file }}"
                  onerror="if(this.dataset.full&&this.src!==this.dataset.full){this.src=this.dataset.full}"
                  data-index="{{ forloop.counter0 }}"
-                 alt="{{ property.get_title_for_front }}" loading="lazy" decoding="async">
+                 alt="{{ property.get_title_for_front }}"
+                 {% if forloop.first %}loading="eager" fetchpriority="high"{% else %}loading="lazy"{% endif %}
+                 decoding="async">
           {% endfor %}
           {% comment %}
             The withheld photos become a slide rather than disappearing — the
