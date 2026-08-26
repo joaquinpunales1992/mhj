@@ -300,9 +300,17 @@ REEL_HOOK_PRICE_FIRST = True
 # it has room for.
 REEL_HOOK_PLACE_MAX_CHARS = 44
 
-# Reels also appear in the main feed and the profile grid. There is no reason to
-# publish into the Reels tab alone — it is the same video with less shelf space.
-REEL_SHARE_TO_FEED = True
+# Whether a reel is also published into the main feed and the profile grid.
+#
+# False, which is a decision rather than a default: the grid is the shop window
+# and a video thumbnail in it is not the same thing as a photograph of a house.
+# It was set deliberately in "avoid sharing reel on feed" (f8aaae9), and this
+# constant then flipped it to True inside an unrelated commit about storing
+# insight ids — with a comment claiming there was no reason to keep reels out
+# of the feed. The reason was in the git history the whole time.
+#
+# Flip it to True to put reels in the grid as well.
+REEL_SHARE_TO_FEED = False
 
 
 # --- Community manager -----------------------------------------------------

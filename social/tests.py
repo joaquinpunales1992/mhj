@@ -464,10 +464,17 @@ class ReelPostingTests(TestCase):
         self.assertTrue(post.caption_angle, "which angle was used must be recorded")
         self.assertEqual(post.overlay_hook, "Wake Up Here")
 
-    def test_the_reel_is_shared_to_the_feed(self):
-        """Reels-tab-only publishing gave up the feed and the profile grid."""
+    def test_the_reel_stays_out_of_the_feed(self):
+        """Keeping reels out of the grid was a deliberate choice — see
+        "avoid sharing reel on feed" (f8aaae9). It was reversed here once, in a
+        commit about something else, along with a test asserting the reversal
+        was right. The test is the thing that would have made it stick, so it
+        now pins the decision rather than the accident.
+
+        REEL_SHARE_TO_FEED is the switch if that decision ever changes.
+        """
         self.post_reel()
-        self.assertTrue(self.media_payload["share_to_feed"])
+        self.assertFalse(self.media_payload["share_to_feed"])
 
     def test_the_caption_sent_to_instagram_leads_with_the_price(self):
         """Not just built price-led — sent that way."""
