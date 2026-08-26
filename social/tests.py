@@ -597,6 +597,18 @@ class PhotoLabelTests(TestCase):
         """担当者 — the person selling it, not the thing being sold."""
         self.assertEqual(self.chosen(self.listing(["担当者", ""])), [""])
 
+    def test_the_floor_plan_is_left_out_by_its_label(self):
+        """SUUMO names it 間取り図 outright. Reading that beats inferring it
+        from the pixels — and it is what the first version of this missed,
+        because the carousel puts the URL in `rel` and lazily loads the src."""
+        listing = self.listing(["現地外観写真", "間取り図", "リビング"])
+        self.assertEqual(self.chosen(listing), ["現地外観写真", "リビング"])
+
+    def test_the_rooms_are_kept(self):
+        """Everything the source calls part of the property stays in."""
+        listing = self.listing(["リビング", "キッチン", "浴室", "玄関"])
+        self.assertEqual(len(self.chosen(listing, limit=6)), 4)
+
     def test_the_propertys_own_equipment_is_kept(self):
         """その他設備 is labelled too, and it is the kitchen and the sink. A
         blanket 'drop anything labelled' would throw away good photographs."""

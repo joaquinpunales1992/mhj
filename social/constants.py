@@ -211,6 +211,15 @@ SOCIAL_SKIP_PHOTO_POSITIONS = ()
 # Untranslated: this is matched against what the source wrote, not against
 # anything we display.
 SOCIAL_SKIP_PHOTO_LABELS = (
+    # Drawings. The source says outright which image is the plan, which is
+    # better than inferring it from pixels — drop_drawings still covers the
+    # listings that carry no labels at all.
+    "間取り図",          # floor plan
+    "区画図",            # plot plan
+    "土地図面",          # land drawing
+    "その他図面",        # other drawings
+    "周辺地図",          # area map
+    # Not the house.
     "担当者",            # the agent's photograph
     "その他環境写真",     # "other environment photo"
     "公園",              # park

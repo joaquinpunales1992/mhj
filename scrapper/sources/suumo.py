@@ -174,24 +174,45 @@ def parse_listing(url: str, translate: bool = True) -> dict | None:
     # field does not need the other twenty-two re-translated, and issuing those
     # calls anyway is what rate-limited the translator into returning error
     # pages — the exact failure the repair exists to clean up.
-    # What SUUMO calls each photo. The main gallery — the house itself, and the
-    # floor plan with it — carries no alt at all; everything the surroundings
-    # section adds is labelled 病院, 公園, スーパー, 駅 and so on, and the
-    # agent's own headshot is 担当者. Half of what we store for a listing can be
-    # neighbourhood photography, so the label is the difference between posting
-    # a house and posting the local hospital.
+    # What SUUMO calls each photo. Every image on a detail page is categorised:
+    # the property's own (間取り図 the floor plan, リビング, キッチン, 浴室,
+    # 現地外観写真 the exterior) and the surroundings section it appends
+    # (スーパー, 駅, 小学校, 病院), plus 担当者 for the agent's headshot.
     #
-    # Matched by filename because the same photo appears both as a clean
-    # gazo/bukken original and inside a resizeImage src, and only one of the two
-    # is what we store.
-    photo_labels: dict[str, str] = {}
-    for tag in soup.find_all("img"):
-        tag_src = tag.get("src") or tag.get("data-src") or ""
-        found = re.search(r"(gazo%2[Ff]bukken[^&\"']+|gazo/bukken/[^\"'?]+)", tag_src)
+    # Two places carry it, and both are needed. The carousel's anchor holds
+    # data-category beside a data-src, and that is the authoritative name. The
+    # <img> inside it repeats it as alt — but lazily, with the URL in `rel`
+    # rather than src, which is how a first attempt at this read the page and
+    # saw only the surroundings thumbnails: those are the ones with a real src.
+    # The floor plan came back unlabelled, and it is the most clearly labelled
+    # image on the page.
+    #
+    # Matched by filename because the same photo appears as a clean gazo/bukken
+    # original and inside a resizeImage src, and only one of the two is stored.
+    def _photo_key(value):
+        if isinstance(value, (list, tuple)):
+            value = " ".join(value)
+        found = re.search(
+            r"(gazo%2[Ff]bukken[^&\"']+|gazo/bukken/[^\"'?]+)", value or ""
+        )
         if not found:
+            return None
+        return urllib.parse.unquote(found.group(1)).rsplit("/", 1)[-1]
+
+    photo_labels: dict[str, str] = {}
+    for anchor in soup.find_all(attrs={"data-category": True}):
+        name = _photo_key(anchor.get("data-src") or anchor.get("href") or "")
+        if name:
+            photo_labels.setdefault(name, (anchor["data-category"] or "").strip())
+    for tag in soup.find_all("img"):
+        alt = (tag.get("alt") or "").strip()
+        if not alt:
             continue
-        name = urllib.parse.unquote(found.group(1)).rsplit("/", 1)[-1]
-        photo_labels.setdefault(name, (tag.get("alt") or "").strip())
+        name = _photo_key(
+            tag.get("src") or tag.get("data-src") or tag.get("rel") or ""
+        )
+        if name:
+            photo_labels.setdefault(name, alt)
 
     translator = GoogleTranslator(source="auto", target="en") if translate else None
 
