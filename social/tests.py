@@ -1282,3 +1282,342 @@ class ReelRenderSmokeTests(TestCase):
         frame_path = os.path.join(out_dir, "reel-frame.png")
         VideoFileClip(video_path).save_frame(frame_path, t=1)
         self.assertTrue(os.path.getsize(frame_path) > 0)
+
+
+class PlaceSourceTests(TestCase):
+    """The places source: what it will say about a town, and what stops it.
+
+    Nothing here reaches Wikipedia. What is worth covering is everything that
+    decides whether a post happens at all — that the article found is the right
+    place, that the listing count reaches the facts, that a place said recently
+    is not said again — because each of those failing produces a post that is
+    confidently wrong rather than an error somebody notices.
+    """
+
+    SUMMARY = {
+        "type": "standard",
+        "title": "Ōita Prefecture",
+        "description": "Prefecture of Japan",
+        "extract": (
+            "Ōita Prefecture is a prefecture of Japan located on the island of "
+            "Kyushu. Its capital and largest city is Ōita. The prefecture has "
+            "a coastline on the Seto Inland Sea. It borders Fukuoka Prefecture "
+            "to the northwest and Miyazaki Prefecture to the south."
+        ),
+        "wikibase_item": "Q131199",
+        "content_urls": {
+            "desktop": {"page": "https://en.wikipedia.org/wiki/Oita_Prefecture"}
+        },
+    }
+
+    def setUp(self):
+        # Imported here rather than at the top of the file: places reaches the
+        # stats source, and with it social.utils, moviepy and numpy.
+        from social.content.sources import places
+
+        self.places = places
+
+    def house(self, location="Oita Prefecture", price=200):
+        return Property.objects.create(
+            url=f"https://example.com/{Property.objects.count()}",
+            price=price, show_in_front=True, location=location,
+        )
+
+    def candidate(self, place="Oita", prefecture="Oita", count=4, name=None):
+        return {
+            "place": place, "prefecture": prefecture, "count": count,
+            "name": name or place.split(",")[0].replace(" City", "").strip(),
+            "query": f"{place} Japan", "key": self.places._key(place),
+        }
+
+    def responses(self, summary=SUMMARY, claims=None, title="Ōita Prefecture"):
+        """Stand in for every HTTP call the source makes, dispatched by URL."""
+
+        def _get_json(url, params=None):
+            if url.startswith(self.places.WIKIPEDIA_SUMMARY):
+                return summary
+            if url == self.places.WIKIDATA_API:
+                return claims or {"claims": {}}
+            return {"query": {"search": [{"title": title}] if title else []}}
+
+        return patch.object(self.places, "_get_json", _get_json)
+
+    def test_macrons_are_folded_before_anything_is_compared(self):
+        self.assertEqual(self.places._fold("Ōita"), "Oita")
+        self.assertEqual(self.places._key("Tsukumi City, Ōita"),
+                         "place:tsukumi-city-oita")
+
+    def test_a_place_needs_enough_houses_to_be_worth_a_post(self):
+        for _ in range(2):
+            self.house()
+        self.assertEqual(self.places._candidates(), [])
+
+        self.house()
+        self.assertEqual(
+            [c["place"] for c in self.places._candidates()], ["Oita"]
+        )
+
+    def test_the_town_and_the_prefecture_are_both_offered(self):
+        for _ in range(3):
+            self.house(location="Tsukumi City, Oita Prefecture")
+        places_found = {c["place"] for c in self.places._candidates()}
+        self.assertEqual(places_found, {"Tsukumi City, Oita", "Oita"})
+
+    def test_an_address_naming_no_prefecture_is_skipped(self):
+        """Without one there is no way to check Wikipedia found the right
+        town, and Japanese place names repeat."""
+        for _ in range(4):
+            self.house(location="7-2 Chome, somewhere")
+        self.assertEqual(self.places._candidates(), [])
+
+    def test_a_house_that_is_not_live_does_not_count_towards_a_place(self):
+        for _ in range(3):
+            self.house()
+        Property.objects.update(show_in_front=False)
+        self.assertEqual(self.places._candidates(), [])
+
+    def test_the_article_has_to_be_about_the_prefecture_we_meant(self):
+        """There is a Fuchu in Tokyo and a Fuchu in Hiroshima."""
+        elsewhere = dict(
+            self.SUMMARY,
+            title="Fuchū, Hiroshima",
+            description="City in Japan",
+            extract="Fuchū is a city in Hiroshima Prefecture, Japan. " * 4,
+        )
+        with self.responses(summary=elsewhere):
+            material = self.places._material(
+                self.candidate(place="Fuchu City, Tokyo", prefecture="Tokyo")
+            )
+        self.assertIsNone(material)
+
+    def test_a_disambiguation_page_is_not_posted(self):
+        with self.responses(summary=dict(self.SUMMARY, type="disambiguation")):
+            self.assertIsNone(self.places._material(self.candidate()))
+
+    def test_a_stub_article_is_not_posted(self):
+        thin = dict(self.SUMMARY, extract="Ōita is in Japan.")
+        with self.responses(summary=thin):
+            self.assertIsNone(self.places._material(self.candidate()))
+
+    def test_a_place_with_no_article_at_all_is_not_posted(self):
+        def _get_json(url, params=None):
+            if url.startswith(self.places.WIKIPEDIA_SUMMARY):
+                raise RuntimeError("404 Not Found")
+            return {"query": {"search": []}}
+
+        with patch.object(self.places, "_get_json", _get_json):
+            self.assertIsNone(self.places._material(self.candidate()))
+
+    def test_the_facts_carry_the_article_and_our_own_listing_count(self):
+        with self.responses():
+            material = self.places._material(self.candidate(count=7))
+
+        self.assertEqual(material.kind, SocialPost.KIND_GUIDE)
+        self.assertIn("7 of our houses are in Oita", material.headline)
+        joined = " ".join(material.facts)
+        self.assertIn("The Wikipedia article on Ōita Prefecture says:", joined)
+        self.assertIn("We have 7 houses listed in Oita", joined)
+        self.assertIn("Ōita Prefecture", material.footnote)
+        self.assertTrue(material.link.startswith("https://en.wikipedia.org/"))
+
+    def test_the_facts_stop_at_the_first_few_sentences(self):
+        """The rest of the article is detail the copy would feel obliged to
+        use, and every extra sentence is another claim to stand behind."""
+        with self.responses():
+            material = self.places._material(self.candidate())
+        self.assertNotIn("borders Fukuoka", material.facts[0])
+
+    def test_the_purchase_disclaimer_stays_off_a_place_post(self):
+        """needs_review also appends the tax and rules disclaimer, which under
+        a post about what a town is like reads as a warning about the town."""
+        from social.content.copy import DISCLAIMER, build_caption
+
+        with self.responses():
+            material = self.places._material(self.candidate())
+
+        self.assertFalse(material.needs_review)
+        self.assertNotIn(DISCLAIMER, build_caption(material, "some copy"))
+
+    def test_the_population_used_is_the_one_wikidata_prefers(self):
+        claims = {"claims": {"P1082": [
+            self.claim("+1000000", "+2010-01-01T00:00:00Z"),
+            self.claim("+1100000", "+2020-01-01T00:00:00Z"),
+        ]}}
+        with self.responses(claims=claims):
+            material = self.places._material(self.candidate())
+        self.assertIn(
+            "Wikidata records the population of Ōita Prefecture as 1,100,000.",
+            material.facts,
+        )
+
+        claims["claims"]["P1082"].append(
+            self.claim("+900000", "+2005-01-01T00:00:00Z", rank="preferred")
+        )
+        with self.responses(claims=claims):
+            material = self.places._material(self.candidate())
+        self.assertIn(
+            "Wikidata records the population of Ōita Prefecture as 900,000.",
+            material.facts,
+        )
+
+    def claim(self, amount, when, rank="normal"):
+        return {
+            "rank": rank,
+            "mainsnak": {"datavalue": {"value": {"amount": amount}}},
+            "qualifiers": {
+                "P585": [{"datavalue": {"value": {"time": when}}}]
+            },
+        }
+
+    def test_a_missing_population_is_not_a_reason_to_say_nothing(self):
+        def _get_json(url, params=None):
+            if url == self.places.WIKIDATA_API:
+                raise RuntimeError("wikidata is down")
+            if url.startswith(self.places.WIKIPEDIA_SUMMARY):
+                return self.SUMMARY
+            return {"query": {"search": [{"title": "Ōita Prefecture"}]}}
+
+        with patch.object(self.places, "_get_json", _get_json):
+            material = self.places._material(self.candidate())
+
+        self.assertIsNotNone(material)
+        self.assertFalse([f for f in material.facts if "Wikidata" in f])
+
+    def test_a_place_said_inside_the_cooldown_is_not_fetched_again(self):
+        from social.models import ContentDraft
+
+        for _ in range(3):
+            self.house()
+        with self.responses():
+            self.assertEqual(len(self.places.gather()), 1)
+
+        ContentDraft.objects.create(
+            kind=SocialPost.KIND_GUIDE, key="place:oita",
+            question="Oita", answer="",
+        )
+        with self.responses():
+            self.assertEqual(self.places.gather(), [])
+
+    def test_the_same_place_is_offered_again_once_the_cooldown_expires(self):
+        from social.models import ContentDraft
+
+        for _ in range(3):
+            self.house()
+        draft = ContentDraft.objects.create(
+            kind=SocialPost.KIND_GUIDE, key="place:oita",
+            question="Oita", answer="",
+        )
+        # created_at is auto_now_add, so it has to be written afterwards.
+        ContentDraft.objects.filter(pk=draft.pk).update(
+            created_at=timezone.now() - timedelta(days=200)
+        )
+        with self.responses():
+            self.assertEqual(len(self.places.gather()), 1)
+
+    def test_one_unresolvable_place_does_not_silence_the_rest(self):
+        for _ in range(3):
+            self.house(location="Tsukumi City, Oita Prefecture")
+
+        def _get_json(url, params=None):
+            if "Tsukumi" in url or "Tsukumi" in str(params):
+                raise RuntimeError("wikipedia said no")
+            if url.startswith(self.places.WIKIPEDIA_SUMMARY):
+                return self.SUMMARY
+            if url == self.places.WIKIDATA_API:
+                return {"claims": {}}
+            return {"query": {"search": [{"title": "Ōita Prefecture"}]}}
+
+        with patch.object(self.places, "_get_json", _get_json):
+            materials = self.places.gather()
+
+        # The town is lost and the prefecture it is in still gets posted.
+        self.assertEqual([m.key for m in materials], ["place:oita"])
+
+    def test_the_station_of_the_same_name_is_stepped_over(self):
+        """When the guessed title misses and search takes over, its best match
+        for a town is regularly the town's railway station — which names Japan
+        and the prefecture, and would otherwise verify."""
+        station = {
+            "type": "standard", "title": "Tsukumi Station",
+            "description": "Railway station in Tsukumi, Ōita, Japan",
+            "extract": "Tsukumi Station is a railway station in Tsukumi, "
+                       "Ōita Prefecture, Japan. It is operated by JR Kyushu "
+                       "and sits on the Nippō Main Line.",
+            "wikibase_item": "Q900001",
+            "content_urls": {"desktop": {"page": "https://en.wikipedia.org/x"}},
+        }
+        town = {
+            "type": "standard", "title": "Tsukumi, Ōita",
+            "description": "City in Ōita Prefecture, Japan",
+            "extract": "Tsukumi is a city in Ōita Prefecture, Japan. The city "
+                       "sits on a inlet of the Bungo Channel and was founded "
+                       "in 1951. Limestone quarrying and cement have long been "
+                       "its main industries.",
+            "wikibase_item": "Q900002",
+            "content_urls": {"desktop": {"page": "https://en.wikipedia.org/y"}},
+        }
+
+        def _get_json(url, params=None):
+            if url.startswith(self.places.WIKIPEDIA_SUMMARY):
+                if "Station" in url:
+                    return station
+                if "%C5%8C" in url:      # the macron, which we cannot guess
+                    return town
+                raise RuntimeError("404 Not Found")
+            if url == self.places.WIKIDATA_API:
+                return {"claims": {}}
+            return {"query": {"search": [
+                {"title": "Tsukumi Station"},
+                {"title": "Tsukumi, Ōita"},
+            ]}}
+
+        with patch.object(self.places, "_get_json", _get_json):
+            material = self.places._material(
+                self.candidate(place="Tsukumi City, Oita",
+                               prefecture="Oita", count=9)
+            )
+
+        self.assertIsNotNone(material)
+        self.assertIn("Tsukumi, Ōita", material.footnote)
+        self.assertIn("Tsukumi is a city", material.facts[0])
+
+    def test_the_prefectures_own_article_cannot_stand_in_for_a_town(self):
+        """It names Japan and the prefecture, so the only thing separating it
+        from the town's article is the town's name."""
+        with self.responses():   # the article on Ōita Prefecture
+            material = self.places._material(
+                self.candidate(place="Tsukumi City, Oita", prefecture="Oita")
+            )
+        self.assertIsNone(material)
+
+    def test_wikidata_is_not_asked_when_the_article_gave_a_population(self):
+        """Two censuses, two numbers, and copy.py would accept either — so the
+        fact list carries one population or none."""
+        stated = dict(
+            self.SUMMARY,
+            extract="Ōita Prefecture is a prefecture of Japan on Kyushu. "
+                    "Ōita Prefecture has a population of 1,081,646 and an "
+                    "area of 6,340 square kilometres. Its capital is Ōita.",
+        )
+        claims = {"claims": {"P1082": [
+            self.claim("+1121589", "+2023-01-01T00:00:00Z")
+        ]}}
+        with self.responses(summary=stated, claims=claims):
+            material = self.places._material(self.candidate())
+
+        self.assertIn("1,081,646", material.facts[0])
+        self.assertFalse([f for f in material.facts if "Wikidata" in f])
+
+    def test_the_japanese_name_leaves_no_double_space_on_the_card(self):
+        spaced = dict(
+            self.SUMMARY,
+            title="Shizuoka Prefecture",
+            extract="Shizuoka Prefecture  is a prefecture of Japan located in "
+                    "the Chubu region. Its capital is the city of Shizuoka. "
+                    "It borders Kanagawa Prefecture to the east.",
+        )
+        with self.responses(summary=spaced):
+            material = self.places._material(
+                self.candidate(place="Shizuoka", prefecture="Shizuoka")
+            )
+        self.assertNotIn("  ", material.facts[0])

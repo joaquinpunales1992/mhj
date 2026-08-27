@@ -327,6 +327,7 @@ CONTENT_WEIGHTS = {
     "news": 2.0,
     "data": 2.0,
     "faq": 2.0,
+    "guide": 2.0,
 }
 
 # How long before the same subject may be posted again. News is keyed by URL and
@@ -422,3 +423,29 @@ NEWS_KEYWORDS_WEAK = [
 
 # Kept as an alias: anything still importing the flat list gets both tiers.
 NEWS_KEYWORDS = NEWS_KEYWORDS_STRONG + NEWS_KEYWORDS_WEAK
+
+# --- Places ----------------------------------------------------------------
+# Posts about where the houses are rather than about the houses. The candidates
+# come from our own inventory, so these numbers decide how much of the country
+# the account is willing to talk about.
+
+# Below this many listings a place is not somewhere we can say much about, and
+# "1 of our houses is in Gunma" is not a post.
+PLACE_MIN_LISTINGS = 3
+
+# Each place costs at least one request to Wikipedia, and several when the
+# guessed title misses. The planner only ever picks one material anyway.
+PLACE_MAX_PER_RUN = 4
+
+# Long, because a place does not change and the account would otherwise work
+# through its handful of prefectures in a fortnight.
+PLACE_COOLDOWN_DAYS = 120
+
+# An article shorter than this is a stub, and a stub gives the copywriter
+# nothing to write from that it would not have to invent.
+PLACE_MIN_EXTRACT_CHARS = 120
+
+# How many search results to consider when the guessed title missed and search
+# is the fallback. Wikipedia's best match for a town name is regularly its
+# railway station, so the source walks down the list until one verifies.
+PLACE_SEARCH_RESULTS = 4

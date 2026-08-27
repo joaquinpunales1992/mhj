@@ -7,11 +7,11 @@ of the split.
 
 import logging
 
-from . import faq, listings, news, stats
+from . import faq, listings, news, places, stats
 
 logger = logging.getLogger(__name__)
 
-SOURCES = [listings, news, stats, faq]
+SOURCES = [listings, news, stats, faq, places]
 
 
 def gather_all():
