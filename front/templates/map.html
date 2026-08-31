@@ -328,11 +328,11 @@
 
     var map = L.map('map', { scrollWheelZoom: true }).setView([37.5, 137.5], 5);
 
-    // CARTO Voyager rather than standard OSM tiles: OSM renders Japan's place
-    // names in Japanese (北海道, 大分県…), which is unusable for an
-    // English-speaking audience. Voyager labels are romanised down to town
-    // level (Gero, Nakatsugawa) and it stays free with attribution, no API key.
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    // Built in the view — see _basemap_tile_url — because CARTO stopped
+    // serving these keyless and now watermarks every tile without a key. Why
+    // Voyager and not standard OSM is documented there too: OSM labels Japan
+    // in Japanese, Voyager romanises it.
+    L.tileLayer('{{ tile_url|escapejs }}', {
       subdomains: 'abcd',
       maxZoom: 19,
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +

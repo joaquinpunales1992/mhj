@@ -199,6 +199,27 @@ MAP_CARD_BATCH_LIMIT = 60
 # them as soon as the viewport is known.
 MAP_INITIAL_CARDS = 24
 
+# CARTO Voyager rather than standard OSM tiles: OSM renders Japan's place names
+# in Japanese (北海道, 大分県…), which is unusable for an English-speaking
+# audience, and Voyager romanises them down to town level (Gero, Nakatsugawa).
+CARTO_TILE_URL = (
+    "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+)
+
+
+def _basemap_tile_url():
+    """The tile URL, keyed if we have a key.
+
+    CARTO served these keyless for years and now paints "API KEY REQUIRED"
+    across every tile, so the key buys back a clean basemap rather than the
+    basemap itself: without one the map still loads, clusters and labels. The
+    braces are Leaflet's placeholders and are left for it to substitute.
+    """
+    if not settings.CARTO_API_KEY:
+        return CARTO_TILE_URL
+    # `key`, which is not what the watermark's own URL suggests.
+    return f"{CARTO_TILE_URL}?key={settings.CARTO_API_KEY}"
+
 
 def map_view(request):
     """Split browse view: map on the left, listings for the current viewport
@@ -248,6 +269,7 @@ def map_view(request):
             "nav": "map",
             "saved_ids_json": json.dumps(saved_ids),
             "card_batch_limit": MAP_CARD_BATCH_LIMIT,
+            "tile_url": _basemap_tile_url(),
             "initial_properties": initial,
             "cities": _available_cities(),
             "selected_city": selected_city,

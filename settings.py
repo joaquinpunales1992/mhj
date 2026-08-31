@@ -425,6 +425,15 @@ CEREBRAS_API_KEY = env("CEREBRAS_API_KEY", default="")
 # key comes from AI Studio. Left unset, the bot behaves exactly as it did.
 GEMINI_API_KEY = env("GEMINI_API_KEY", default="")
 
+# The basemap key for /map/. CARTO used to serve the Voyager tiles keyless and
+# now watermarks "API KEY REQUIRED" diagonally across every one of them, so this
+# is what removes the watermark rather than what makes the map work — left unset,
+# the map still loads, still clusters and still labels Japan in romaji, just
+# defaced. Public by nature: it ships in the page HTML, so it is a quota rather
+# than a secret — CARTO ties it to the domain named when requesting it, and the
+# free tier is 5 million tile requests a month across raster and vector.
+CARTO_API_KEY = env("CARTO_API_KEY", default="")
+
 # Domain-ownership verification, for TikTok and anyone else who asks for it.
 # Only needed when verifying by file rather than by DNS — DNS needs no deploy
 # and covers every URL on the domain at once, so prefer it. Set both:

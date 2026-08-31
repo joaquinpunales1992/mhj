@@ -540,3 +540,42 @@ class PreviewPanelTests(TestCase):
 
         self.assertContains(response, "You have opened all")
         self.assertNotContains(response, "Short-term rental (Airbnb) potential")
+
+
+class BasemapKeyTests(TestCase):
+    """The map's tile URL, which is a URL we do not control the terms of.
+
+    CARTO served these tiles keyless for years and now paints "API KEY
+    REQUIRED" diagonally across every one of them. The key is what buys back a
+    clean basemap, so what is worth pinning is the parameter name — `key`, not
+    the `apikey` the watermark's own URL suggests — and that a missing key
+    still leaves a working map rather than a blank panel.
+    """
+
+    def tile_url(self):
+        response = self.client.get("/map/")
+        self.assertEqual(response.status_code, 200)
+        match = re.search(
+            r"L\.tileLayer\('([^']+)'", response.content.decode()
+        )
+        self.assertIsNotNone(match, "the map has no tile layer at all")
+        return match.group(1)
+
+    @override_settings(CARTO_API_KEY="")
+    def test_without_a_key_the_map_still_has_its_tiles(self):
+        url = self.tile_url()
+        self.assertIn("basemaps.cartocdn.com/rastertiles/voyager", url)
+        self.assertNotIn("key", url)
+
+    @override_settings(CARTO_API_KEY="abc123")
+    def test_the_key_goes_on_as_key_and_not_api_key(self):
+        # escapejs turns the '=' into a unicode escape, which the browser reads
+        # back as '=' inside the JS string. Undone here for that reason.
+        url = self.tile_url().replace("\\u003D", "=")
+        self.assertTrue(url.endswith("?key=abc123"), url)
+
+    @override_settings(CARTO_API_KEY="abc'123")
+    def test_a_key_cannot_break_out_of_the_javascript_string(self):
+        """It is rendered into a JS string literal, so an unescaped quote would
+        end the string and take the map's script with it."""
+        self.assertNotIn("abc'123", self.tile_url())
