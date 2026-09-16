@@ -300,6 +300,42 @@ REEL_HOOK_PRICE_FIRST = True
 # it has room for.
 REEL_HOOK_PLACE_MAX_CHARS = 44
 
+# Where the two type blocks sit, as a fraction of frame height.
+#
+# Instagram covers the top of a reel with the status bar and its own Reels
+# header, and the bottom with the caption, the username row and the action rail.
+# Meta's own guidance is to keep text out of the top 14% and the bottom 20%, and
+# both blocks were outside that: the price block started at the card margin
+# (3.75% down, so the price itself sat behind the header) and the wordmark at
+# 0.74H ran into the caption row.
+#
+# These are the fractions the type is pinned to, so the safe area is one number
+# to change rather than three call sites.
+REEL_TOP_BLOCK_Y = 0.15
+REEL_BOTTOM_BLOCK_Y = 0.66
+
+# How dark the gradients behind the type are, 0-255 at their darkest.
+#
+# 150 (59%), down from 240 (94%). The old value was not chosen for legibility —
+# it was chosen so that a ramp which had already faded to a third of its
+# strength still covered the brass size line at the bottom of the block. See
+# _scrims in utils.py: the band is flat across the rows that carry type now, so
+# the number here is the contrast the type actually gets rather than a peak set
+# at the frame edge, where nothing of ours is written.
+REEL_SCRIM_ALPHA = 150
+
+# How much of the frame each gradient covers: (fade-in start, plateau start,
+# plateau end, fade-out end), as fractions of height. The plateaus bracket the
+# two type blocks above; the fades are what keeps this reading as a gradient
+# rather than the hard translucent bands the reel used to have.
+REEL_TOP_SCRIM = (0.00, 0.12, 0.34, 0.45)
+REEL_BOTTOM_SCRIM = (0.53, 0.63, 0.82, 1.00)
+
+# Alpha at the very top and bottom edges of the frame. Not zero: Instagram lays
+# its own white chrome over both, and a little separation keeps a bright sky
+# from swallowing it. Nothing of ours is written this far out.
+REEL_SCRIM_EDGE_ALPHA = 70
+
 # Whether a reel is also published into the main feed and the profile grid.
 #
 # False, which is a decision rather than a default: the grid is the shop window

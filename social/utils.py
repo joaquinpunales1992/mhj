@@ -32,7 +32,7 @@ from moviepy import (
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 import numpy as np
 from PIL import Image
-from social.content.cards import ACCENT, FG
+from social.content.cards import FG
 from social.content.listing_cards import (
     MARGIN as CARD_MARGIN,
     _details_line,
@@ -1428,31 +1428,51 @@ def create_property_video(
         return "#%02x%02x%02x" % rgb
 
     def _scrims():
-        """The card's two gradients, as one transparent overlay.
+        """The two gradients the type sits on, as one transparent overlay.
+
+        SHAPE. Each band is flat at REEL_SCRIM_ALPHA across the rows that carry
+        type, and fades out above and below it. The previous shape was a ramp
+        anchored at the frame edge, and it was backwards: it put 94% black along
+        the very top of the frame — where Instagram draws its own header and
+        nothing of ours is written — and had faded to about a third of that by
+        the time it reached the brass size line, which is the one line that
+        needs the help. So half the photograph was being dimmed to protect text
+        that was not there, and the strength had to keep climbing to cover the
+        text that was. A house under it looked overcast on a clear day.
+
+        A plateau decouples the two: the darkest value is now the contrast the
+        type actually gets, and the fades are what keep this reading as a
+        gradient rather than the hard translucent bands the reel used to have.
 
         One clip rather than two: it is the same RGBA image either way, and the
         composite has fewer layers to walk on a box with no memory to spare.
         """
-        canvas = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-        # Deeper and longer than the card's, and concave rather than convex: a
-        # card is read in still light, where a gradient that only darkens near
-        # the edge is enough. On video the type sits over whatever the photo
-        # happens to be — sunlit concrete, in the render I checked — and the
-        # brass size line and the hook both disappeared into it. The exponent
-        # below 1 keeps the band dark most of the way across and spends the fade
-        # at the very end, where nothing is written.
-        for height, strength, at_top in (
-            (int(H * 0.40), 240, True), (int(H * 0.46), 238, False)
-        ):
-            ramp = Image.new("L", (1, height))
-            ramp.putdata([
-                int(strength * ((1 - i / max(1, height - 1)) if at_top
-                                else i / max(1, height - 1)) ** 0.6)
-                for i in range(height)
-            ])
-            band = Image.new("RGBA", (W, height), (*REEL_BG_COLOR, 255))
-            band.putalpha(ramp.resize((W, height), Image.BILINEAR))
-            canvas.alpha_composite(band, (0, 0 if at_top else H - height))
+        edge, plateau = REEL_SCRIM_EDGE_ALPHA, REEL_SCRIM_ALPHA
+        top_in, top_flat, top_flat_end, top_out = REEL_TOP_SCRIM
+        bot_in, bot_flat, bot_flat_end, bot_out = REEL_BOTTOM_SCRIM
+        # (fraction of height, alpha), linear between neighbours. Written out in
+        # order down the frame so the shape is readable as a list.
+        stops = [
+            (top_in, edge), (top_flat, plateau),
+            (top_flat_end, plateau), (top_out, 0),
+            (bot_in, 0), (bot_flat, plateau),
+            (bot_flat_end, plateau), (bot_out, edge),
+        ]
+
+        def _alpha(f):
+            for (y0, a0), (y1, a1) in zip(stops, stops[1:]):
+                if y0 <= f <= y1:
+                    span = y1 - y0
+                    return int(a0 + (a1 - a0) * ((f - y0) / span if span else 0))
+            # Outside the stops entirely — only reachable if the fractions are
+            # retuned to leave a gap at an edge. Untouched photo is the right
+            # answer there.
+            return 0
+
+        ramp = Image.new("L", (1, H))
+        ramp.putdata([_alpha(y / max(1, H - 1)) for y in range(H)])
+        canvas = Image.new("RGBA", (W, H), (*REEL_BG_COLOR, 255))
+        canvas.putalpha(ramp.resize((W, H), Image.BILINEAR))
         return ImageClip(np.array(canvas), transparent=True).with_duration(dur)
 
     def _line(text, y, box_h, font, font_size, color):
@@ -1474,7 +1494,21 @@ def create_property_video(
         )
 
     def _price_stack(top):
-        """Price, place, size — the hero card's block, in the same order."""
+        """Price, place, size — the hero card's block, in the same order.
+
+        The size line is white here where the card draws it in brass. That is
+        the one place the two formats are allowed to differ, and it is not a
+        drift: brass (214,168,90) is a light colour, and it reads on the cards
+        because there it sits on a solid panel of BG. On a reel it sits on a
+        photograph, and measured against a sunlit white wall — the background
+        this whole overlay is designed around — brass comes out at 2.5:1 where
+        white on the same rows is 5.1:1. Under 4.5:1 the line is decoration
+        rather than information.
+
+        Darkening the scrim until brass carried was the previous answer, and it
+        is what made the photographs look overcast; see _scrims. Changing one
+        colour costs less than dimming the house.
+        """
         # Tiered rather than shrunk to fit: see _line on what an overflow costs.
         price_size = fs(126) if len(price) <= 10 else (
             fs(96) if len(price) <= 13 else fs(76)
@@ -1487,7 +1521,7 @@ def create_property_video(
         if details:
             clips.append(
                 _line(details, top + fs(292), fs(56), light_font, fs(32),
-                      _hex(ACCENT))
+                      _hex(FG))
             )
         return clips
 
@@ -1527,16 +1561,26 @@ def create_property_video(
     meta["hook_price_first"] = REEL_HOOK_PRICE_FIRST
 
     overlays = [clip, _scrims()]
+    top_block = int(H * REEL_TOP_BLOCK_Y)
     if REEL_HOOK_PRICE_FIRST:
-        # Frame one, top of the screen: the price, then where it is, then how
-        # big. The AI phrase goes to the bottom — it is atmosphere, not a hook,
-        # and it was occupying the only line anyone reads before deciding to
-        # scroll.
-        # 0.74 rather than lower: Instagram's own caption and buttons cover the
-        # bottom of a reel, and the wordmark was sitting under them.
-        overlays += _price_stack(margin) + _hook_stack(int(H * 0.74))
+        # Frame one, near the top of the screen: the price, then where it is,
+        # then how big. The AI phrase goes to the bottom — it is atmosphere, not
+        # a hook, and it was occupying the only line anyone reads before
+        # deciding to scroll.
+        #
+        # Both blocks are inside Instagram's safe area now. They were not: the
+        # price started at the card's margin, which is 3.75% down a 9:16 frame,
+        # so the largest and most important thing on the reel sat behind the
+        # status bar and the Reels header. The wordmark at 0.74H ran into the
+        # caption row. See REEL_TOP_BLOCK_Y.
+        overlays += (
+            _price_stack(top_block)
+            + _hook_stack(int(H * REEL_BOTTOM_BLOCK_Y))
+        )
     else:
-        overlays += _hook_stack(margin) + _price_stack(int(H * 0.58))
+        overlays += (
+            _hook_stack(top_block) + _price_stack(int(H * 0.58))
+        )
 
     # Composite overlays onto the base video. On any failure, fall back to the
     # already-written no-label video so the bot still posts something.
