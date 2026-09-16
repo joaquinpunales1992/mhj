@@ -345,7 +345,20 @@ REEL_SCRIM_EDGE_ALPHA = 70
 # insight ids — with a comment claiming there was no reason to keep reels out
 # of the feed. The reason was in the git history the whole time.
 #
-# Flip it to True to put reels in the grid as well.
+# THE ARGUMENT THE OTHER WAY, so it stops being rediscovered: off, a reel lives
+# only in the Reels tab, and the profile grid is what somebody looks at in the
+# seconds after tapping through from a reel and before deciding to follow. That
+# is shelf space given up. It is a real cost, and it is the one to weigh if
+# follower conversion is what is being diagnosed — see the dates below.
+#
+# Three positions so far: False from f8aaae9 (2025-07-11), True from 69b6ecd
+# (2026-08-20), False again from 82dd418 (2026-08-26). The middle one was not a
+# decision, which is why it lasted six days. Anyone reading the numbers across
+# that window needs the dates, and POST_ONLY_FEATURED landing on 2026-08-25
+# means this flag and that one cannot be told apart by date alone.
+#
+# Flip it to True to put reels in the grid as well. social/tests.py asserts the
+# current value, so it changes with this.
 REEL_SHARE_TO_FEED = False
 
 

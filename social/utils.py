@@ -889,8 +889,13 @@ def post_instagram_reel():
             "media_type": "REELS",
             "video_url": video_url,
             "caption": caption,
-            # Publishing into the Reels tab alone gave up the feed and the
-            # profile grid for nothing — same video, less shelf space.
+            # False, so a reel lives in the Reels tab and not in the feed or
+            # the profile grid. The argument that used to sit here was the
+            # opposite one — "same video, less shelf space" — and it was left
+            # behind when the constant went back to False in 82dd418; the
+            # reasoning for both directions is kept with REEL_SHARE_TO_FEED
+            # rather than duplicated here, because this is the third time the
+            # decision has moved and the comment did not move with it.
             "share_to_feed": REEL_SHARE_TO_FEED,
             "access_token": get_fresh_token(),
         }
