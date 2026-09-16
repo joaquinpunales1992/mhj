@@ -1119,6 +1119,83 @@ class ListingCardTests(TestCase):
         self.assertTrue(os.path.exists(path))
 
 
+class PhotoOverPanelTests(TestCase):
+    """The reel's "panel" layout: the whole photo, and a panel under it.
+
+    One invariant carries the whole reason this layout exists — nothing is
+    cropped off the sides. The "cover" layout it is an alternative to keeps 42%
+    of a landscape photo's width, which on a listing photo means a detail of the
+    house instead of the house. If a change here ever starts cropping
+    horizontally, the layout has become the thing it was written to replace and
+    the test should say so in those terms.
+
+    The second invariant is duller and breaks more often: the panel must start
+    at the same y on every slide, or the type jumps between them.
+    """
+
+    def setUp(self):
+        self.dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.dir, ignore_errors=True)
+
+    def photo(self, size):
+        from PIL import Image
+
+        path = os.path.join(self.dir, f"p{size[0]}x{size[1]}.jpg")
+        Image.new("RGB", size, (200, 190, 170)).save(path, "JPEG")
+        return path
+
+    @property
+    def BG(self):
+        from social.content.cards import BG
+
+        return tuple(BG)
+
+    def test_the_full_width_of_the_photo_survives(self):
+        from PIL import Image
+
+        from social.content.listing_cards import photo_over_panel
+
+        for size in ((1000, 750), (800, 600), (600, 450), (1200, 800)):
+            with self.subTest(size=size):
+                frame = photo_over_panel(self.photo(size), 540, 960, 442)
+                # The photo is fitted to the width, so the pixel columns at both
+                # edges of the band belong to it rather than to the backdrop.
+                band = frame.crop((0, 0, 540, 442))
+                left = band.getpixel((0, 220))
+                right = band.getpixel((539, 220))
+                self.assertNotEqual(
+                    left, self.BG,
+                    "the photo does not reach the left edge — it was cropped",
+                )
+                self.assertNotEqual(
+                    right, self.BG,
+                    "the photo does not reach the right edge — it was cropped",
+                )
+
+    def test_the_panel_starts_at_the_same_y_whatever_the_photo(self):
+        from social.content.listing_cards import photo_over_panel
+
+        for size in ((1000, 750), (800, 600), (540, 960), (1600, 500)):
+            with self.subTest(size=size):
+                frame = photo_over_panel(self.photo(size), 540, 960, 442)
+                self.assertEqual(frame.size, (540, 960))
+                # Below the band is panel, whatever shape the photo was.
+                self.assertEqual(frame.getpixel((270, 500)), self.BG)
+                self.assertEqual(frame.getpixel((270, 900)), self.BG)
+
+    def test_a_portrait_photo_is_cropped_vertically_not_squashed(self):
+        from social.content.listing_cards import photo_over_panel
+
+        frame = photo_over_panel(self.photo((600, 1200)), 540, 960, 442)
+        self.assertEqual(frame.size, (540, 960))
+        # It still reaches both edges: the crop it takes is off the top and
+        # bottom, never the sides.
+        self.assertNotEqual(frame.getpixel((0, 220)), self.BG)
+        self.assertNotEqual(frame.getpixel((539, 220)), self.BG)
+
+
 class CardLocationTests(TestCase):
     """What place name goes on the image.
 

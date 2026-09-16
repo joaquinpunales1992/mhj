@@ -32,12 +32,13 @@ from moviepy import (
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 import numpy as np
 from PIL import Image
-from social.content.cards import FG
+from social.content.cards import ACCENT, FG, MUTED
 from social.content.listing_cards import (
     MARGIN as CARD_MARGIN,
     _details_line,
     _photo_band,
     looks_like_a_drawing,
+    photo_over_panel,
 )
 from membership.utils import notify_social_token_expired
 import logging
@@ -1316,8 +1317,17 @@ def create_property_video(
         so what moviepy holds per slide is 540x960 either way, exactly what it
         held before. A photo too small to reach the frame is still letterboxed
         onto the dark canvas below rather than smeared across it.
+
+        In "panel" layout it is the other trade: the whole photo at full width,
+        nothing cropped off the sides, and a solid panel below it for the type.
+        See REEL_PHOTO_LAYOUT.
         """
-        _photo_band(local_path, W, H).save(local_path, "JPEG", quality=88)
+        if REEL_PHOTO_LAYOUT == "panel":
+            photo_over_panel(
+                local_path, W, H, int(H * REEL_PANEL_TOP)
+            ).save(local_path, "JPEG", quality=88)
+        else:
+            _photo_band(local_path, W, H).save(local_path, "JPEG", quality=88)
 
         img = ImageClip(local_path, duration=duration_per_image).with_position("center")
         if REEL_ENABLE_KEN_BURNS:
@@ -1457,12 +1467,20 @@ def create_property_video(
         bot_in, bot_flat, bot_flat_end, bot_out = REEL_BOTTOM_SCRIM
         # (fraction of height, alpha), linear between neighbours. Written out in
         # order down the frame so the shape is readable as a list.
-        stops = [
-            (top_in, edge), (top_flat, plateau),
-            (top_flat_end, plateau), (top_out, 0),
-            (bot_in, 0), (bot_flat, plateau),
-            (bot_flat_end, plateau), (bot_out, edge),
-        ]
+        if REEL_PHOTO_LAYOUT == "panel":
+            # Nothing of ours is written over the photograph in this layout —
+            # the type is on a solid panel — so the only thing left to do is
+            # give Instagram's own white header something to sit on, and even
+            # that only at the very top. The photo plays at full brightness
+            # below it, which no amount of tuning the plateau could achieve.
+            stops = [(0.00, edge), (0.13, 0), (1.00, 0)]
+        else:
+            stops = [
+                (top_in, edge), (top_flat, plateau),
+                (top_flat_end, plateau), (top_out, 0),
+                (bot_in, 0), (bot_flat, plateau),
+                (bot_flat_end, plateau), (bot_out, edge),
+            ]
 
         def _alpha(f):
             for (y0, a0), (y1, a1) in zip(stops, stops[1:]):
@@ -1538,6 +1556,61 @@ def create_property_video(
                   _hex(FG)),
         ]
 
+    def _panel_stack():
+        """Everything the reel says, on the solid panel under the photograph.
+
+        One block rather than the two the "cover" layout splits the frame into,
+        because there is no longer a reason to split it: the type was top and
+        bottom to keep it off the middle of the photograph, and the photograph
+        now ends where this begins.
+
+        Read in the order it is laid out: the AI phrase as an eyebrow, the price
+        at the size it deserves, where it is, how big, and who is selling it.
+        The eyebrow is the phrase's honest job — it was never a hook, and as a
+        line above the price it finally reads like the atmosphere it is.
+
+        The size line is brass again here, where the "cover" layout has to draw
+        it white. Brass fails on a photograph and reads on a solid panel, which
+        is the whole argument in _price_stack — and this panel is the same BG
+        the cards use, so it is the case where brass works.
+        """
+        top = int(H * REEL_PANEL_TOP)
+        rule_y = top + fs(48)
+        clips = [
+            ImageClip(
+                np.full((max(2, fs(8)), fs(200), 3), ACCENT, dtype=np.uint8)
+            ).with_duration(dur).with_position((margin, rule_y)),
+        ]
+        y = rule_y + fs(44)
+        if video_top_text:
+            clips.append(
+                _line(video_top_text, y, fs(64), light_font, fs(34), _hex(MUTED))
+            )
+        y += fs(88)
+        price_size = fs(126) if len(price) <= 10 else (
+            fs(96) if len(price) <= 13 else fs(76)
+        )
+        clips.append(_line(price, y, fs(150), black_font, price_size, _hex(FG)))
+        y += fs(160)
+        if place:
+            clips.append(
+                _line(place, y, fs(120), light_font, fs(46), _hex(FG))
+            )
+        y += fs(128)
+        if details:
+            clips.append(
+                _line(details, y, fs(56), light_font, fs(32), _hex(ACCENT))
+            )
+        # Pinned to the panel's floor rather than stacked, so a two-line place
+        # name cannot push the wordmark into Instagram's caption row. Muted and
+        # light, as the cards set it on a panel: a signature under the facts,
+        # not a fourth line of them — at full weight it read as one.
+        clips.append(
+            _line(REEL_BRAND_TEXT, int(H * 0.75), fs(60), light_font, fs(30),
+                  _hex(MUTED))
+        )
+        return clips
+
     # Top: short AI hook, sanitised to ASCII (the model sometimes injects CJK).
     try:
         raw_top = llm.generate_text(
@@ -1567,7 +1640,11 @@ def create_property_video(
 
     overlays = [clip, _scrims()]
     top_block = int(H * REEL_TOP_BLOCK_Y)
-    if REEL_HOOK_PRICE_FIRST:
+    if REEL_PHOTO_LAYOUT == "panel":
+        # One block on the panel; the price-first question does not arise,
+        # because nothing competes with the price for the top of the screen.
+        overlays += _panel_stack()
+    elif REEL_HOOK_PRICE_FIRST:
         # Frame one, near the top of the screen: the price, then where it is,
         # then how big. The AI phrase goes to the bottom — it is atmosphere, not
         # a hook, and it was occupying the only line anyone reads before

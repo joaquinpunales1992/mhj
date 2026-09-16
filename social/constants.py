@@ -300,6 +300,30 @@ REEL_HOOK_PRICE_FIRST = True
 # it has room for.
 REEL_HOOK_PLACE_MAX_CHARS = 44
 
+# How a listing photo is fitted to the 9:16 frame.
+#
+# "cover" crops the photo to fill the frame. On a landscape listing photo — and
+# they are nearly all landscape, the house across the frame — that keeps 42% of
+# the width and cuts 29% off each side, so what plays is a detail of the
+# building rather than the building. It fills the screen, which is what it was
+# introduced for in 8a87a3a: before that the photo was fitted and two thirds of
+# the phone was black.
+#
+# "panel" fits the whole photo to the width and puts the type on a solid panel
+# below it. Nothing is cropped horizontally. The panel is worth more than the
+# space it costs: type on a solid ground needs no gradient over the photograph,
+# so the photo plays at full brightness rather than under a scrim — which is the
+# darkening problem solved outright rather than tuned.
+REEL_PHOTO_LAYOUT = "cover"
+
+# Where the panel starts, as a fraction of frame height, in "panel" layout.
+# Fixed rather than measured per photo: the panel has to start at the same y on
+# every slide or the type jumps between them. 0.46 is where a 4:3 photo at full
+# width very nearly fills the band — 405px of 442 — so the dark margin above the
+# photograph stays thin, and the panel below is deep enough for the price, the
+# place, the size and the wordmark with all of it above Instagram's caption row.
+REEL_PANEL_TOP = 0.46
+
 # Where the two type blocks sit, as a fraction of frame height.
 #
 # Instagram covers the top of a reel with the status bar and its own Reels

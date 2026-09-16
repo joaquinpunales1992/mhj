@@ -177,6 +177,53 @@ def _photo_band(local_path, width, target_height):
     return band
 
 
+def photo_over_panel(local_path, width, height, band_height):
+    """The whole photo at full width, on a frame with a solid panel below it.
+
+    The alternative to `_photo_band` for a 9:16 reel, and the reason it exists:
+    cover-cropping a landscape listing photo into a 9:16 frame keeps 42% of its
+    width and throws away 29% off each side. Listing photos are shot landscape
+    with the house across the frame, so what survives the crop is a detail of
+    the building rather than the building.
+
+    Here the photo is fitted to the width instead — the whole of it, never
+    cropped horizontally — and centred in a band `band_height` deep. Whatever
+    the band does not use is BG, which is the same colour as the panel below it,
+    so a 4:3 photo reads as a picture sitting above a panel rather than as a
+    letterbox.
+
+    `band_height` is fixed by the caller rather than measured from the photo, so
+    the panel starts at the same y on every slide of a reel. Measuring it per
+    photo would make the type jump between slides.
+
+    A photo taller than the band — a portrait shot, which listings do carry — is
+    cropped vertically to fit it. That is the one crop this function makes, and
+    it takes it off the bottom third for the same reason `_photo_band` does: the
+    foreground of a listing photo is gravel.
+    """
+    with Image.open(local_path) as raw:
+        raw.draft("RGB", (width, band_height))
+        photo = trim_white_borders(raw.convert("RGB"))
+
+    scale = min(width / photo.width, MAX_UPSCALE)
+    photo = photo.resize(
+        (max(1, round(photo.width * scale)), max(1, round(photo.height * scale))),
+        Image.LANCZOS,
+    )
+
+    if photo.height > band_height:
+        top = max(0, min((photo.height - band_height) // 3,
+                         photo.height - band_height))
+        photo = photo.crop((0, top, photo.width, top + band_height))
+
+    canvas = Image.new("RGB", (width, height), BG)
+    canvas.paste(
+        photo,
+        ((width - photo.width) // 2, (band_height - photo.height) // 2),
+    )
+    return canvas
+
+
 def _scrim(img, top, bottom, strength=232):
     """Fade a dark gradient up from `bottom` to `top`. Legibility, not mood.
 
