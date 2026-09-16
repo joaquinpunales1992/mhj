@@ -314,7 +314,15 @@ REEL_HOOK_PLACE_MAX_CHARS = 44
 # space it costs: type on a solid ground needs no gradient over the photograph,
 # so the photo plays at full brightness rather than under a scrim — which is the
 # darkening problem solved outright rather than tuned.
-REEL_PHOTO_LAYOUT = "cover"
+#
+# "panel" from 2026-09-16. Both complaints that prompted this week's work — the
+# reels look dark, and the photos look zoomed in — are answered by it rather
+# than reduced: no scrim at all over the photograph, and nothing cropped off the
+# sides. What it gives up is screen: the house is smaller than a cover crop
+# makes it, and a reel is a moving format where filling the frame has pull that
+# a still frame does not show. If watch time drops, that is the trade showing
+# up, and "cover" is still here.
+REEL_PHOTO_LAYOUT = "panel"
 
 # Where the panel starts, as a fraction of frame height, in "panel" layout.
 # Fixed rather than measured per photo: the panel has to start at the same y on
